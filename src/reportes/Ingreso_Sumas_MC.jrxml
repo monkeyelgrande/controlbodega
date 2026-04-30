@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Factura_Sumas_MC" language="groovy" pageWidth="724" pageHeight="393" columnWidth="724" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="cd7a492b-6feb-4d43-a346-aabf9464acf6">
+	<property name="ireport.zoom" value="1.7715610000000057"/>
+	<property name="ireport.x" value="266"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="id_factura" class="java.lang.Integer">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[select sum(id.cantidad) from ingresos_mercancias_detalle id, ingresos_mercancias_cabecera ic where id.id_ingreso_cabecera=ic.id and id.id_ingreso_cabecera = $P{id_factura}]]>
+	</queryString>
+	<field name="sum" class="java.lang.Double"/>
+	<lastPageFooter>
+		<band height="64">
+			<staticText>
+				<reportElement x="433" y="10" width="113" height="24" uuid="0da1c392-4a8f-436f-ac1b-b707ba1c4868"/>
+				<textElement textAlignment="Right">
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Total de articulos:]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="550" y="10" width="159" height="24" uuid="1e1685af-460a-408c-867f-d6b372692c50"/>
+				<textElement>
+					<font size="14" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[new DecimalFormat("###,###,##0").format($F{sum})]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="10" y="11" width="165" height="16" uuid="c34b1b3c-1142-4865-9b7d-8d16d2f157e5"/>
+				<textElement verticalAlignment="Bottom">
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[________________________]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="10" y="28" width="100" height="16" uuid="cdbd1456-9b80-4d04-9b3b-009e3f112aef"/>
+				<textElement>
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Firma ]]></text>
+			</staticText>
+		</band>
+	</lastPageFooter>
+</jasperReport>

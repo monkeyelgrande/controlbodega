@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="SalidaProductos_oficio" language="groovy" pageWidth="612" pageHeight="792" columnWidth="572" leftMargin="20" rightMargin="20" topMargin="0" bottomMargin="20" uuid="5d1b9e38-61e2-4cf7-833d-8e970173a13b">
+	<property name="ireport.zoom" value="1.7715610000000044"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fecha1" class="java.util.Date">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fecha2" class="java.util.Date">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigo" class="java.lang.Integer">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[select fc.id as id_factura, fc.fecha, c.nombre as contacto, fd.cantidad, p.codigo_barras, p.descripcion from facturas_detalles fd, facturas_cabeceras fc, productos p, contactos c where fd.id_cabecera=fc.id and fd.id_producto=p.id and fc.id_contacto=c.id and fd.id_producto=$P{codigo} and fc.anulado=1 and fc.fecha between $P{fecha1} and $P{fecha2} order by fc.fecha ]]>
+	</queryString>
+	<field name="id_factura" class="java.lang.Integer"/>
+	<field name="fecha" class="java.sql.Date"/>
+	<field name="contacto" class="java.lang.String"/>
+	<field name="cantidad" class="java.lang.Double"/>
+	<field name="codigo_barras" class="java.lang.String"/>
+	<field name="descripcion" class="java.lang.String"/>
+	<variable name="total_1" class="java.lang.Double" calculation="Sum">
+		<variableExpression><![CDATA[]]></variableExpression>
+	</variable>
+	<variable name="total_2" class="java.lang.Double" resetType="Page" calculation="Sum">
+		<variableExpression><![CDATA[]]></variableExpression>
+	</variable>
+	<variable name="cantidad_1" class="java.lang.Integer" calculation="Sum">
+		<variableExpression><![CDATA[$F{cantidad}]]></variableExpression>
+	</variable>
+	<background>
+		<band/>
+	</background>
+	<pageHeader>
+		<band height="70">
+			<rectangle>
+				<reportElement x="-21" y="0" width="613" height="66" backcolor="#006699" uuid="9a7d4518-e988-425b-9a0c-05faa6be4768"/>
+				<graphicElement>
+					<pen lineWidth="0.0"/>
+				</graphicElement>
+			</rectangle>
+			<staticText>
+				<reportElement x="0" y="11" width="311" height="20" forecolor="#FFFFFF" uuid="c001b686-311b-4532-8fd6-c53da9f6dc52"/>
+				<textElement>
+					<font size="14" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Reporte salida de productos por producto]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="0" y="31" width="82" height="20" forecolor="#FFFFFF" uuid="e41bfd27-64cb-4087-93c2-55235519ff2d"/>
+				<textElement>
+					<font size="12"/>
+				</textElement>
+				<text><![CDATA[Rango fecha]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="82" y="31" width="72" height="20" forecolor="#FFFFFF" uuid="d338f5b7-e90b-4699-86e4-e5eb5b94d5d0"/>
+				<textElement verticalAlignment="Top">
+					<font size="12" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[new SimpleDateFormat("dd-MMM-yyyy").format($P{fecha1})]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="154" y="31" width="17" height="20" forecolor="#FFFFFF" uuid="b54f04b1-c161-427f-980a-0513a7581ca3"/>
+				<textElement>
+					<font size="12"/>
+				</textElement>
+				<text><![CDATA[ a]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="179" y="31" width="84" height="20" forecolor="#FFFFFF" uuid="8424db82-1151-42f7-addf-3751c7269528"/>
+				<textElement>
+					<font size="12" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[new SimpleDateFormat("dd-MMM-yyyy").format($P{fecha2})]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="376" y="11" width="58" height="17" forecolor="#FFFFFF" uuid="19a5ea47-d9ca-42f9-8cc4-1eaae4277ed1"/>
+				<textElement>
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Producto]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="350" y="28" width="84" height="15" forecolor="#FFFFFF" uuid="72b4aebf-f303-40fe-8b55-f979da65d924"/>
+				<textElement textAlignment="Right">
+					<font size="10" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Codigo de barras: ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="376" y="45" width="58" height="15" forecolor="#FFFFFF" uuid="5f3c094e-a288-4f41-9fc1-2bba98837e4f"/>
+				<textElement textAlignment="Right">
+					<font size="10" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Descripción: ]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="437" y="28" width="121" height="15" forecolor="#FFFFFF" uuid="5c93227c-7f7b-45d1-8062-256b9f859c9e"/>
+				<textFieldExpression><![CDATA[$F{codigo_barras}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="437" y="45" width="121" height="15" forecolor="#FFFFFF" uuid="aa1fd207-3439-4436-b6b4-b48324bcd0d1"/>
+				<textFieldExpression><![CDATA[$F{descripcion}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageHeader>
+	<columnHeader>
+		<band height="24">
+			<rectangle radius="10">
+				<reportElement x="-10" y="1" width="575" height="20" uuid="ddedfbad-be69-406b-8d3a-ca458ed0f985"/>
+			</rectangle>
+			<staticText>
+				<reportElement x="2" y="3" width="71" height="15" uuid="5253e2cc-a0e9-4998-a895-80a71fb200a8"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Fecha]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="474" y="3" width="78" height="15" uuid="5ab9d0c4-2bd3-434f-835f-746b9f908f6b"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Cantidad]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="82" y="3" width="376" height="15" uuid="27df89bd-0ab0-45fe-84a3-a1da30c9bb26"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Contacto]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="17">
+			<rectangle>
+				<reportElement x="-10" y="0" width="575" height="16" backcolor="#E3E3E3" uuid="c3d95037-b5ab-4c2e-ac39-bff18c3b171f">
+					<printWhenExpression><![CDATA[new Boolean($V{REPORT_COUNT}.intValue() % 2 == 0)]]></printWhenExpression>
+				</reportElement>
+				<graphicElement>
+					<pen lineColor="#FFFFFF"/>
+				</graphicElement>
+			</rectangle>
+			<textField>
+				<reportElement x="2" y="2" width="71" height="15" uuid="ba72322d-63b1-47a6-ad8a-ef4e9ca99a59"/>
+				<textFieldExpression><![CDATA[new SimpleDateFormat("dd/MMM/yyyy").format($F{fecha})]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="474" y="2" width="78" height="15" uuid="d1d8a784-8ade-42fb-8ee4-33a452cb9360"/>
+				<textFieldExpression><![CDATA[$F{cantidad}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="82" y="2" width="376" height="15" uuid="259690f9-c787-4059-851a-639e1b84070c"/>
+				<textFieldExpression><![CDATA[$F{contacto}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<columnFooter>
+		<band/>
+	</columnFooter>
+	<pageFooter>
+		<band height="32">
+			<textField>
+				<reportElement mode="Opaque" x="0" y="19" width="515" height="13" backcolor="#E6E6E6" uuid="f7547c18-2ebc-42a1-915f-b88546885ba7"/>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA["Página "+$V{PAGE_NUMBER}+" de"]]></textFieldExpression>
+			</textField>
+			<textField pattern="EEEEE dd MMMMM yyyy">
+				<reportElement x="0" y="19" width="100" height="13" uuid="c92bd322-5d12-4084-a23a-1a8857c3fa57"/>
+				<textFieldExpression><![CDATA[new java.util.Date()]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement mode="Opaque" x="515" y="19" width="40" height="13" backcolor="#E6E6E6" uuid="2327550f-e17c-4906-89df-30406303d047"/>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+	<lastPageFooter>
+		<band height="33">
+			<textField>
+				<reportElement mode="Opaque" x="0" y="17" width="515" height="13" backcolor="#E6E6E6" uuid="292de5b8-f745-49ab-ba0a-cb605e0bf544"/>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA["Página "+$V{PAGE_NUMBER}+" de"]]></textFieldExpression>
+			</textField>
+			<textField pattern="EEEEE dd MMMMM yyyy">
+				<reportElement x="0" y="17" width="100" height="13" uuid="e215c1e5-c00d-4ee3-b80b-c6b79d2a7d73"/>
+				<textFieldExpression><![CDATA[new java.util.Date()]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement mode="Opaque" x="515" y="18" width="40" height="13" backcolor="#E6E6E6" uuid="38efe4a8-c7b9-4f9f-a8cb-cd0b6fa26a0e"/>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="321" y="1" width="131" height="15" uuid="98c428a7-dc43-479d-af16-7b69390407e0"/>
+				<textElement textAlignment="Right"/>
+				<text><![CDATA[Total salida productos:]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="458" y="1" width="100" height="17" forecolor="#CC0000" uuid="29e96557-b5c8-4eb0-97f3-c5087cf13fe4"/>
+				<textElement>
+					<font size="12" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{cantidad_1}]]></textFieldExpression>
+			</textField>
+		</band>
+	</lastPageFooter>
+	<summary>
+		<band/>
+	</summary>
+</jasperReport>

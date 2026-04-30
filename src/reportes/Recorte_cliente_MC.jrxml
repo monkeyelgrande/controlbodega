@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Recorte_cliente_MC" language="groovy" pageWidth="611" pageHeight="395" columnWidth="611" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="68affa4a-09f2-4c02-972d-eda2f6746484">
+	<property name="ireport.zoom" value="1.4641000000000095"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="id_factura" class="java.lang.Integer">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[select rc.id as id_f, rc.fecha, c.id as id_c, c.cedula, c.nombre, c.direccion, c.contacto, rd.codigo
+from recortes_cabecera rc,contactos c, recortes_detalle rd
+where rd.id_contacto=c.id and rd.id=$P{id_factura} and rd.id_cabecera=rc.id]]>
+	</queryString>
+	<field name="id_f" class="java.lang.Integer"/>
+	<field name="fecha" class="java.sql.Date"/>
+	<field name="id_c" class="java.lang.Integer"/>
+	<field name="cedula" class="java.lang.String"/>
+	<field name="nombre" class="java.lang.String"/>
+	<field name="direccion" class="java.lang.String"/>
+	<field name="contacto" class="java.lang.String"/>
+	<field name="codigo" class="java.lang.String"/>
+	<title>
+		<band height="24" splitType="Stretch">
+			<rectangle radius="10">
+				<reportElement x="6" y="2" width="575" height="21" uuid="a741fcbd-dbe4-4f03-90a0-5d83894062d2"/>
+			</rectangle>
+			<staticText>
+				<reportElement x="430" y="5" width="44" height="16" uuid="0dab7921-2499-4978-bba3-aa10445b8f22"/>
+				<textElement verticalAlignment="Middle">
+					<font size="12" isBold="false"/>
+				</textElement>
+				<text><![CDATA[CC/NIT:]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="475" y="5" width="103" height="16" forecolor="#333333" uuid="dfc0ed6b-0e62-4674-805d-6a1dd496a934"/>
+				<textElement>
+					<font size="12" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{cedula}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="112" y="5" width="207" height="16" forecolor="#000000" uuid="8713b2d2-8325-4aec-9859-6e1e30742ce4"/>
+				<textElement verticalAlignment="Middle">
+					<font size="12" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{nombre}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="20" y="5" width="90" height="16" uuid="0c75f7ad-e092-4213-8642-f5d7200f2b26"/>
+				<textElement>
+					<font size="12" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Nombre Cliente:]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="322" y="5" width="103" height="16" forecolor="#333333" uuid="e1d51fdf-f70b-4eaa-8d34-bd29fddb48c1"/>
+				<textElement>
+					<font size="12" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{contacto}]]></textFieldExpression>
+			</textField>
+		</band>
+	</title>
+</jasperReport>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Factura_cliente_MC" language="groovy" pageWidth="611" pageHeight="395" columnWidth="611" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="68affa4a-09f2-4c02-972d-eda2f6746484">
+	<property name="ireport.zoom" value="1.6105100000000134"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="id_factura" class="java.lang.Integer">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[select i.id, i.no_factura, p.nombre as proveedor, p.cedula as cedula, t.nombre as transportador, ti.nombre as tipo from ingresos_mercancias_cabecera i, contactos p, contactos t, tipo_ingreso ti
+where i.id_proveedor=p.id and i.id_transportador=t.id and i.id_tipo=ti.id and i.id= $P{id_factura}]]>
+	</queryString>
+	<field name="id" class="java.lang.Integer"/>
+	<field name="no_factura" class="java.lang.String"/>
+	<field name="proveedor" class="java.lang.String"/>
+	<field name="cedula" class="java.lang.String"/>
+	<field name="transportador" class="java.lang.String"/>
+	<field name="tipo" class="java.lang.String"/>
+	<title>
+		<band height="48" splitType="Stretch">
+			<rectangle radius="10">
+				<reportElement x="6" y="2" width="575" height="43" uuid="a741fcbd-dbe4-4f03-90a0-5d83894062d2"/>
+			</rectangle>
+			<staticText>
+				<reportElement x="338" y="5" width="44" height="16" uuid="0dab7921-2499-4978-bba3-aa10445b8f22"/>
+				<textElement verticalAlignment="Middle">
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[CC/NIT:]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="382" y="5" width="91" height="16" forecolor="#333333" uuid="dfc0ed6b-0e62-4674-805d-6a1dd496a934"/>
+				<textElement>
+					<font size="12" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{cedula}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="137" y="4" width="200" height="18" forecolor="#000000" uuid="8713b2d2-8325-4aec-9859-6e1e30742ce4"/>
+				<textElement>
+					<font size="14" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{proveedor}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="472" y="5" width="109" height="16" uuid="70fe86ed-3b4d-4ad9-a402-aef52ad6a9e6"/>
+				<textElement>
+					<font size="12" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{tipo}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="33" y="5" width="104" height="16" uuid="0c75f7ad-e092-4213-8642-f5d7200f2b26"/>
+				<textElement>
+					<font size="12" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Nombre proveedor:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="13" y="24" width="124" height="16" uuid="345d11d7-1863-46ef-9877-50b43c954a99"/>
+				<textElement>
+					<font size="12" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Nombre transportador:]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="137" y="24" width="200" height="18" forecolor="#000000" uuid="70f94c06-415e-4730-9c3f-d6a7fa10b6a0"/>
+				<textElement>
+					<font size="14" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{transportador}]]></textFieldExpression>
+			</textField>
+		</band>
+	</title>
+</jasperReport>

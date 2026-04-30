@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Mockup - Barra de Notificaciones</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", Tahoma, sans-serif; }
+  html, body { height: 100%; background: #2b2b2b; }
+
+  /* ---------- Layout principal (simula frm_main) ---------- */
+  .ventana {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: #1e1e1e;
+  }
+
+  /* Barra de menu superior */
+  .menu-bar {
+    background: #333;
+    color: #ddd;
+    padding: 6px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid #000;
+  }
+  .menu-bar span { margin-right: 22px; cursor: pointer; }
+  .menu-bar span:hover { color: #fff; }
+
+  /* Toolbar con botones (simula los botones de frm_main) */
+  .toolbar {
+    background: #2b2b2b;
+    padding: 10px;
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid #000;
+    flex-wrap: wrap;
+  }
+  .toolbar button {
+    color: #fff; border: none; padding: 8px 14px;
+    font-weight: bold; font-size: 12px; cursor: pointer; border-radius: 3px;
+  }
+  .btn-rojo   { background: #f44336; }
+  .btn-negro  { background: #212121; }
+  .btn-amber  { background: #ffc107; color:#000 !important; }
+  .btn-teal   { background: #009999; }
+  .btn-vino   { background: #990000; }
+
+  /* Cuerpo: jdesktop + barra notificaciones */
+  .cuerpo {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* JDesktopPane simulado */
+  .jdesktop {
+    flex: 1;                 /* 80% aprox */
+    background: #1b1b1b url("background.jpg") center/cover no-repeat;
+    position: relative;
+  }
+  .jdesktop .marca-agua {
+    position: absolute; bottom: 12px; right: 18px;
+    color: rgba(255,255,255,.25); font-size: 12px; letter-spacing:1px;
+  }
+
+  /* ---------- Barra de notificaciones (20% derecha) ---------- */
+  .barra-notif {
+    width: 20%;
+    min-width: 280px;
+    max-width: 380px;
+    background: #161616;
+    border-left: 2px solid #000;
+    display: flex;
+    flex-direction: column;
+    color: #eee;
+  }
+  .barra-notif .header {
+    padding: 12px 14px;
+    background: linear-gradient(180deg, #2a2a2a, #1a1a1a);
+    border-bottom: 1px solid #000;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .barra-notif .header h3 {
+    font-size: 14px; letter-spacing: .5px; color: #fff;
+  }
+  .barra-notif .header .contador {
+    background: #f44336; color: #fff; font-size: 11px; font-weight: bold;
+    padding: 2px 8px; border-radius: 10px;
+  }
+
+  .lista-notif {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .lista-notif::-webkit-scrollbar { width: 8px; }
+  .lista-notif::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+
+  .notif {
+    background: #232323;
+    border-left: 4px solid #009999;
+    border-radius: 4px;
+    padding: 10px 12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.5);
+    font-size: 12px;
+    transition: background .2s;
+  }
+  .notif:hover { background: #2c2c2c; cursor: pointer; }
+
+  .notif .titulo {
+    display: flex; justify-content: space-between; align-items: center;
+    font-weight: bold; color: #4dd0e1; margin-bottom: 4px;
+  }
+  .notif .titulo .hora { color: #888; font-weight: normal; font-size: 11px; }
+  .notif .linea { color: #ccc; line-height: 1.45; }
+  .notif .linea b { color: #fff; }
+
+  /* Animacion stroboscopica al llegar (parpadeo de colores 1 seg) */
+  @keyframes flash {
+    0%   { background: #009999; border-left-color:#fff; }
+    25%  { background: #f44336; border-left-color:#fff; }
+    50%  { background: #ffc107; border-left-color:#000; color:#000; }
+    75%  { background: #4caf50; border-left-color:#fff; }
+    100% { background: #232323; border-left-color:#009999; }
+  }
+  .notif.nueva { animation: flash 1s ease-in-out 1; }
+
+  /* Animacion de entrada deslizando */
+  @keyframes slideIn {
+    from { transform: translateY(-12px); opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+  }
+  .notif { animation: slideIn .35s ease-out; }
+
+  /* footer barra */
+  .barra-notif .footer {
+    padding: 8px 12px;
+    border-top: 1px solid #000;
+    background: #1a1a1a;
+    font-size: 11px; color: #888;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .barra-notif .footer button {
+    background: #333; color: #ddd; border: 1px solid #444;
+    padding: 4px 10px; font-size: 11px; cursor: pointer; border-radius: 3px;
+  }
+  .barra-notif .footer button:hover { background:#444; }
+
+  /* Boton de prueba para simular nueva orden */
+  .test-btn {
+    position: fixed; bottom: 16px; left: 16px;
+    background: #009999; color: #fff; border: none;
+    padding: 10px 16px; font-weight: bold; cursor: pointer; border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.6);
+  }
+</style>
+</head>
+<body>
+
+<div class="ventana">
+
+  <div class="menu-bar">
+    <span>Archivo</span><span>Inventario</span><span>Ventas</span>
+    <span>Reportes</span><span>Configuracion</span><span>Ayuda</span>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn-rojo">Facturar</button>
+    <button class="btn-negro">Ver Facturas</button>
+    <button class="btn-amber">Devoluciones</button>
+    <button class="btn-teal">Productos</button>
+    <button class="btn-teal">Ingreso productos</button>
+    <button class="btn-vino">Generar Orden</button>
+    <button class="btn-vino">Ver Ordenes</button>
+    <button class="btn-rojo">Cotizar</button>
+  </div>
+
+  <div class="cuerpo">
+
+    <!-- JDesktopPane (80%) -->
+    <div class="jdesktop">
+      <div class="marca-agua">BODEGA TECNIREPUESTOS</div>
+    </div>
+
+    <!-- Barra notificaciones (20%) -->
+    <aside class="barra-notif">
+      <div class="header">
+        <h3>NOTIFICACIONES</h3>
+        <span class="contador" id="contador">3</span>
+      </div>
+
+      <div class="lista-notif" id="lista">
+        <!-- ejemplos iniciales -->
+        <div class="notif">
+          <div class="titulo">Nueva Orden #1042 <span class="hora">10:24</span></div>
+          <div class="linea">Factura: <b>FE-00875</b></div>
+          <div class="linea">Cliente: <b>Juan Perez Rodriguez</b></div>
+          <div class="linea">Bodega: <b>Principal</b></div>
+        </div>
+        <div class="notif">
+          <div class="titulo">Nueva Orden #1041 <span class="hora">10:22</span></div>
+          <div class="linea">Factura: <b>FE-00874</b></div>
+          <div class="linea">Cliente: <b>Maria Lopez S.A.S.</b></div>
+          <div class="linea">Bodega: <b>Sucursal Norte</b></div>
+        </div>
+        <div class="notif">
+          <div class="titulo">Nueva Orden #1040 <span class="hora">10:18</span></div>
+          <div class="linea">Factura: <b>FE-00873</b></div>
+          <div class="linea">Cliente: <b>Distribuidora El Sol</b></div>
+          <div class="linea">Bodega: <b>Principal</b></div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span id="info">Maximo 20 notificaciones</span>
+        <button onclick="limpiar()">Limpiar</button>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<button class="test-btn" onclick="simularNueva()">+ Simular nueva orden</button>
+
+<script>
+  const MAX = 20;
+  let contadorOrden = 1042;
+  const clientes = [
+    "Carlos Ramirez","Distribuidora La 14","Inversiones JJ","Agroindustrias Valle",
+    "Maria Lopez S.A.S.","Pedro Gomez","Talleres Diaz","Comercial El Norte"
+  ];
+  const bodegas = ["Principal","Sucursal Norte","Sucursal Sur","Bodega Centro"];
+
+  function simularNueva() {
+    contadorOrden++;
+    const lista = document.getElementById("lista");
+    const ahora = new Date();
+    const hh = String(ahora.getHours()).padStart(2,"0");
+    const mm = String(ahora.getMinutes()).padStart(2,"0");
+    const cliente = clientes[Math.floor(Math.random()*clientes.length)];
+    const bodega  = bodegas[Math.floor(Math.random()*bodegas.length)];
+    const factura = "FE-00" + (800 + Math.floor(Math.random()*200));
+
+    const div = document.createElement("div");
+    div.className = "notif nueva";
+    div.innerHTML = `
+      <div class="titulo">Nueva Orden #${contadorOrden} <span class="hora">${hh}:${mm}</span></div>
+      <div class="linea">Factura: <b>${factura}</b></div>
+      <div class="linea">Cliente: <b>${cliente}</b></div>
+      <div class="linea">Bodega: <b>${bodega}</b></div>
+    `;
+    lista.insertBefore(div, lista.firstChild);
+
+    // Recortar al maximo
+    while (lista.children.length > MAX) {
+      lista.removeChild(lista.lastChild);
+    }
+    actualizarContador();
+  }
+
+  function limpiar() {
+    document.getElementById("lista").innerHTML = "";
+    actualizarContador();
+  }
+
+  function actualizarContador() {
+    document.getElementById("contador").textContent =
+      document.getElementById("lista").children.length;
+  }
+
+  // Demo: cada 5 seg llega una nueva
+  setInterval(simularNueva, 5000);
+</script>
+
+</body>
+</html>

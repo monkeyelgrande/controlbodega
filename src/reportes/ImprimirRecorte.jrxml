@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="ImprimirFactura_MC" language="groovy" pageWidth="610" pageHeight="423" columnWidth="570" leftMargin="20" rightMargin="20" topMargin="14" bottomMargin="20" uuid="5d1b9e38-61e2-4cf7-833d-8e970173a13b">
+	<property name="ireport.zoom" value="1.6105100000000183"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="id_factura" class="java.lang.Integer">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[select p.codigo_barras, p.descripcion,  uni.nombre as unidad, fd.cantidad, u.user_name
+from recortes_detalle fd, recortes_cabecera fc, productos p, users u, unidades_medidas uni where fc.id_producto=p.id and fd.id_cabecera=fc.id and fc.id_user=u.id and p.id_unidad=uni.id and fd.id=$P{id_factura}]]>
+	</queryString>
+	<field name="codigo_barras" class="java.lang.String"/>
+	<field name="descripcion" class="java.lang.String"/>
+	<field name="unidad" class="java.lang.String"/>
+	<field name="cantidad" class="java.lang.Double"/>
+	<field name="user_name" class="java.lang.String"/>
+	<background>
+		<band height="361">
+			<image>
+				<reportElement x="161" y="87" width="235" height="230" uuid="9704398e-e66f-4706-b04f-3a525fa8a313"/>
+				<imageExpression><![CDATA["C:\\background.jpg"]]></imageExpression>
+			</image>
+		</band>
+	</background>
+	<pageHeader>
+		<band height="165">
+			<subreport>
+				<reportElement x="-10" y="-9" width="581" height="149" uuid="8030f465-7535-4c36-ac4a-ffebe1e23089"/>
+				<subreportParameter name="id_factura">
+					<subreportParameterExpression><![CDATA[$P{id_factura}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "Recorte_Titulo_MC.jasper"]]></subreportExpression>
+			</subreport>
+			<subreport>
+				<reportElement x="-9" y="140" width="580" height="25" uuid="d56168ca-1f32-45b6-8cbe-7237737c1f48"/>
+				<subreportParameter name="id_factura">
+					<subreportParameterExpression><![CDATA[$P{id_factura}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "Recorte_cliente_MC.jasper"]]></subreportExpression>
+			</subreport>
+		</band>
+	</pageHeader>
+	<columnHeader>
+		<band height="16">
+			<rectangle radius="10">
+				<reportElement mode="Transparent" x="-3" y="0" width="568" height="14" forecolor="#000000" backcolor="#666666" uuid="ddedfbad-be69-406b-8d3a-ca458ed0f985"/>
+			</rectangle>
+			<staticText>
+				<reportElement x="64" y="2" width="325" height="12" uuid="5f2e83e8-9bcb-49e3-aef2-9f8a819143e5"/>
+				<textElement>
+					<font size="9" isBold="true"/>
+				</textElement>
+				<text><![CDATA[DESCRIPCIÓN]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="485" y="2" width="67" height="12" uuid="cf69efcb-58cc-4b4f-8618-db72f8f7be3e"/>
+				<textElement>
+					<font size="9" isBold="true"/>
+				</textElement>
+				<text><![CDATA[CANT.]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="5" y="2" width="57" height="12" uuid="4d5089ec-7e36-49b1-a9c9-fe451453ffb6"/>
+				<textElement>
+					<font size="9" isBold="true"/>
+				</textElement>
+				<text><![CDATA[CÓDIGO]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="396" y="2" width="67" height="12" uuid="97c8724b-c4d6-4d82-a400-48c4a5a83993"/>
+				<textElement>
+					<font size="9" isBold="true"/>
+				</textElement>
+				<text><![CDATA[UNIDAD]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="16">
+			<rectangle>
+				<reportElement x="-10" y="0" width="590" height="16" backcolor="#E3E3E3" uuid="c3d95037-b5ab-4c2e-ac39-bff18c3b171f">
+					<printWhenExpression><![CDATA[new Boolean($V{REPORT_COUNT}.intValue() % 2 == 0)]]></printWhenExpression>
+				</reportElement>
+				<graphicElement>
+					<pen lineColor="#FFFFFF"/>
+				</graphicElement>
+			</rectangle>
+			<textField>
+				<reportElement x="64" y="1" width="325" height="14" uuid="9e3bf1ce-ade4-42e7-94d4-298b7f8495b9"/>
+				<textElement>
+					<font size="11"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{descripcion}]]></textFieldExpression>
+			</textField>
+			<textField pattern="">
+				<reportElement x="484" y="1" width="68" height="14" uuid="c1414561-a9ca-483d-85a7-95f49a03de23"/>
+				<textElement>
+					<font size="11"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{cantidad}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="3" y="1" width="59" height="14" uuid="5c702c15-a952-40b3-ba3a-b252d55d8191"/>
+				<textElement>
+					<font size="11"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{codigo_barras}]]></textFieldExpression>
+			</textField>
+			<textField pattern="">
+				<reportElement x="396" y="1" width="68" height="14" uuid="768f3d79-f3d9-4e22-9396-39fece45e529"/>
+				<textElement>
+					<font size="11"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{unidad}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<columnFooter>
+		<band/>
+	</columnFooter>
+	<pageFooter>
+		<band height="15">
+			<textField>
+				<reportElement mode="Opaque" x="0" y="1" width="530" height="13" backcolor="#E6E6E6" uuid="f7547c18-2ebc-42a1-915f-b88546885ba7"/>
+				<textElement textAlignment="Right">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Página "+$V{PAGE_NUMBER}+" de"]]></textFieldExpression>
+			</textField>
+			<textField pattern="EEEEE dd MMMMM yyyy">
+				<reportElement x="0" y="1" width="100" height="13" uuid="c92bd322-5d12-4084-a23a-1a8857c3fa57"/>
+				<textElement>
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[new java.util.Date()]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement mode="Opaque" x="530" y="1" width="40" height="13" backcolor="#E6E6E6" uuid="2327550f-e17c-4906-89df-30406303d047"/>
+				<textElement>
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+	<lastPageFooter>
+		<band height="85">
+			<textField>
+				<reportElement mode="Opaque" x="0" y="71" width="408" height="13" backcolor="#E6E6E6" uuid="292de5b8-f745-49ab-ba0a-cb605e0bf544"/>
+				<textElement textAlignment="Right">
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Página "+$V{PAGE_NUMBER}+" de"]]></textFieldExpression>
+			</textField>
+			<textField pattern="EEEEE dd MMMMM yyyy">
+				<reportElement x="3" y="71" width="86" height="13" uuid="e215c1e5-c00d-4ee3-b80b-c6b79d2a7d73"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[new java.util.Date()]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement mode="Opaque" x="408" y="71" width="40" height="13" backcolor="#E6E6E6" uuid="38efe4a8-c7b9-4f9f-a8cb-cd0b6fa26a0e"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+			<subreport>
+				<reportElement x="-10" y="0" width="590" height="71" uuid="43aaf13a-a6c0-49de-8fb3-379a8f95e250"/>
+				<subreportParameter name="id_factura">
+					<subreportParameterExpression><![CDATA[$P{id_factura}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "Recorte_Sumas_MC.jasper"]]></subreportExpression>
+			</subreport>
+			<textField>
+				<reportElement mode="Opaque" x="484" y="71" width="86" height="13" backcolor="#E6E6E6" uuid="4e743fae-2018-4a76-9e38-dd71334963fa"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{user_name}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement mode="Opaque" x="448" y="71" width="36" height="13" backcolor="#E6E6E6" uuid="260c3258-cdd4-472b-8706-a81af7209aa2"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[USER:]]></text>
+			</staticText>
+			<line>
+				<reportElement x="90" y="71" width="1" height="13" uuid="31a8160b-f1b8-48dc-a482-cc6a7140ba41"/>
+			</line>
+		</band>
+	</lastPageFooter>
+	<summary>
+		<band/>
+	</summary>
+</jasperReport>
