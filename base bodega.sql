@@ -698,6 +698,9 @@ CREATE TABLE ajustes_inventario_detalle
   cantidad_anterior double precision NOT NULL DEFAULT 0,
   cantidad_nueva double precision NOT NULL DEFAULT 0,
   diferencia double precision NOT NULL DEFAULT 0,
+  pendientes_anterior double precision NOT NULL DEFAULT 0,
+  pendientes_nuevo double precision NOT NULL DEFAULT 0,
+  diferencia_pendientes double precision NOT NULL DEFAULT 0,
   observacion character varying(300),
   CONSTRAINT ajustes_inventario_detalle_pkey PRIMARY KEY (id),
   CONSTRAINT ajustes_inventario_detalle_id_ajuste_cabecera_fkey FOREIGN KEY (id_ajuste_cabecera)
@@ -832,4 +835,44 @@ CREATE INDEX idx_novedades_tipo    ON novedades_facturas (tipo);
 CREATE INDEX idx_novedades_estado  ON novedades_facturas (estado_revision);
 CREATE INDEX idx_novedades_factura ON novedades_facturas (numero_factura);
 CREATE INDEX idx_novedades_codigo  ON novedades_facturas (codigo_normalizado);
+
+-- ============================================================================
+-- TABLA: escaneos_qr_ordenes
+-- ============================================================================
+-- Log de lecturas de codigo QR del modulo "Entregas Rapidas".
+-- Registra cada escaneo (valido o invalido) realizado desde la pantalla
+-- tactil con lector QR. Permite generar reportes historicos de la orden
+-- incluyendo todas sus lecturas.
+-- ============================================================================
+CREATE TABLE escaneos_qr_ordenes
+(
+  id serial NOT NULL,
+  id_factura integer,                       -- NULL si la lectura fue invalida o no resolvio orden
+  id_user integer NOT NULL,                 -- usuario que escaneo
+  id_bodega integer NOT NULL,               -- bodega del usuario al momento del escaneo
+  fecha_escaneo date NOT NULL,
+  hora_escaneo time without time zone NOT NULL,
+  qr_leido character varying(150),          -- texto crudo recibido del lector (auditoria)
+  resultado character varying(30) NOT NULL, -- OK | QR_INVALIDO | ORDEN_NO_EXISTE | OTRA_BODEGA | ANULADA | YA_ENTREGADA
+  accion character varying(30) NOT NULL,    -- NINGUNA | ENTREGA_COMPLETA | ENTREGA_PARCIAL
+  id_entrega_cab integer,                   -- FK a entregas_productos_cabecera si genero entrega
+  pc_origen character varying(80),          -- hostname del PC tactil
+  CONSTRAINT pk_escaneos_qr_ordenes PRIMARY KEY (id),
+  CONSTRAINT fk_escaneos_qr_user FOREIGN KEY (id_user)
+      REFERENCES users (id),
+  CONSTRAINT fk_escaneos_qr_bodega FOREIGN KEY (id_bodega)
+      REFERENCES bodegas (id),
+  CONSTRAINT fk_escaneos_qr_factura FOREIGN KEY (id_factura)
+      REFERENCES facturas_cabeceras (id),
+  CONSTRAINT fk_escaneos_qr_entrega_cab FOREIGN KEY (id_entrega_cab)
+      REFERENCES entregas_productos_cabecera (id) ON DELETE SET NULL
+)
+WITH (
+  OIDS=FALSE
+);
+
+CREATE INDEX idx_escaneos_qr_id_factura ON escaneos_qr_ordenes (id_factura);
+CREATE INDEX idx_escaneos_qr_fecha      ON escaneos_qr_ordenes (fecha_escaneo);
+CREATE INDEX idx_escaneos_qr_user       ON escaneos_qr_ordenes (id_user);
+CREATE INDEX idx_escaneos_qr_bodega     ON escaneos_qr_ordenes (id_bodega);
 CREATE INDEX idx_novedades_fecha   ON novedades_facturas (fecha_deteccion DESC);

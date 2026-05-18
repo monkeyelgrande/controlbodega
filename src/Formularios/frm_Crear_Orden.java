@@ -90,13 +90,25 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
         Bodegas bod = new Bodegas();
         bod.mostrarBodegas(jbox_bodega);
 
-        // Selecciona la 3a bodega como predeterminada (legado);
-        // si hay menos, cae a la última disponible para no reventar.
         int total_bodegas = jbox_bodega.getItemCount();
-        if (total_bodegas > 2) {
-            jbox_bodega.setSelectedIndex(2);
-        } else if (total_bodegas > 0) {
-            jbox_bodega.setSelectedIndex(total_bodegas - 1);
+        if (frm_main.perfil == 2 || frm_main.perfil == 3 || frm_main.perfil == 4) {
+            // Perfiles operativos: fijar combo a la bodega del usuario en sesion.
+            for (int i = 0; i < total_bodegas; i++) {
+                if (jbox_bodega.getItemAt(i).getId() == frm_main.id_bodega) {
+                    jbox_bodega.setSelectedIndex(i);
+                    break;
+                }
+            }
+            jbox_bodega.setEnabled(false);
+        } else {
+            // Perfiles 1 (admin) y 5: combo libre.
+            // Selecciona la 3a bodega como predeterminada (legado);
+            // si hay menos, cae a la última disponible para no reventar.
+            if (total_bodegas > 2) {
+                jbox_bodega.setSelectedIndex(2);
+            } else if (total_bodegas > 0) {
+                jbox_bodega.setSelectedIndex(total_bodegas - 1);
+            }
         }
 
         lbl_id_cliente.setText("1");
@@ -317,8 +329,16 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
         } catch (Exception m) {
         }
         modeloProductos.setColumnIdentifiers(new Object[]{"Código", "Descripción", "Unidad", "stock"});
-        String consulta = "select p.codigo_barras, p.descripcion, u.nombre as unidad, COALESCE(sp.stock, 0) as stock "
-                + "from productos p LEFT JOIN (SELECT id_producto, SUM(cantidad) as stock FROM stock_productos GROUP BY id_producto) sp ON sp.id_producto = p.id, unidades_medidas u where p.id_unidad=u.id AND COALESCE(p.estado, true) = true";
+        String consulta;
+        if (frm_main.perfil == 2 || frm_main.perfil == 3 || frm_main.perfil == 4) {
+            // Perfiles operativos: stock solo de la bodega del usuario.
+            consulta = "select p.codigo_barras, p.descripcion, u.nombre as unidad, COALESCE(sp.stock, 0) as stock "
+                    + "from productos p LEFT JOIN (SELECT id_producto, cantidad as stock FROM stock_productos WHERE id_bodega = " + frm_main.id_bodega + ") sp ON sp.id_producto = p.id, unidades_medidas u where p.id_unidad=u.id AND COALESCE(p.estado, true) = true";
+        } else {
+            // Perfiles 1 (admin) y 5: stock total sumado de todas las bodegas.
+            consulta = "select p.codigo_barras, p.descripcion, u.nombre as unidad, COALESCE(sp.stock, 0) as stock "
+                    + "from productos p LEFT JOIN (SELECT id_producto, SUM(cantidad) as stock FROM stock_productos GROUP BY id_producto) sp ON sp.id_producto = p.id, unidades_medidas u where p.id_unidad=u.id AND COALESCE(p.estado, true) = true";
+        }
 //        System.out.println(consulta);
         ResultSet rs = DB_consultas_R_D.getTabla(consulta);
 
@@ -1106,7 +1126,43 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
             txt_codigo_barras.requestFocus();
         } else {
             boolean flag = true;
-            // ... validación de stock existente ...
+            int idBodegaValidacion;
+            String nombreBodegaValidacion;
+            try {
+                idBodegaValidacion = jbox_bodega.getItemAt(jbox_bodega.getSelectedIndex()).getId();
+                nombreBodegaValidacion = jbox_bodega.getSelectedItem().toString();
+            } catch (Exception e) {
+                idBodegaValidacion = id_bodega;
+                nombreBodegaValidacion = "asignada";
+            }
+            for (int i = 0; i < jtabla_Ventas.getRowCount(); i++) {
+                int idFacturaRef = 0;
+                try {
+                    idFacturaRef = Integer.parseInt(modelo_ventas.getValueAt(i, 4).toString());
+                } catch (Exception e) {
+                    idFacturaRef = 0;
+                }
+                if (idFacturaRef != 0) {
+                    continue;
+                }
+                double can = 0;
+                try {
+                    can = Double.parseDouble("" + modelo_ventas.getValueAt(i, 3));
+                } catch (NumberFormatException e) {
+                    can = 1;
+                }
+                double stock = DB_consultas_R_D.consultar_stock_x_bodega("" + modelo_ventas.getValueAt(i, 1), idBodegaValidacion);
+                if (can > stock) {
+                    flag = false;
+                    int dialogButton = JOptionPane.YES_NO_OPTION;
+                    int dialogResult = JOptionPane.showConfirmDialog(null, "El producto " + modelo_ventas.getValueAt(i, 2) + " solo cuenta con un inventario de:\n"
+                            + stock + " en la bodega " + nombreBodegaValidacion + "\n¿Desea continuar esta  orden sin inventario suficiente?\n"
+                            + "el balance le dara negativo", "Alerta", dialogButton);
+                    if (dialogResult == JOptionPane.YES_OPTION) {
+                        flag = true;
+                    }
+                }
+            }
 
             if (flag) {
                 lbl_numerofactura.setText(DB_consultas_R_D.cargarId("facturas_cabeceras"));

@@ -20,12 +20,16 @@ import com.lowagie.text.pdf.PdfPageEventHelper;
 import com.lowagie.text.pdf.PdfTemplate;
 import com.lowagie.text.pdf.PdfWriter;
 import conexiondb.DB_consultas_R_D;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.printing.PDFPageable;
 
 import javax.imageio.ImageIO;
+import javax.print.PrintService;
 import javax.swing.JOptionPane;
 import java.awt.Color;
 import java.awt.Desktop;
 import java.awt.image.BufferedImage;
+import java.awt.print.PrinterJob;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -80,14 +84,35 @@ public class ImprimirFacturaPDF {
     // ==================== API publica ====================
 
     /**
-     * Genera el PDF en un archivo temporal y lo abre en el visor PDF
-     * predeterminado del sistema. Desde alli el usuario puede imprimir.
-     * El archivo se elimina al cerrar la JVM (y se intenta borrar tras abrir).
+     * Genera el PDF en un archivo temporal y muestra un dialogo con tres
+     * opciones:
+     *   - Imprimir: envia el PDF directo a la impresora configurada en
+     *     {@code configuraciones.nombre_impresora}. Si no esta configurada o
+     *     no se encuentra en el sistema, abre el archivo como fallback.
+     *   - Ver: abre el PDF en el visor predeterminado del sistema.
+     *   - Cancelar: no hace nada.
      */
     public void imprimir(int idFactura) {
         try {
-            File pdf = generarArchivoTemporal(idFactura);
-            abrirEnVisor(pdf);
+            DatosFactura datos;
+            try (Connection cn = DB_consultas_R_D.getConexion()) {
+                datos = cargarDatos(cn, idFactura);
+            }
+            File pdf = File.createTempFile("orden_" + idFactura + "_", ".pdf");
+            pdf.deleteOnExit();
+            generarPDF(datos, pdf);
+
+            int opcion = mostrarDialogoOpciones(idFactura);
+            switch (opcion) {
+                case 0: // Imprimir
+                    imprimirDirecto(pdf, datos.nombreImpresora);
+                    break;
+                case 1: // Ver
+                    abrirEnVisor(pdf);
+                    break;
+                default: // Cancelar / cerrar dialogo
+                    break;
+            }
         } catch (Exception ex) {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(null,
@@ -101,15 +126,82 @@ public class ImprimirFacturaPDF {
         imprimir(idFactura);
     }
 
-    private File generarArchivoTemporal(int idFactura) throws Exception {
-        DatosFactura datos;
-        try (Connection cn = DB_consultas_R_D.getConexion()) {
-            datos = cargarDatos(cn, idFactura);
+    /**
+     * Muestra el dialogo con tres botones: Imprimir, Ver, Cancelar.
+     * @return 0 = Imprimir, 1 = Ver, 2 = Cancelar (o cerrar dialogo).
+     */
+    private int mostrarDialogoOpciones(int idFactura) {
+        Object[] opciones = { "Imprimir", "Ver", "Cancelar" };
+        int sel = JOptionPane.showOptionDialog(null,
+                "Que deseas hacer con la orden?",
+                "Orden #" + idFactura,
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                opciones,
+                opciones[0]);
+        return sel < 0 ? 2 : sel;
+    }
+
+    /**
+     * Imprime el PDF directamente en la impresora indicada, sin abrir visor.
+     * Usa Apache PDFBox para rasterizar y java.awt.print.PrinterJob para
+     * enviar al servicio de impresion. Si la impresora no esta configurada
+     * o no se encuentra en el sistema, abre el PDF como fallback.
+     */
+    private void imprimirDirecto(File pdf, String nombreImpresora) throws Exception {
+        if (!noVacio(nombreImpresora)) {
+            JOptionPane.showMessageDialog(null,
+                    "No hay impresora configurada en Configuraciones.\nSe abrira el archivo.",
+                    "Impresion", JOptionPane.WARNING_MESSAGE);
+            abrirEnVisor(pdf);
+            return;
         }
-        File out = File.createTempFile("orden_" + idFactura + "_", ".pdf");
-        out.deleteOnExit();
-        generarPDF(datos, out);
-        return out;
+
+        PrintService destino = buscarImpresora(nombreImpresora);
+        if (destino == null) {
+            JOptionPane.showMessageDialog(null,
+                    "No se encontro la impresora '" + nombreImpresora
+                            + "' en el sistema.\nSe abrira el archivo.",
+                    "Impresion", JOptionPane.WARNING_MESSAGE);
+            abrirEnVisor(pdf);
+            return;
+        }
+
+        try (PDDocument documento = PDDocument.load(pdf)) {
+            PrinterJob job = PrinterJob.getPrinterJob();
+            job.setPrintService(destino);
+            job.setJobName("Orden " + pdf.getName());
+            job.setPageable(new PDFPageable(documento));
+            job.print();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(null,
+                    "Fallo la impresion directa:\n" + ex.getMessage()
+                            + "\nSe abrira el archivo.",
+                    "Impresion", JOptionPane.ERROR_MESSAGE);
+            abrirEnVisor(pdf);
+        }
+    }
+
+    /** Busca un PrintService cuyo nombre coincida (case-insensitive). */
+    private PrintService buscarImpresora(String nombre) {
+        if (!noVacio(nombre)) return null;
+        String objetivo = nombre.trim();
+        for (PrintService ps : PrinterJob.lookupPrintServices()) {
+            if (ps.getName().equalsIgnoreCase(objetivo)) {
+                return ps;
+            }
+        }
+        // Segundo intento: coincidencia parcial (algunos drivers cuelgan sufijos
+        // tipo "Canon TS3100 series (Copia 1)").
+        for (PrintService ps : PrinterJob.lookupPrintServices()) {
+            if (ps.getName().toLowerCase(Locale.ROOT)
+                    .contains(objetivo.toLowerCase(Locale.ROOT))) {
+                return ps;
+            }
+        }
+        return null;
     }
 
     private void abrirEnVisor(File pdf) throws Exception {
@@ -130,9 +222,14 @@ public class ImprimirFacturaPDF {
 
     // ==================== Generacion del PDF ====================
 
+    // Altura util de la "media carta" dentro de una hoja carta.
+    // Letter = 612x792 pt; queremos que el diseno solo ocupe los 396 pt superiores.
+    private static final float MEDIA_CARTA_ALTO = 396f;
+
     private void generarPDF(DatosFactura d, File archivo) throws Exception {
-        Rectangle pageSize = new Rectangle(610, 396);
-        Document doc = new Document(pageSize, 20, 20, 14, 20);
+        Rectangle pageSize = PageSize.LETTER;
+        float bottomMargin = pageSize.getHeight() - MEDIA_CARTA_ALTO + 20f;
+        Document doc = new Document(pageSize, 20, 20, 14, bottomMargin);
         PdfWriter writer = PdfWriter.getInstance(doc, new FileOutputStream(archivo));
 
         PageFooterEvent footer = new PageFooterEvent(d);
@@ -503,7 +600,7 @@ public class ImprimirFacturaPDF {
         // Encabezado (negocio + factura + cliente + user)
         String sqlCab =
             "SELECT c.nombre_negocio, c.nit_negocio, c.contacto_negocio, c.contacto2_negocio, " +
-            "       c.direccion, c.pie_legal, c.servicios, " +
+            "       c.direccion, c.pie_legal, c.servicios, c.nombre_impresora, " +
             "       f.codigo, f.fecha, f.hora, f.tipo_factura, f.observacion, " +
             "       ct.cedula, ct.nombre AS nombre_cliente, ct.direccion AS direccion_cliente, ct.contacto, " +
             "       u.user_name " +
@@ -523,6 +620,7 @@ public class ImprimirFacturaPDF {
                     d.direccion        = rs.getString("direccion");
                     d.pieLegal         = rs.getString("pie_legal");
                     d.servicios        = rs.getString("servicios");
+                    d.nombreImpresora  = rs.getString("nombre_impresora");
                     d.codigoFactura    = rs.getString("codigo");
                     d.fechaFactura     = rs.getDate("fecha");
                     d.horaFactura      = rs.getString("hora");
@@ -569,6 +667,7 @@ public class ImprimirFacturaPDF {
     private static class DatosFactura {
         int idFactura;
         String nombreNegocio, nitNegocio, contactoNegocio, contacto2Negocio, direccion, pieLegal, servicios;
+        String nombreImpresora;
         String codigoFactura, tipoFactura, observacion;
         Date fechaFactura;
         String horaFactura;
@@ -599,7 +698,8 @@ public class ImprimirFacturaPDF {
         public void onEndPage(PdfWriter writer, Document doc) {
             PdfContentByte cb = writer.getDirectContent();
             Rectangle r = doc.getPageSize();
-            float y = 14f;
+            // Pie justo encima del fold de la media carta, no en el borde inferior de la hoja carta.
+            float y = r.getHeight() - MEDIA_CARTA_ALTO + 14f;
 
             // linea separadora
             cb.setColorStroke(BORDER_GRAY);

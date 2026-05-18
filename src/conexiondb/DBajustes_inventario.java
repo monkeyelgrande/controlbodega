@@ -6,6 +6,10 @@ import javax.swing.JOptionPane;
 /**
  * Operaciones CRUD para ajustes_inventario_cabecera y ajustes_inventario_detalle.
  *
+ * Cada fila en el detalle puede ajustar:
+ *   - la cantidad fisica (cantidad_anterior/cantidad_nueva/diferencia), y/o
+ *   - la cantidad pendiente (pendientes_anterior/pendientes_nuevo/diferencia_pendientes).
+ *
  * @author M-Work
  */
 public class DBajustes_inventario {
@@ -13,11 +17,13 @@ public class DBajustes_inventario {
     /**
      * Guarda un ajuste completo (cabecera + detalles) y aplica los movimientos de stock.
      *
-     * @param idUser      ID del usuario que realiza el ajuste
-     * @param idBodega    ID de la bodega
-     * @param observacion Observacion general del ajuste
-     * @param productos   Array de {idProducto, cantidadAnterior, cantidadNueva, diferencia}
-     * @param obsProductos Array de observaciones por producto (puede ser null en posiciones)
+     * @param idUser       ID del usuario que realiza el ajuste
+     * @param idBodega     ID de la bodega
+     * @param observacion  Observacion general del ajuste
+     * @param productos    Array de 7 columnas por fila:
+     *                       [idProducto, cantAnterior, cantNueva, difCant,
+     *                        pendAnterior, pendNueva, difPend]
+     * @param obsProductos Array de observaciones por producto (puede ser null)
      * @return ID de la cabecera creada, o -1 si falla
      */
     public int guardar(int idUser, int idBodega, String observacion,
@@ -52,24 +58,33 @@ public class DBajustes_inventario {
                 return -1;
             }
 
-            // 2. Insertar detalles
+            // 2. Insertar detalles (cantidad + pendientes)
             String sqlDet = "INSERT INTO ajustes_inventario_detalle "
-                    + "(id_ajuste_cabecera, id_producto, cantidad_anterior, cantidad_nueva, diferencia, observacion) "
-                    + "VALUES (?, ?, ?, ?, ?, ?)";
+                    + "(id_ajuste_cabecera, id_producto, "
+                    + "cantidad_anterior, cantidad_nueva, diferencia, "
+                    + "pendientes_anterior, pendientes_nuevo, diferencia_pendientes, "
+                    + "observacion) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             PreparedStatement psDet = con.prepareStatement(sqlDet);
 
             for (int i = 0; i < productos.length; i++) {
                 int idProducto = (int) productos[i][0];
                 double cantAnterior = productos[i][1];
-                double cantNueva = productos[i][2];
-                double diferencia = productos[i][3];
+                double cantNueva    = productos[i][2];
+                double difCant      = productos[i][3];
+                double pendAnterior = productos[i][4];
+                double pendNueva    = productos[i][5];
+                double difPend      = productos[i][6];
 
                 psDet.setInt(1, idCabecera);
                 psDet.setInt(2, idProducto);
                 psDet.setDouble(3, cantAnterior);
                 psDet.setDouble(4, cantNueva);
-                psDet.setDouble(5, diferencia);
-                psDet.setString(6, obsProductos != null && i < obsProductos.length ? obsProductos[i] : null);
+                psDet.setDouble(5, difCant);
+                psDet.setDouble(6, pendAnterior);
+                psDet.setDouble(7, pendNueva);
+                psDet.setDouble(8, difPend);
+                psDet.setString(9, obsProductos != null && i < obsProductos.length ? obsProductos[i] : null);
                 psDet.addBatch();
             }
             psDet.executeBatch();
@@ -81,16 +96,22 @@ public class DBajustes_inventario {
             DBstock_productos dbStock = new DBstock_productos();
             for (int i = 0; i < productos.length; i++) {
                 int idProducto = (int) productos[i][0];
-                double diferencia = productos[i][3];
+                double difCant = productos[i][3];
+                double difPend = productos[i][6];
 
-                if (diferencia != 0) {
-                    boolean esPositivo = diferencia > 0;
-                    String obs = "Ajuste #" + idCabecera;
-                    if (obsProductos != null && i < obsProductos.length && obsProductos[i] != null) {
-                        obs += " - " + obsProductos[i];
-                    }
+                String obsBase = "Ajuste #" + idCabecera;
+                if (obsProductos != null && i < obsProductos.length && obsProductos[i] != null
+                        && !obsProductos[i].trim().isEmpty()) {
+                    obsBase += " - " + obsProductos[i];
+                }
+
+                if (difCant != 0) {
                     dbStock.ajuste(idProducto, idBodega, idUser,
-                            Math.abs(diferencia), esPositivo, obs);
+                            Math.abs(difCant), difCant > 0, obsBase);
+                }
+                if (difPend != 0) {
+                    dbStock.ajustePendientes(idProducto, idBodega, idUser,
+                            Math.abs(difPend), difPend > 0, obsBase + " (pendientes)");
                 }
             }
 
@@ -109,11 +130,8 @@ public class DBajustes_inventario {
     }
 
     /**
-     * Elimina (anula) un ajuste de inventario, revirtiendo los movimientos de stock.
-     *
-     * @param idCabecera ID del ajuste a eliminar
-     * @param idUser     ID del usuario que anula
-     * @return true si se anulo correctamente
+     * Elimina (anula) un ajuste de inventario, revirtiendo los movimientos de stock
+     * (tanto cantidad como pendientes).
      */
     public boolean eliminar(int idCabecera, int idUser) {
         Connection con = null;
@@ -144,22 +162,29 @@ public class DBajustes_inventario {
 
             // 2. Obtener detalles para revertir
             PreparedStatement psDet = con.prepareStatement(
-                    "SELECT id_producto, diferencia FROM ajustes_inventario_detalle WHERE id_ajuste_cabecera = ?");
+                    "SELECT id_producto, diferencia, diferencia_pendientes "
+                    + "FROM ajustes_inventario_detalle "
+                    + "WHERE id_ajuste_cabecera = ?");
             psDet.setInt(1, idCabecera);
             ResultSet rsDet = psDet.executeQuery();
 
-            // 3. Revertir stock (invertir la diferencia)
+            // 3. Revertir stock (invertir las diferencias)
             DBstock_productos dbStock = new DBstock_productos();
             while (rsDet.next()) {
                 int idProducto = rsDet.getInt("id_producto");
-                double diferencia = rsDet.getDouble("diferencia");
+                double difCant = rsDet.getDouble("diferencia");
+                double difPend = rsDet.getDouble("diferencia_pendientes");
 
-                if (diferencia != 0) {
+                String obsBase = "Anulacion ajuste #" + idCabecera;
+
+                if (difCant != 0) {
                     // Revertir: si fue +5, ahora es -5
-                    boolean esPositivo = diferencia < 0; // invertido
                     dbStock.ajuste(idProducto, idBodega, idUser,
-                            Math.abs(diferencia), esPositivo,
-                            "Anulacion ajuste #" + idCabecera);
+                            Math.abs(difCant), difCant < 0, obsBase);
+                }
+                if (difPend != 0) {
+                    dbStock.ajustePendientes(idProducto, idBodega, idUser,
+                            Math.abs(difPend), difPend < 0, obsBase + " (pendientes)");
                 }
             }
             rsDet.close();

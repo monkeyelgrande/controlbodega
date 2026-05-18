@@ -1,31 +1,30 @@
 package Formularios;
 
+import Metodos.FontAwesome;
 import Metodos.metodos;
 import conexiondb.DB_consultas_R_D;
 import conexiondb.DBajustes_inventario;
 import modelos.Bodegas;
 
 import javax.swing.*;
-import javax.swing.border.AbstractBorder;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.geom.RoundRectangle2D;
 import java.sql.ResultSet;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
-import javax.swing.RowFilter;
-import javax.swing.table.TableRowSorter;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
 
 /**
  * Dialogo para crear o ver un ajuste de inventario.
- * Estilo Material Design.
+ * Soporta ajustar tanto la cantidad fisica como los pendientes.
  *
  * @author M-Work
  */
@@ -43,21 +42,47 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
     private static final Color SELECTION     = new Color(197, 202, 233);
     private static final Color SUCCESS       = new Color(67, 160, 71);
     private static final Color DANGER        = new Color(229, 57, 53);
+    private static final Color INFO_BG       = new Color(232, 234, 246);
     private static final String FONT_FAMILY  = "Segoe UI";
+
+    // Indices de columnas (mantener sincronizados con la creacion del modelo)
+    private static final int COL_ID         = 0;
+    private static final int COL_CODIGO     = 1;
+    private static final int COL_DESC       = 2;
+    private static final int COL_CANT_ACT   = 3;
+    private static final int COL_CANT_NUEVA = 4;
+    private static final int COL_DIF_CANT   = 5;
+    private static final int COL_PEND_ACT   = 6;
+    private static final int COL_PEND_NUEVA = 7;
+    private static final int COL_DIF_PEND   = 8;
+    private static final int COL_NOTA       = 9;
 
     // Componentes
     private JTextField txtCodigoBarras;
     private JTextField txtCantidadNueva;
+    private JTextField txtPendientesNueva;
     private JTextField txtObsProducto;
     private JTextField txtObsGeneral;
     private JComboBox<Bodegas> cmbBodega;
     private JTable tabla;
     private DefaultTableModel modelo;
     private JLabel lblTotal;
+    private JLabel lblInfoActual;
     private JButton btnGuardar;
+    private JButton btnEliminarFila;
+
+    // Estado del producto previsualizado
+    private int previewIdProducto = -1;
+    private String previewDescripcion = "";
+    private double previewCantActual = 0;
+    private double previewPendActual = 0;
 
     private boolean modoVer = false;
-    private final DecimalFormat df = new DecimalFormat("###,###.##");
+    // Símbolos fijos: agrupador ',' y decimal '.', para que el formateo coincida
+    // con parseNum() sin importar el locale del sistema (en es-* el agrupador
+    // por defecto es '.', lo que corrompía 40.000 -> 40 al re-parsear).
+    private final DecimalFormat df = new DecimalFormat("###,###.##",
+            new DecimalFormatSymbols(Locale.US));
 
     public jd_crear_ajuste_inventario(java.awt.Frame parent, boolean modal) {
         super(parent, modal);
@@ -73,12 +98,14 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
         modoVer = true;
         txtCodigoBarras.setEnabled(false);
         txtCantidadNueva.setEnabled(false);
+        txtPendientesNueva.setEnabled(false);
         txtObsProducto.setEnabled(false);
         txtObsGeneral.setEnabled(false);
         cmbBodega.setEnabled(false);
         btnGuardar.setVisible(false);
+        btnEliminarFila.setVisible(false);
 
-        // Cargar cabecera
+        // Cabecera
         try {
             ResultSet rsCab = DB_consultas_R_D.getTabla(
                     "SELECT a.id, a.fecha, a.hora, b.nombre as bodega, a.observacion, a.estado, a.id_bodega "
@@ -92,7 +119,6 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
                         + (rsCab.getInt("estado") == 0 ? " [ANULADO]" : ""));
                 txtObsGeneral.setText(rsCab.getString("observacion") != null ? rsCab.getString("observacion") : "");
 
-                // Seleccionar bodega
                 String bodegaNombre = rsCab.getString("bodega");
                 for (int i = 0; i < cmbBodega.getItemCount(); i++) {
                     if (cmbBodega.getItemAt(i).toString().equals(bodegaNombre)) {
@@ -106,25 +132,31 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
             System.err.println("Error cargando cabecera: " + e.getMessage());
         }
 
-        // Cargar detalles
+        // Detalles
         modelo.setRowCount(0);
         try {
             ResultSet rsDet = DB_consultas_R_D.getTabla(
                     "SELECT d.id_producto, p.codigo_barras, p.descripcion, "
-                    + "d.cantidad_anterior, d.cantidad_nueva, d.diferencia, d.observacion "
+                    + "d.cantidad_anterior, d.cantidad_nueva, d.diferencia, "
+                    + "d.pendientes_anterior, d.pendientes_nuevo, d.diferencia_pendientes, "
+                    + "d.observacion "
                     + "FROM ajustes_inventario_detalle d "
                     + "JOIN productos p ON p.id = d.id_producto "
                     + "WHERE d.id_ajuste_cabecera = " + idAjuste
                     + " ORDER BY d.id");
             while (rsDet.next()) {
-                double dif = rsDet.getDouble("diferencia");
+                double difC = rsDet.getDouble("diferencia");
+                double difP = rsDet.getDouble("diferencia_pendientes");
                 modelo.addRow(new Object[]{
                     rsDet.getString("id_producto"),
                     rsDet.getString("codigo_barras"),
                     rsDet.getString("descripcion"),
                     df.format(rsDet.getDouble("cantidad_anterior")),
                     df.format(rsDet.getDouble("cantidad_nueva")),
-                    (dif >= 0 ? "+" : "") + df.format(dif),
+                    (difC >= 0 ? "+" : "") + df.format(difC),
+                    df.format(rsDet.getDouble("pendientes_anterior")),
+                    df.format(rsDet.getDouble("pendientes_nuevo")),
+                    (difP >= 0 ? "+" : "") + df.format(difP),
                     rsDet.getString("observacion") != null ? rsDet.getString("observacion") : ""
                 });
             }
@@ -141,8 +173,8 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
     // ================================================================
     private void initComponentes() {
         setTitle("Nuevo Ajuste de Inventario");
-        setSize(1000, 650);
-        setMinimumSize(new Dimension(850, 550));
+        setSize(1180, 680);
+        setMinimumSize(new Dimension(1000, 580));
         getContentPane().setBackground(SURFACE);
         setLayout(new BorderLayout());
 
@@ -198,7 +230,8 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
         // Fila 0: Labels
         c.gridy = 0;
         c.gridx = 0; card.add(buildLabel("BODEGA"), c);
-        c.gridx = 1; card.add(buildLabel("OBSERVACI\u00d3N GENERAL"), c);
+        c.gridx = 1; c.gridwidth = 3; card.add(buildLabel("OBSERVACIÓN GENERAL"), c);
+        c.gridwidth = 1;
 
         // Fila 1: Bodega + Observacion general
         c.gridy = 1;
@@ -206,32 +239,36 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
         cmbBodega.setFont(new Font(FONT_FAMILY, Font.PLAIN, 13));
         cmbBodega.setPreferredSize(new Dimension(220, 34));
         new Bodegas().mostrarBodegas(cmbBodega);
-        // Pre-seleccionar bodega del usuario
         for (int i = 0; i < cmbBodega.getItemCount(); i++) {
             if (cmbBodega.getItemAt(i).getId() == frm_main.id_bodega) {
                 cmbBodega.setSelectedIndex(i);
                 break;
             }
         }
-        c.gridx = 0; c.weightx = 0.3;
+        cmbBodega.addActionListener(new ActionListener() {
+            @Override public void actionPerformed(ActionEvent e) { actualizarPreview(); }
+        });
+        c.gridx = 0; c.weightx = 0.25;
         card.add(cmbBodega, c);
 
         txtObsGeneral = new JTextField();
         txtObsGeneral.setFont(new Font(FONT_FAMILY, Font.PLAIN, 13));
         txtObsGeneral.setPreferredSize(new Dimension(300, 34));
-        c.gridx = 1; c.weightx = 0.7;
+        c.gridx = 1; c.gridwidth = 3; c.weightx = 0.75;
         card.add(txtObsGeneral, c);
+        c.gridwidth = 1;
 
         // Separador visual
-        c.gridy = 2; c.gridx = 0; c.gridwidth = 4; c.weightx = 1;
+        c.gridy = 2; c.gridx = 0; c.gridwidth = 5; c.weightx = 1;
         card.add(new JSeparator(), c);
         c.gridwidth = 1;
 
         // Fila 3: Labels producto
         c.gridy = 3;
-        c.gridx = 0; card.add(buildLabel("C\u00d3DIGO DE BARRAS"), c);
+        c.gridx = 0; card.add(buildLabel("CÓDIGO DE BARRAS"), c);
         c.gridx = 1; card.add(buildLabel("CANTIDAD NUEVA"), c);
-        c.gridx = 2; card.add(buildLabel("NOTA (OPCIONAL)"), c);
+        c.gridx = 2; card.add(buildLabel("PENDIENTES NUEVOS"), c);
+        c.gridx = 3; card.add(buildLabel("NOTA (OPCIONAL)"), c);
 
         // Fila 4: Inputs producto
         c.gridy = 4;
@@ -245,13 +282,11 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
         txtCodigoBarras.setPreferredSize(new Dimension(180, 38));
         panelCodigo.add(txtCodigoBarras, BorderLayout.CENTER);
 
-        JButton btnBuscarProducto = new JButton("\uD83D\uDD0D");
-        btnBuscarProducto.setFont(new Font(FONT_FAMILY, Font.PLAIN, 16));
-        btnBuscarProducto.setPreferredSize(new Dimension(42, 38));
+        JButton btnBuscarProducto = new JButton(FontAwesome.icon(FontAwesome.SEARCH, 16f, Color.WHITE));
+        btnBuscarProducto.setPreferredSize(new Dimension(46, 38));
         btnBuscarProducto.setBackground(PRIMARY);
-        btnBuscarProducto.setForeground(Color.WHITE);
         btnBuscarProducto.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnBuscarProducto.setToolTipText("Buscar producto por nombre o c\u00f3digo");
+        btnBuscarProducto.setToolTipText("Buscar producto por nombre o código");
         btnBuscarProducto.setFocusPainted(false);
         btnBuscarProducto.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
         btnBuscarProducto.addActionListener(new ActionListener() {
@@ -259,48 +294,64 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
         });
         panelCodigo.add(btnBuscarProducto, BorderLayout.EAST);
 
-        c.gridx = 0; c.weightx = 0.3;
+        c.gridx = 0; c.weightx = 0.25;
         card.add(panelCodigo, c);
 
         txtCantidadNueva = new JTextField();
         txtCantidadNueva.setFont(new Font(FONT_FAMILY, Font.BOLD, 16));
         txtCantidadNueva.setPreferredSize(new Dimension(140, 38));
-        c.gridx = 1; c.weightx = 0.2;
+        txtCantidadNueva.setToolTipText("Dejar vacio para no modificar la cantidad fisica");
+        c.gridx = 1; c.weightx = 0.18;
         card.add(txtCantidadNueva, c);
+
+        txtPendientesNueva = new JTextField();
+        txtPendientesNueva.setFont(new Font(FONT_FAMILY, Font.BOLD, 16));
+        txtPendientesNueva.setPreferredSize(new Dimension(140, 38));
+        txtPendientesNueva.setToolTipText("Dejar vacio para no modificar los pendientes");
+        c.gridx = 2; c.weightx = 0.18;
+        card.add(txtPendientesNueva, c);
 
         txtObsProducto = new JTextField();
         txtObsProducto.setFont(new Font(FONT_FAMILY, Font.PLAIN, 13));
-        txtObsProducto.setPreferredSize(new Dimension(250, 38));
-        c.gridx = 2; c.weightx = 0.5;
+        txtObsProducto.setPreferredSize(new Dimension(220, 38));
+        c.gridx = 3; c.weightx = 0.39;
         card.add(txtObsProducto, c);
+
+        // Fila 5: Preview del stock actual del producto
+        c.gridy = 5;
+        lblInfoActual = new JLabel(" ");
+        lblInfoActual.setFont(new Font(FONT_FAMILY, Font.PLAIN, 12));
+        lblInfoActual.setForeground(TEXT_SECOND);
+        lblInfoActual.setOpaque(true);
+        lblInfoActual.setBackground(INFO_BG);
+        lblInfoActual.setBorder(new EmptyBorder(6, 10, 6, 10));
+        c.gridx = 0; c.gridwidth = 4; c.weightx = 1;
+        card.add(lblInfoActual, c);
+        c.gridwidth = 1;
 
         // Listeners
         txtCodigoBarras.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    actualizarPreview();
                     txtCantidadNueva.requestFocus();
                 }
             }
         });
-
-        txtCantidadNueva.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    agregarProducto();
-                }
-            }
+        txtCodigoBarras.addFocusListener(new FocusAdapter() {
+            @Override public void focusLost(FocusEvent e) { actualizarPreview(); }
         });
 
-        txtObsProducto.addKeyListener(new KeyAdapter() {
+        KeyAdapter enterAgrega = new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    agregarProducto();
-                }
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) agregarProducto();
             }
-        });
+        };
+        txtCantidadNueva.addKeyListener(enterAgrega);
+        txtPendientesNueva.addKeyListener(enterAgrega);
+        txtObsProducto.addKeyListener(enterAgrega);
 
         return card;
     }
@@ -318,7 +369,10 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
         card.setBorder(BorderFactory.createLineBorder(DIVIDER));
 
         modelo = new DefaultTableModel(
-                new Object[]{"ID", "C\u00d3DIGO", "DESCRIPCI\u00d3N", "CANT. ACTUAL", "CANT. NUEVA", "DIFERENCIA", "NOTA"}, 0) {
+                new Object[]{"ID", "CÓDIGO", "DESCRIPCIÓN",
+                        "CANT. ACT.", "CANT. NUEVA", "DIF. CANT.",
+                        "PEND. ACT.", "PEND. NUEVO", "DIF. PEND.",
+                        "NOTA"}, 0) {
             @Override public boolean isCellEditable(int row, int col) { return false; }
         };
 
@@ -343,7 +397,7 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
                 l.setForeground(TEXT_SECOND);
                 l.setFont(new Font(FONT_FAMILY, Font.BOLD, 11));
                 l.setBorder(new EmptyBorder(8, 10, 8, 10));
-                if (col >= 3 && col <= 5) l.setHorizontalAlignment(SwingConstants.RIGHT);
+                if (col >= COL_CANT_ACT && col <= COL_DIF_PEND) l.setHorizontalAlignment(SwingConstants.RIGHT);
                 else l.setHorizontalAlignment(SwingConstants.LEFT);
                 return l;
             }
@@ -351,7 +405,7 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
         header.setPreferredSize(new Dimension(0, 40));
         header.setReorderingAllowed(false);
 
-        // Cell renderer con colores para diferencia
+        // Renderer con colores para diferencias
         tabla.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable t, Object value,
@@ -369,15 +423,15 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
                     l.setForeground(TEXT_PRIMARY);
                 }
 
-                if (col >= 3 && col <= 5) {
+                if (col >= COL_CANT_ACT && col <= COL_DIF_PEND) {
                     l.setHorizontalAlignment(SwingConstants.RIGHT);
                     l.setFont(new Font(FONT_FAMILY, Font.BOLD, 13));
                 } else {
                     l.setHorizontalAlignment(SwingConstants.LEFT);
                 }
 
-                // Colorear diferencia
-                if (col == 5 && value != null && !sel) {
+                // Color en columnas de diferencia
+                if ((col == COL_DIF_CANT || col == COL_DIF_PEND) && value != null && !sel) {
                     String s = value.toString().replace(",", "").replace("+", "");
                     try {
                         double v = Double.parseDouble(s);
@@ -390,16 +444,18 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
             }
         });
 
-        // Anchos
         TableColumnModel cm = tabla.getColumnModel();
-        cm.getColumn(0).setPreferredWidth(50);
-        cm.getColumn(0).setMaxWidth(70);
-        cm.getColumn(1).setPreferredWidth(120);
-        cm.getColumn(2).setPreferredWidth(300);
-        cm.getColumn(3).setPreferredWidth(100);
-        cm.getColumn(4).setPreferredWidth(100);
-        cm.getColumn(5).setPreferredWidth(100);
-        cm.getColumn(6).setPreferredWidth(150);
+        cm.getColumn(COL_ID).setPreferredWidth(45);
+        cm.getColumn(COL_ID).setMaxWidth(60);
+        cm.getColumn(COL_CODIGO).setPreferredWidth(110);
+        cm.getColumn(COL_DESC).setPreferredWidth(240);
+        cm.getColumn(COL_CANT_ACT).setPreferredWidth(85);
+        cm.getColumn(COL_CANT_NUEVA).setPreferredWidth(95);
+        cm.getColumn(COL_DIF_CANT).setPreferredWidth(85);
+        cm.getColumn(COL_PEND_ACT).setPreferredWidth(85);
+        cm.getColumn(COL_PEND_NUEVA).setPreferredWidth(95);
+        cm.getColumn(COL_DIF_PEND).setPreferredWidth(85);
+        cm.getColumn(COL_NOTA).setPreferredWidth(140);
 
         // Tecla Delete para eliminar fila
         tabla.getInputMap(JComponent.WHEN_FOCUSED).put(
@@ -436,11 +492,14 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
         JPanel panelAcciones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         panelAcciones.setOpaque(false);
 
-        JButton btnEliminarFila = new JButton("Eliminar fila");
+        btnEliminarFila = new JButton("Eliminar fila",
+                FontAwesome.icon(FontAwesome.TRASH, 14f, DANGER));
         btnEliminarFila.setFont(new Font(FONT_FAMILY, Font.BOLD, 12));
         btnEliminarFila.setForeground(DANGER);
         btnEliminarFila.setBackground(CARD_BG);
+        btnEliminarFila.setFocusPainted(false);
         btnEliminarFila.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnEliminarFila.setIconTextGap(8);
         btnEliminarFila.addActionListener(new ActionListener() {
             @Override public void actionPerformed(ActionEvent e) {
                 if (modoVer) return;
@@ -452,12 +511,15 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
             }
         });
 
-        btnGuardar = new JButton("GUARDAR AJUSTE");
+        btnGuardar = new JButton("GUARDAR AJUSTE",
+                FontAwesome.icon(FontAwesome.SAVE, 15f, Color.WHITE));
         btnGuardar.setFont(new Font(FONT_FAMILY, Font.BOLD, 13));
         btnGuardar.setForeground(Color.WHITE);
         btnGuardar.setBackground(PRIMARY);
-        btnGuardar.setBorder(new EmptyBorder(12, 30, 12, 30));
+        btnGuardar.setFocusPainted(false);
         btnGuardar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnGuardar.setIconTextGap(10);
+        btnGuardar.setBorder(new EmptyBorder(10, 24, 10, 24));
         btnGuardar.addActionListener(new ActionListener() {
             @Override public void actionPerformed(ActionEvent e) { guardarAjuste(); }
         });
@@ -470,19 +532,67 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
     }
 
     // ================================================================
+    // Preview del stock actual del producto
+    // ================================================================
+    private void actualizarPreview() {
+        String codigo = txtCodigoBarras.getText().trim();
+        if (codigo.isEmpty()) {
+            previewIdProducto = -1;
+            previewDescripcion = "";
+            previewCantActual = 0;
+            previewPendActual = 0;
+            lblInfoActual.setText(" ");
+            return;
+        }
+
+        Bodegas bodegaSel = (Bodegas) cmbBodega.getSelectedItem();
+        int idBodega = bodegaSel != null ? bodegaSel.getId() : frm_main.id_bodega;
+
+        String sql = "SELECT p.id, p.descripcion, "
+                + "COALESCE(sp.cantidad, 0) as cantidad, "
+                + "COALESCE(sp.pendientes, 0) as pendientes "
+                + "FROM productos p "
+                + "LEFT JOIN stock_productos sp ON sp.id_producto = p.id AND sp.id_bodega = " + idBodega + " "
+                + "WHERE p.codigo_barras = '" + codigo.replace("'", "''") + "' "
+                + "AND COALESCE(p.estado, true) = true";
+
+        try {
+            ResultSet rs = DB_consultas_R_D.getTabla(sql);
+            if (rs.next()) {
+                previewIdProducto  = rs.getInt("id");
+                previewDescripcion = rs.getString("descripcion");
+                previewCantActual  = rs.getDouble("cantidad");
+                previewPendActual  = rs.getDouble("pendientes");
+                double disponible  = previewCantActual - previewPendActual;
+                lblInfoActual.setText(
+                        "<html><b>" + previewDescripcion + "</b>"
+                        + "  &nbsp;|&nbsp;  Cantidad actual: <b>" + df.format(previewCantActual) + "</b>"
+                        + "  &nbsp;|&nbsp;  Pendientes: <b>" + df.format(previewPendActual) + "</b>"
+                        + "  &nbsp;|&nbsp;  Disponible: <b>" + df.format(disponible) + "</b></html>");
+                lblInfoActual.setForeground(TEXT_PRIMARY);
+            } else {
+                previewIdProducto = -1;
+                lblInfoActual.setText("Producto con código '" + codigo + "' no encontrado.");
+                lblInfoActual.setForeground(DANGER);
+            }
+            rs.close();
+        } catch (Exception e) {
+            System.err.println("Error preview producto: " + e.getMessage());
+        }
+    }
+
+    // ================================================================
     // Buscador de productos
     // ================================================================
-
     private void abrirBuscadorProductos() {
         if (modoVer) return;
 
         Bodegas bodegaSel = (Bodegas) cmbBodega.getSelectedItem();
         int idBodega = bodegaSel != null ? bodegaSel.getId() : frm_main.id_bodega;
 
-        // Crear dialogo
         final JDialog dlg = new JDialog(this, "Buscar Producto", true);
-        dlg.setSize(750, 500);
-        dlg.setMinimumSize(new Dimension(600, 400));
+        dlg.setSize(820, 520);
+        dlg.setMinimumSize(new Dimension(680, 420));
         dlg.setLocationRelativeTo(this);
         dlg.getContentPane().setBackground(SURFACE);
         dlg.setLayout(new BorderLayout());
@@ -502,9 +612,11 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
         appBar.setOpaque(false);
         appBar.setBorder(new EmptyBorder(12, 18, 12, 18));
         appBar.setPreferredSize(new Dimension(0, 50));
-        JLabel lblTit = new JLabel("Buscar Producto");
+        JLabel lblTit = new JLabel("Buscar Producto",
+                FontAwesome.icon(FontAwesome.SEARCH, 16f, Color.WHITE), SwingConstants.LEFT);
         lblTit.setForeground(Color.WHITE);
         lblTit.setFont(new Font(FONT_FAMILY, Font.BOLD, 18));
+        lblTit.setIconTextGap(10);
         appBar.add(lblTit, BorderLayout.WEST);
         JLabel lblHint = new JLabel("Doble clic o Enter para seleccionar");
         lblHint.setForeground(new Color(255, 255, 255, 180));
@@ -512,25 +624,22 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
         appBar.add(lblHint, BorderLayout.EAST);
         dlg.add(appBar, BorderLayout.NORTH);
 
-        // Contenido
         JPanel content = new JPanel(new BorderLayout(0, 8));
         content.setBackground(SURFACE);
         content.setBorder(new EmptyBorder(12, 16, 12, 16));
 
-        // Campo de busqueda
         final JTextField txtBuscar = new JTextField();
         txtBuscar.setFont(new Font(FONT_FAMILY, Font.PLAIN, 14));
         txtBuscar.setPreferredSize(new Dimension(0, 38));
         txtBuscar.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(DIVIDER),
                 new EmptyBorder(6, 12, 6, 12)));
-        txtBuscar.setToolTipText("Escriba c\u00f3digo o nombre del producto");
+        txtBuscar.setToolTipText("Escriba código o nombre del producto");
         content.add(txtBuscar, BorderLayout.NORTH);
 
-        // Tabla de productos
         final DefaultTableModel modeloBuscar = new DefaultTableModel(
-                new Object[]{"C\u00d3DIGO", "DESCRIPCI\u00d3N", "STOCK EN BODEGA"}, 0) {
-            @Override public boolean isCellEditable(int r, int c) { return false; }
+                new Object[]{"CÓDIGO", "DESCRIPCIÓN", "CANTIDAD", "PENDIENTES", "DISPONIBLE"}, 0) {
+            @Override public boolean isCellEditable(int r, int col) { return false; }
         };
 
         final JTable tablaBuscar = new JTable(modeloBuscar);
@@ -543,7 +652,6 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
         tablaBuscar.setSelectionBackground(SELECTION);
         tablaBuscar.setSelectionForeground(TEXT_PRIMARY);
 
-        // Header style
         tablaBuscar.getTableHeader().setDefaultRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable t, Object value,
@@ -553,13 +661,12 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
                 l.setForeground(TEXT_SECOND);
                 l.setFont(new Font(FONT_FAMILY, Font.BOLD, 11));
                 l.setBorder(new EmptyBorder(8, 10, 8, 10));
-                if (col == 2) l.setHorizontalAlignment(SwingConstants.RIGHT);
+                if (col >= 2) l.setHorizontalAlignment(SwingConstants.RIGHT);
                 return l;
             }
         });
         tablaBuscar.getTableHeader().setPreferredSize(new Dimension(0, 38));
 
-        // Body renderer
         tablaBuscar.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable t, Object value,
@@ -568,13 +675,10 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
                 l.setFont(new Font(FONT_FAMILY, col == 1 ? Font.BOLD : Font.PLAIN, 13));
                 l.setBorder(new EmptyBorder(0, 10, 0, 10));
                 l.setOpaque(true);
-                if (sel) {
-                    l.setBackground(SELECTION);
-                } else {
-                    l.setBackground(row % 2 == 0 ? CARD_BG : ROW_ALT);
-                }
+                if (sel) l.setBackground(SELECTION);
+                else l.setBackground(row % 2 == 0 ? CARD_BG : ROW_ALT);
                 l.setForeground(TEXT_PRIMARY);
-                if (col == 2) l.setHorizontalAlignment(SwingConstants.RIGHT);
+                if (col >= 2) l.setHorizontalAlignment(SwingConstants.RIGHT);
                 else l.setHorizontalAlignment(SwingConstants.LEFT);
                 return l;
             }
@@ -582,15 +686,16 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
 
         TableColumnModel cmBuscar = tablaBuscar.getColumnModel();
         cmBuscar.getColumn(0).setPreferredWidth(130);
-        cmBuscar.getColumn(1).setPreferredWidth(400);
-        cmBuscar.getColumn(2).setPreferredWidth(120);
+        cmBuscar.getColumn(1).setPreferredWidth(360);
+        cmBuscar.getColumn(2).setPreferredWidth(90);
+        cmBuscar.getColumn(3).setPreferredWidth(90);
+        cmBuscar.getColumn(4).setPreferredWidth(90);
 
         JScrollPane scrollBuscar = new JScrollPane(tablaBuscar);
         scrollBuscar.setBorder(BorderFactory.createLineBorder(DIVIDER));
         scrollBuscar.getViewport().setBackground(CARD_BG);
         content.add(scrollBuscar, BorderLayout.CENTER);
 
-        // Footer con conteo
         final JLabel lblCount = new JLabel("0 productos");
         lblCount.setFont(new Font(FONT_FAMILY, Font.PLAIN, 12));
         lblCount.setForeground(TEXT_SECOND);
@@ -600,7 +705,8 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
 
         // Cargar productos
         String sqlProductos = "SELECT p.codigo_barras, p.descripcion, "
-                + "COALESCE(sp.cantidad, 0) as stock "
+                + "COALESCE(sp.cantidad, 0) as cantidad, "
+                + "COALESCE(sp.pendientes, 0) as pendientes "
                 + "FROM productos p "
                 + "LEFT JOIN stock_productos sp ON sp.id_producto = p.id AND sp.id_bodega = " + idBodega + " "
                 + "WHERE COALESCE(p.estado, true) = true "
@@ -610,10 +716,14 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
             ResultSet rs = DB_consultas_R_D.getTabla(sqlProductos);
             int count = 0;
             while (rs.next()) {
+                double cant = rs.getDouble("cantidad");
+                double pend = rs.getDouble("pendientes");
                 modeloBuscar.addRow(new Object[]{
                     rs.getString("codigo_barras"),
                     rs.getString("descripcion") != null ? rs.getString("descripcion") : "",
-                    df.format(rs.getDouble("stock"))
+                    df.format(cant),
+                    df.format(pend),
+                    df.format(cant - pend)
                 });
                 count++;
             }
@@ -623,7 +733,6 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
             System.err.println("Error cargando productos: " + e.getMessage());
         }
 
-        // Filtro en vivo
         final TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<DefaultTableModel>(modeloBuscar);
         tablaBuscar.setRowSorter(sorter);
 
@@ -639,7 +748,6 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
             }
         });
 
-        // Accion de seleccionar
         final Runnable seleccionar = new Runnable() {
             @Override public void run() {
                 int viewRow = tablaBuscar.getSelectedRow();
@@ -648,25 +756,23 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
                 String codigo = modeloBuscar.getValueAt(modelRow, 0).toString();
                 txtCodigoBarras.setText(codigo);
                 dlg.dispose();
+                actualizarPreview();
                 txtCantidadNueva.requestFocus();
             }
         };
 
-        // Doble clic
         tablaBuscar.addMouseListener(new MouseAdapter() {
             @Override public void mousePressed(MouseEvent e) {
                 if (e.getClickCount() == 2) seleccionar.run();
             }
         });
 
-        // Enter en tabla
         tablaBuscar.getInputMap(JComponent.WHEN_FOCUSED).put(
                 KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "sel");
         tablaBuscar.getActionMap().put("sel", new AbstractAction() {
             @Override public void actionPerformed(ActionEvent e) { seleccionar.run(); }
         });
 
-        // Enter en campo busqueda = seleccionar primera fila
         txtBuscar.addKeyListener(new KeyAdapter() {
             @Override public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_ENTER && tablaBuscar.getRowCount() > 0) {
@@ -679,7 +785,6 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
             }
         });
 
-        // Escape cierra
         dlg.getRootPane().registerKeyboardAction(
                 new ActionListener() { @Override public void actionPerformed(ActionEvent e) { dlg.dispose(); } },
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
@@ -692,104 +797,129 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
     // ================================================================
     // Logica
     // ================================================================
-
     private void agregarProducto() {
+        if (modoVer) return;
+
         String codigoBarras = txtCodigoBarras.getText().trim();
         String cantNuevaStr = txtCantidadNueva.getText().trim();
+        String pendNuevaStr = txtPendientesNueva.getText().trim();
 
         if (codigoBarras.isEmpty()) {
             txtCodigoBarras.requestFocus();
             return;
         }
-        if (cantNuevaStr.isEmpty()) {
+        if (cantNuevaStr.isEmpty() && pendNuevaStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Ingrese al menos una cantidad nueva o pendientes nuevos.");
             txtCantidadNueva.requestFocus();
             return;
         }
 
-        double cantNueva;
-        try {
-            cantNueva = Double.parseDouble(cantNuevaStr);
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "La cantidad nueva debe ser un n\u00famero v\u00e1lido.");
-            txtCantidadNueva.requestFocus();
-            txtCantidadNueva.selectAll();
+        // Refrescar preview si no esta cargado o si el codigo cambio
+        if (previewIdProducto <= 0) {
+            actualizarPreview();
+        }
+        if (previewIdProducto <= 0) {
+            JOptionPane.showMessageDialog(this,
+                    "Producto con código '" + codigoBarras + "' no encontrado.",
+                    "Producto no encontrado", JOptionPane.WARNING_MESSAGE);
+            txtCodigoBarras.selectAll();
+            txtCodigoBarras.requestFocus();
             return;
         }
 
-        // Verificar que no este ya en la tabla
-        for (int i = 0; i < modelo.getRowCount(); i++) {
-            if (modelo.getValueAt(i, 1).toString().equals(codigoBarras)) {
-                JOptionPane.showMessageDialog(this, "Este producto ya fue agregado.");
-                txtCodigoBarras.setText("");
-                txtCodigoBarras.requestFocus();
+        // Si vacio, no cambia (queda igual al actual)
+        double cantNueva = previewCantActual;
+        double pendNueva = previewPendActual;
+
+        if (!cantNuevaStr.isEmpty()) {
+            try {
+                cantNueva = Double.parseDouble(cantNuevaStr);
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(this, "La cantidad nueva debe ser un número válido.");
+                txtCantidadNueva.requestFocus();
+                txtCantidadNueva.selectAll();
+                return;
+            }
+        }
+        if (!pendNuevaStr.isEmpty()) {
+            try {
+                pendNueva = Double.parseDouble(pendNuevaStr);
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(this, "Los pendientes deben ser un número válido.");
+                txtPendientesNueva.requestFocus();
+                txtPendientesNueva.selectAll();
                 return;
             }
         }
 
-        // Buscar producto
-        Bodegas bodegaSel = (Bodegas) cmbBodega.getSelectedItem();
-        int idBodega = bodegaSel != null ? bodegaSel.getId() : frm_main.id_bodega;
-
-        String sql = "SELECT p.id, p.codigo_barras, p.descripcion, "
-                + "COALESCE(sp.cantidad, 0) as cantidad_actual "
-                + "FROM productos p "
-                + "LEFT JOIN stock_productos sp ON sp.id_producto = p.id AND sp.id_bodega = " + idBodega + " "
-                + "WHERE p.codigo_barras = '" + codigoBarras.replace("'", "''") + "' "
-                + "AND COALESCE(p.estado, true) = true";
-
-        try {
-            ResultSet rs = DB_consultas_R_D.getTabla(sql);
-            if (rs.next()) {
-                String idProducto = rs.getString("id");
-                String descripcion = rs.getString("descripcion");
-                double cantActual = rs.getDouble("cantidad_actual");
-                double diferencia = cantNueva - cantActual;
-
-                modelo.addRow(new Object[]{
-                    idProducto,
-                    codigoBarras,
-                    descripcion,
-                    df.format(cantActual),
-                    df.format(cantNueva),
-                    (diferencia >= 0 ? "+" : "") + df.format(diferencia),
-                    txtObsProducto.getText().trim()
-                });
-
-                actualizarTotal();
-
-                txtCodigoBarras.setText("");
-                txtCantidadNueva.setText("");
-                txtObsProducto.setText("");
-                txtCodigoBarras.requestFocus();
-
-            } else {
-                JOptionPane.showMessageDialog(this,
-                        "Producto con c\u00f3digo '" + codigoBarras + "' no encontrado.",
-                        "Producto no encontrado", JOptionPane.WARNING_MESSAGE);
-                txtCodigoBarras.selectAll();
-                txtCodigoBarras.requestFocus();
-            }
-            rs.close();
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error buscando producto:\n" + e.getMessage());
+        // Validacion: pendientes no puede ser mayor que cantidad
+        if (pendNueva > cantNueva) {
+            int resp = JOptionPane.showConfirmDialog(this,
+                    "Los pendientes nuevos (" + df.format(pendNueva) + ") superan la cantidad nueva ("
+                    + df.format(cantNueva) + ").\nEsto deja disponible negativo. ¿Desea continuar?",
+                    "Advertencia", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (resp != JOptionPane.YES_OPTION) return;
         }
+
+        // Verificar duplicado
+        for (int i = 0; i < modelo.getRowCount(); i++) {
+            if (modelo.getValueAt(i, COL_CODIGO).toString().equals(codigoBarras)) {
+                JOptionPane.showMessageDialog(this, "Este producto ya fue agregado.");
+                limpiarInputsProducto();
+                return;
+            }
+        }
+
+        double difCant = cantNueva - previewCantActual;
+        double difPend = pendNueva - previewPendActual;
+
+        modelo.addRow(new Object[]{
+            String.valueOf(previewIdProducto),
+            codigoBarras,
+            previewDescripcion,
+            df.format(previewCantActual),
+            df.format(cantNueva),
+            (difCant >= 0 ? "+" : "") + df.format(difCant),
+            df.format(previewPendActual),
+            df.format(pendNueva),
+            (difPend >= 0 ? "+" : "") + df.format(difPend),
+            txtObsProducto.getText().trim()
+        });
+
+        actualizarTotal();
+        limpiarInputsProducto();
+    }
+
+    private void limpiarInputsProducto() {
+        txtCodigoBarras.setText("");
+        txtCantidadNueva.setText("");
+        txtPendientesNueva.setText("");
+        txtObsProducto.setText("");
+        lblInfoActual.setText(" ");
+        previewIdProducto = -1;
+        previewCantActual = 0;
+        previewPendActual = 0;
+        txtCodigoBarras.requestFocus();
     }
 
     private void actualizarTotal() {
-        int positivos = 0, negativos = 0, sinCambio = 0;
+        int cAum = 0, cDis = 0, pAum = 0, pDis = 0;
         for (int i = 0; i < modelo.getRowCount(); i++) {
-            String difStr = modelo.getValueAt(i, 5).toString().replace(",", "").replace("+", "");
             try {
-                double d = Double.parseDouble(difStr);
-                if (d > 0) positivos++;
-                else if (d < 0) negativos++;
-                else sinCambio++;
+                double dC = Double.parseDouble(modelo.getValueAt(i, COL_DIF_CANT).toString()
+                        .replace(",", "").replace("+", ""));
+                if (dC > 0) cAum++; else if (dC < 0) cDis++;
+            } catch (Exception ignore) {}
+            try {
+                double dP = Double.parseDouble(modelo.getValueAt(i, COL_DIF_PEND).toString()
+                        .replace(",", "").replace("+", ""));
+                if (dP > 0) pAum++; else if (dP < 0) pDis++;
             } catch (Exception ignore) {}
         }
         lblTotal.setText(modelo.getRowCount() + " productos  |  "
-                + positivos + " aumentos  |  "
-                + negativos + " disminuciones  |  "
-                + sinCambio + " sin cambio");
+                + "Cant: +" + cAum + " / -" + cDis + "  |  "
+                + "Pend: +" + pAum + " / -" + pDis);
     }
 
     private void guardarAjuste() {
@@ -805,8 +935,8 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
         }
 
         int resp = JOptionPane.showConfirmDialog(this,
-                "Se ajustar\u00e1n " + modelo.getRowCount() + " productos en " + bodegaSel.toString() + ".\n"
-                + "\u00bfDesea continuar?",
+                "Se ajustarán " + modelo.getRowCount() + " productos en " + bodegaSel.toString() + ".\n"
+                + "¿Desea continuar?",
                 "Confirmar ajuste", JOptionPane.YES_NO_OPTION);
         if (resp != JOptionPane.YES_OPTION) return;
 
@@ -814,15 +944,23 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
         int idUser = frm_main.id_user;
         String observacion = txtObsGeneral.getText().trim();
 
-        double[][] productos = new double[modelo.getRowCount()][4];
+        double[][] productos = new double[modelo.getRowCount()][7];
         String[] obsProductos = new String[modelo.getRowCount()];
 
-        for (int i = 0; i < modelo.getRowCount(); i++) {
-            productos[i][0] = Double.parseDouble(modelo.getValueAt(i, 0).toString()); // id_producto
-            productos[i][1] = Double.parseDouble(modelo.getValueAt(i, 3).toString().replace(",", "")); // cant_anterior
-            productos[i][2] = Double.parseDouble(modelo.getValueAt(i, 4).toString().replace(",", "")); // cant_nueva
-            productos[i][3] = Double.parseDouble(modelo.getValueAt(i, 5).toString().replace(",", "").replace("+", "")); // diferencia
-            obsProductos[i] = modelo.getValueAt(i, 6).toString();
+        try {
+            for (int i = 0; i < modelo.getRowCount(); i++) {
+                productos[i][0] = Double.parseDouble(modelo.getValueAt(i, COL_ID).toString());
+                productos[i][1] = parseNum(modelo.getValueAt(i, COL_CANT_ACT));
+                productos[i][2] = parseNum(modelo.getValueAt(i, COL_CANT_NUEVA));
+                productos[i][3] = parseNum(modelo.getValueAt(i, COL_DIF_CANT));
+                productos[i][4] = parseNum(modelo.getValueAt(i, COL_PEND_ACT));
+                productos[i][5] = parseNum(modelo.getValueAt(i, COL_PEND_NUEVA));
+                productos[i][6] = parseNum(modelo.getValueAt(i, COL_DIF_PEND));
+                obsProductos[i] = modelo.getValueAt(i, COL_NOTA).toString();
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error procesando datos:\n" + e.getMessage());
+            return;
         }
 
         DBajustes_inventario db = new DBajustes_inventario();
@@ -835,5 +973,12 @@ public class jd_crear_ajuste_inventario extends javax.swing.JDialog {
                     "Ajuste guardado", JOptionPane.INFORMATION_MESSAGE);
             dispose();
         }
+    }
+
+    private static double parseNum(Object v) {
+        if (v == null) return 0;
+        String s = v.toString().replace(",", "").replace("+", "").trim();
+        if (s.isEmpty()) return 0;
+        return Double.parseDouble(s);
     }
 }

@@ -723,6 +723,22 @@ public class DBstock_productos {
                 null, null, null, observacion);
     }
 
+    /**
+     * Registra un AJUSTE que solo afecta la cantidad PENDIENTE (reservada contra
+     * ordenes). No modifica la cantidad fisica.
+     */
+    public int ajustePendientes(int idProducto, int idBodega, int idUser, double cantidad,
+            boolean esPositivo, String observacion) {
+
+        String tipo = esPositivo ? TIPO_AJUSTE_POSITIVO : TIPO_AJUSTE_NEGATIVO;
+        int afecta = esPositivo ? +1 : -1;
+
+        return registrarMovimiento(idProducto, idBodega, idUser,
+                tipo, Math.abs(cantidad), 0, afecta,
+                null, null,
+                null, null, null, observacion);
+    }
+
     // ========================================================================
     // SELECCION INTELIGENTE DE BODEGA
     // ========================================================================

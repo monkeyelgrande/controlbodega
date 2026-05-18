@@ -487,6 +487,32 @@ public class login extends JFrame {
                 main.perfil = per;
                 main.permisos();
                 main.montarBarraNotificaciones();
+
+                String nombrePerfil = DB_consultas_R_D.TraerNombrePerfil(per);
+                if (nombrePerfil != null && nombrePerfil.trim().equalsIgnoreCase("bodeguero")) {
+                    Formularios_internos.jd_SeleccionModoBodega selector =
+                            new Formularios_internos.jd_SeleccionModoBodega(
+                                    this, txt_user.getText(), main.bodega);
+                    selector.setVisible(true);
+
+                    Formularios_internos.jd_SeleccionModoBodega.Modo modo = selector.getModo();
+                    if (modo == Formularios_internos.jd_SeleccionModoBodega.Modo.ENTREGAS_RAPIDAS) {
+                        Formularios.frm_EntregasQR vent = new Formularios.frm_EntregasQR(
+                                main.id_user, txt_user.getText(),
+                                main.id_bodega, main.bodega);
+                        vent.setVisible(true);
+                        this.dispose();
+                        return;
+                    } else if (modo == Formularios_internos.jd_SeleccionModoBodega.Modo.CANCELADO) {
+                        // Vuelve al login: limpia credenciales y aborta el flujo
+                        txt_user.setText("");
+                        jpassword.setText("");
+                        txt_user.requestFocus();
+                        return;
+                    }
+                    // ACCESO_NORMAL cae al flujo clasico
+                }
+
                 main.show();
 
                 this.dispose();

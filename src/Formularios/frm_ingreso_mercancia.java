@@ -9,6 +9,7 @@ import Formularios_internos.jif_crear_ingreso_mercancia;
 import Metodos.CellRendererIngresos;
 import Metodos.metodos;
 import conexiondb.DB_consultas_R_D;
+import conexiondb.DBingresosMercancias;
 import java.awt.event.MouseEvent;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -341,13 +342,16 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
                     try {
                         DefaultTableModel modelo = (DefaultTableModel) jtabla.getModel();
                         String id = (String) jtabla.getValueAt(fila, 0);//suponiendo que el id lo muestras en la primera columna
-                        if (DB_consultas_R_D.eliminar("ingresos_mercancias_cabecera", id)) {
+                        DBingresosMercancias dbIngreso = new DBingresosMercancias();
+                        if (dbIngreso.eliminarConReversion(Integer.parseInt(id), frm_main.id_user)) {
                             for (int i = 0; i < modelo.getRowCount(); i++) {
                                 if (modelo.getValueAt(i, 0).equals(id)) {
                                     modelo.removeRow(i);
                                     break;
                                 }
                             }
+                            JOptionPane.showMessageDialog(null,
+                                    "Ingreso eliminado y stock revertido correctamente.");
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -491,13 +495,7 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
     boolean act = true;
 
     public void actualizar() {
-        try {
-            for (int i = 0; i < modelo.getRowCount(); i++) {
-                modelo.removeRow(i);
-                i -= 1;
-            }
-        } catch (Exception e) {
-        }
+        modelo.setRowCount(0);
         ResultSet rs = null;
         String consulta = "";
 
@@ -516,7 +514,7 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
                     + "	from consulta c left join pagos_ingresos p on p.id_ingresos_mercancias_cabecera=c.id\n"
                     + "	group by c.id, c.proveedor, c.fecha, c.fecha_vencimiento, c.no_factura, c.estado, c.total\n"
                     + ")\n"
-                    + "select * from con2 where saldo>0";
+                    + "select * from con2 where saldo>0 order by id desc";
             act = false;
         } else {
             consulta = "with con2 as (\n"
@@ -532,7 +530,7 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
                     + "	from consulta c left join pagos_ingresos p on p.id_ingresos_mercancias_cabecera=c.id\n"
                     + "	group by c.id, c.proveedor, c.fecha, c.fecha_vencimiento, c.no_factura, c.estado, c.total\n"
                     + ")\n"
-                    + "select * from con2";
+                    + "select * from con2 order by id desc";
             act = true;
         }
 

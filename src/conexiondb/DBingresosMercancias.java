@@ -9,6 +9,8 @@ import Formularios_internos.jif_crear_ingreso_mercancia;
 import java.sql.*;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 import modelos.IngresosMercancias;
@@ -174,6 +176,99 @@ public class DBingresosMercancias {
         }
 
         frm.show();
+    }
+
+    /**
+     * Elimina un ingreso de mercancía revirtiendo su efecto en el inventario.
+     *
+     * A diferencia de un DELETE plano (que dejaba el stock inflado y sin
+     * rastro), aquí primero se lee el detalle, se descuenta de stock_productos
+     * y se registra el movimiento de reversión por cada producto, y solo
+     * entonces se borra la cabecera (el ON DELETE CASCADE limpia el detalle).
+     *
+     * El detalle se lee ANTES de borrar porque el cascade lo elimina.
+     *
+     * @param idIngreso ID de la cabecera del ingreso a eliminar
+     * @param idUser    ID del usuario que realiza la eliminación
+     * @return true si se revirtió y eliminó correctamente
+     */
+    public boolean eliminarConReversion(int idIngreso, int idUser) {
+        Connection con = null;
+        try {
+            con = DB_consultas_R_D.getConexion();
+
+            // 1. Bodega del ingreso (y verificar que exista)
+            int idBodega = -1;
+            try (PreparedStatement ps = con.prepareStatement(
+                    "SELECT id_bodega FROM ingresos_mercancias_cabecera WHERE id = ?")) {
+                ps.setInt(1, idIngreso);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        idBodega = rs.getInt("id_bodega");
+                    } else {
+                        JOptionPane.showMessageDialog(null, "El ingreso no existe.");
+                        return false;
+                    }
+                }
+            }
+
+            // 2. Leer el detalle ANTES de borrar (el cascade lo elimina)
+            List<Integer> productos = new ArrayList<Integer>();
+            List<Double> cantidades = new ArrayList<Double>();
+            try (PreparedStatement ps = con.prepareStatement(
+                    "SELECT id_producto, cantidad FROM ingresos_mercancias_detalle "
+                    + "WHERE id_ingreso_cabecera = ?")) {
+                ps.setInt(1, idIngreso);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        productos.add(rs.getInt("id_producto"));
+                        cantidades.add(rs.getDouble("cantidad"));
+                    }
+                }
+            }
+
+            // 3. Revertir stock + registrar movimiento por cada producto.
+            //    Si una reversión falla, se aborta SIN borrar la cabecera para
+            //    no perder el rastro de lo que aún falta revertir.
+            DBstock_productos dbStock = new DBstock_productos();
+            for (int i = 0; i < productos.size(); i++) {
+                int idProducto = productos.get(i);
+                double cantidad = cantidades.get(i);
+                int idMov = dbStock.eliminarIngreso(
+                        idProducto, idBodega, idUser, cantidad, idIngreso,
+                        "Reversión por eliminación de ingreso #" + idIngreso);
+                if (idMov <= 0) {
+                    JOptionPane.showMessageDialog(null,
+                            "No se pudo revertir el stock del producto " + idProducto
+                            + ".\nEl ingreso NO fue eliminado para no dejar inventario inconsistente.",
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                    return false;
+                }
+            }
+
+            // 4. Borrar la cabecera (el cascade elimina el detalle)
+            try (PreparedStatement ps = con.prepareStatement(
+                    "DELETE FROM ingresos_mercancias_cabecera WHERE id = ?")) {
+                ps.setInt(1, idIngreso);
+                ps.executeUpdate();
+            }
+
+            return true;
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null,
+                    "Error al eliminar el ingreso de mercancía:\n" + e.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        } finally {
+            try {
+                if (con != null) {
+                    con.close();
+                }
+            } catch (SQLException ex) {
+                System.err.println("Error al cerrar conexión: " + ex.getMessage());
+            }
+        }
     }
 
 }
