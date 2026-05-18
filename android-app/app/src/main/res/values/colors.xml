@@ -1,0 +1,26 @@
+<resources>
+    <!-- Paleta del design system de Stitch: "Industrial Efficiency System" -->
+    <color name="primary">#2E7D32</color>
+    <color name="primary_dark">#1B5E20</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="primary_container">#A3F69C</color>
+    <color name="on_primary_container">#002204</color>
+
+    <color name="accion_azul">#1565C0</color>
+    <color name="on_accion">#FFFFFF</color>
+
+    <color name="surface">#F7FBF0</color>
+    <color name="surface_card">#FFFFFF</color>
+    <color name="on_surface">#181D17</color>
+    <color name="on_surface_variant">#40493D</color>
+    <color name="outline">#707A6C</color>
+    <color name="divider">#E0E4DA</color>
+
+    <color name="error">#BA1A1A</color>
+    <color name="on_error">#FFFFFF</color>
+    <color name="error_container">#FFDAD6</color>
+    <color name="exito">#0D631B</color>
+
+    <color name="nota_bg">#FFF8E1</color>
+    <color name="nota_borde">#F9A825</color>
+</resources>

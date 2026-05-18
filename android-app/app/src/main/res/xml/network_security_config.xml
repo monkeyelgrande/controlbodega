@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  La API corre en HTTP plano dentro de la red local de la empresa.
+  Android bloquea HTTP sin cifrar por defecto; aqui se permite porque el
+  trafico no sale de la LAN. Si algun dia la API pasa a HTTPS, esto se
+  puede endurecer.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

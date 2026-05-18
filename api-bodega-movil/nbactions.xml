@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Acciones de NetBeans para este proyecto.
+  Hace que "Run" y "Debug" arranquen la app con el goal de Spring Boot
+  (spring-boot:run) en vez del plugin exec generico, que fallaba con
+  el placeholder ${start-class} sin resolver.
+-->
+<actions>
+    <action>
+        <actionName>run</actionName>
+        <goals>
+            <goal>process-classes</goal>
+            <goal>org.springframework.boot:spring-boot-maven-plugin:run</goal>
+        </goals>
+    </action>
+    <action>
+        <actionName>debug</actionName>
+        <goals>
+            <goal>process-classes</goal>
+            <goal>org.springframework.boot:spring-boot-maven-plugin:run</goal>
+        </goals>
+        <properties>
+            <jpda.listen>true</jpda.listen>
+            <spring-boot.run.jvmArguments>-agentlib:jdwp=transport=dt_socket,server=n,address=${jpda.address}</spring-boot.run.jvmArguments>
+        </properties>
+    </action>
+</actions>

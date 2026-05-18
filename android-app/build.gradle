@@ -1,0 +1,5 @@
+// Build script de nivel raiz. Las versiones del plugin de Android y Gradle
+// las maneja Android Studio al sincronizar.
+plugins {
+    id 'com.android.application' version '8.5.2' apply false
+}

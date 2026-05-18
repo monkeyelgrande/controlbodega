@@ -1,0 +1,27 @@
+<service>
+  <id>bodegaapi</id>
+  <name>Bodega Movil API</name>
+  <description>API REST para la app movil de bodega (escaneo de ordenes, entregas, inventario).</description>
+
+  <!-- Java instalado en el servidor (Temurin 8). -->
+  <executable>C:\Program Files\Eclipse Adoptium\jdk-8.0.482.8-hotspot\bin\java.exe</executable>
+  <arguments>-jar api-bodega-movil-0.0.1.jar</arguments>
+
+  <!-- Se ejecuta dentro de D:\apimovil: aqui debe estar el jar y, si esta
+       empresa usa otra base, un application.properties con BODEGA_DB_NAME. -->
+  <workingdirectory>D:\apimovil</workingdirectory>
+
+  <!-- Arranca sola al prender el servidor. -->
+  <startmode>Automatic</startmode>
+
+  <!-- Si se cae, Windows la reinicia a los 10 segundos (hasta 3 veces). -->
+  <onfailure action="restart" delay="10 sec"/>
+  <onfailure action="restart" delay="20 sec"/>
+  <resetfailure>1 hour</resetfailure>
+
+  <!-- Logs en D:\apimovil con rotacion (no crecen sin control). -->
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>8</keepFiles>
+  </log>
+</service>
