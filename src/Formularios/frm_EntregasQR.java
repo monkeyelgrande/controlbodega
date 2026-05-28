@@ -98,6 +98,7 @@ public class frm_EntregasQR extends JFrame {
     private JButton btnEntregaCompleta;
     private JButton btnEntregaParcial;
     private JButton btnCerrarSesion;
+    private JButton btnEscaneoManual;
 
     public frm_EntregasQR(int idUser, String nombreUsuario, int idBodega, String nombreBodega) {
         this.idUser = idUser;
@@ -188,8 +189,22 @@ public class frm_EntregasQR extends JFrame {
         center.add(buildTablaPanel(), BorderLayout.CENTER);
         body.add(center, BorderLayout.CENTER);
 
-        // Sur: botones grandes
-        body.add(buildAcciones(), BorderLayout.SOUTH);
+        // Sur: botones grandes + acceso a escaneo manual (abajo derecha)
+        JPanel south = new JPanel(new BorderLayout(0, 8));
+        south.setOpaque(false);
+        south.add(buildAcciones(), BorderLayout.CENTER);
+
+        JPanel footer = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 0, 0));
+        footer.setOpaque(false);
+        btnEscaneoManual = botonHeader("⌨  ESCANEO MANUAL");
+        btnEscaneoManual.setBackground(INFO_BLUE);
+        btnEscaneoManual.addMouseListener(new MouseAdapter() {
+            @Override public void mouseClicked(MouseEvent e) { onEscaneoManual(); }
+        });
+        footer.add(btnEscaneoManual);
+        south.add(footer, BorderLayout.SOUTH);
+
+        body.add(south, BorderLayout.SOUTH);
 
         return body;
     }
@@ -472,25 +487,18 @@ public class frm_EntregasQR extends JFrame {
             sb.append("¿Deseas continuar de todos modos?");
             sb.append("</body></html>");
 
-            int op = JOptionPane.showConfirmDialog(this, sb.toString(),
-                    "Stock negativo",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE);
-            if (op != JOptionPane.YES_OPTION) return;
+            if (!confirmarTactil(sb.toString(), "Stock negativo")) return;
         }
 
         // 3) Confirmacion final
         double totalUnid = 0.0;
         for (ItemEntrega it : items) totalUnid += it.cantidad;
-        int op = JOptionPane.showConfirmDialog(this,
-                "<html><body style='font-family:Segoe UI;font-size:13pt;'>"
-                + "Se van a entregar <b>" + fmt(totalUnid) + "</b> unidades "
+        if (!confirmarTactil(
+                "<html><body style='font-family:Segoe UI;font-size:18pt;text-align:center;'>"
+                + "Se van a entregar <b>" + fmt(totalUnid) + "</b> unidades<br>"
                 + "en <b>" + items.size() + "</b> productos.<br><br>"
-                + "¿Confirmar entrega completa?</body></html>",
-                "Confirmar entrega completa",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE);
-        if (op != JOptionPane.YES_OPTION) return;
+                + "<b>¿Confirmar entrega completa?</b></body></html>",
+                "Confirmar entrega completa")) return;
 
         // 4) Ejecutar
         int idCab = EntregaQRService.ejecutarEntrega(
@@ -662,6 +670,93 @@ public class frm_EntregasQR extends JFrame {
     }
 
     // =====================================================================
+    // Escaneo manual (respaldo si el lector QR falla)
+    // =====================================================================
+    private void onEscaneoManual() {
+        final javax.swing.JDialog dlg =
+                new javax.swing.JDialog(this, "Escaneo manual", true);
+        dlg.setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+
+        JPanel root = new JPanel(new BorderLayout(0, 18));
+        root.setBackground(CARD_BG);
+        root.setBorder(BorderFactory.createEmptyBorder(28, 32, 24, 32));
+
+        JLabel lblInfo = new JLabel(
+                "<html><body style='font-family:Segoe UI;font-size:16pt;text-align:center;'>"
+                + "Escribe el <b>número de la orden</b> y presiona <b>ENTER</b>."
+                + "</body></html>");
+        lblInfo.setForeground(TEXT);
+        lblInfo.setHorizontalAlignment(SwingConstants.CENTER);
+        root.add(lblInfo, BorderLayout.NORTH);
+
+        final javax.swing.JTextField txt = new javax.swing.JTextField();
+        txt.setFont(new Font("Segoe UI", Font.BOLD, 40));
+        txt.setHorizontalAlignment(SwingConstants.CENTER);
+        txt.setForeground(TEXT);
+        txt.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(INFO_BLUE, 2),
+                BorderFactory.createEmptyBorder(10, 14, 10, 14)));
+        // Solo digitos: el QR es "ORDEN-<id>", aqui solo se escribe el <id>
+        ((javax.swing.text.AbstractDocument) txt.getDocument())
+                .setDocumentFilter(new javax.swing.text.DocumentFilter() {
+            @Override public void insertString(FilterBypass fb, int off,
+                    String s, javax.swing.text.AttributeSet a)
+                    throws javax.swing.text.BadLocationException {
+                if (s != null) super.insertString(fb, off, s.replaceAll("\\D", ""), a);
+            }
+            @Override public void replace(FilterBypass fb, int off, int len,
+                    String s, javax.swing.text.AttributeSet a)
+                    throws javax.swing.text.BadLocationException {
+                if (s != null) super.replace(fb, off, len, s.replaceAll("\\D", ""), a);
+            }
+        });
+        root.add(txt, BorderLayout.CENTER);
+
+        JButton btnCargar = new JButton("CARGAR");
+        JButton btnCancelar = new JButton("CANCELAR");
+        estiloBotonTactil(btnCargar, OK_GREEN);
+        estiloBotonTactil(btnCancelar, ERROR_RED);
+
+        final Runnable cargar = () -> {
+            String num = txt.getText().trim();
+            if (num.isEmpty()) { txt.requestFocusInWindow(); return; }
+            dlg.dispose();
+            final String codigo = "ORDEN-" + num;
+            SwingUtilities.invokeLater(() -> procesarQR(codigo));
+        };
+        btnCargar.addActionListener(e -> cargar.run());
+        btnCancelar.addActionListener(e -> dlg.dispose());
+
+        JPanel pBotones = new JPanel(new GridLayout(1, 2, 28, 0));
+        pBotones.setOpaque(false);
+        pBotones.setBorder(BorderFactory.createEmptyBorder(20, 0, 4, 0));
+        pBotones.add(btnCancelar);
+        pBotones.add(btnCargar);
+        root.add(pBotones, BorderLayout.SOUTH);
+
+        dlg.setContentPane(root);
+
+        // Teclado: ENTER = cargar ; ESC = cancelar
+        javax.swing.JRootPane rp = dlg.getRootPane();
+        javax.swing.InputMap im =
+                rp.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW);
+        javax.swing.ActionMap am = rp.getActionMap();
+        im.put(javax.swing.KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "cargar");
+        im.put(javax.swing.KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "cancelar");
+        am.put("cargar", new javax.swing.AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { cargar.run(); }
+        });
+        am.put("cancelar", new javax.swing.AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { dlg.dispose(); }
+        });
+
+        dlg.setSize(600, 360);
+        dlg.setLocationRelativeTo(this);
+        SwingUtilities.invokeLater(() -> txt.requestFocusInWindow());
+        dlg.setVisible(true); // modal
+    }
+
+    // =====================================================================
     // Helpers
     // =====================================================================
 
@@ -672,6 +767,95 @@ public class frm_EntregasQR extends JFrame {
             return String.valueOf((long) d);
         }
         return String.format(java.util.Locale.US, "%.2f", d);
+    }
+
+    // =====================================================================
+    // Confirmacion tactil grande (SI verde / NO rojo, teclas S-Enter / N-Esc)
+    // =====================================================================
+    private boolean confirmarTactil(String htmlMensaje, String titulo) {
+        final javax.swing.JDialog dlg =
+                new javax.swing.JDialog(this, titulo, true);
+        final boolean[] resultado = { false };
+
+        dlg.setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(CARD_BG);
+        root.setBorder(BorderFactory.createEmptyBorder(28, 32, 24, 32));
+
+        JLabel lblMsg = new JLabel(htmlMensaje);
+        lblMsg.setFont(new Font("Segoe UI", Font.PLAIN, 20));
+        lblMsg.setForeground(TEXT);
+        lblMsg.setHorizontalAlignment(SwingConstants.CENTER);
+        lblMsg.setVerticalAlignment(SwingConstants.CENTER);
+
+        JScrollPane sp = new JScrollPane(lblMsg);
+        sp.setBorder(null);
+        sp.getViewport().setBackground(CARD_BG);
+        sp.getVerticalScrollBar().setUnitIncrement(24);
+        root.add(sp, BorderLayout.CENTER);
+
+        JButton btnSi = new JButton("SÍ  ( S )");
+        JButton btnNo = new JButton("NO  ( N )");
+        estiloBotonTactil(btnSi, OK_GREEN);
+        estiloBotonTactil(btnNo, ERROR_RED);
+
+        btnSi.addActionListener(e -> { resultado[0] = true;  dlg.dispose(); });
+        btnNo.addActionListener(e -> { resultado[0] = false; dlg.dispose(); });
+
+        JPanel pBotones = new JPanel(new GridLayout(1, 2, 28, 0));
+        pBotones.setOpaque(false);
+        pBotones.setBorder(BorderFactory.createEmptyBorder(28, 0, 4, 0));
+        pBotones.add(btnNo);
+        pBotones.add(btnSi);
+        root.add(pBotones, BorderLayout.SOUTH);
+
+        dlg.setContentPane(root);
+
+        // Atajos de teclado: S / ENTER = SI ; N / ESC = NO
+        javax.swing.JRootPane rp = dlg.getRootPane();
+        javax.swing.InputMap im =
+                rp.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW);
+        javax.swing.ActionMap am = rp.getActionMap();
+
+        im.put(javax.swing.KeyStroke.getKeyStroke(KeyEvent.VK_S, 0), "si");
+        im.put(javax.swing.KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "si");
+        im.put(javax.swing.KeyStroke.getKeyStroke(KeyEvent.VK_N, 0), "no");
+        im.put(javax.swing.KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "no");
+
+        am.put("si", new javax.swing.AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) {
+                resultado[0] = true;  dlg.dispose();
+            }
+        });
+        am.put("no", new javax.swing.AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) {
+                resultado[0] = false; dlg.dispose();
+            }
+        });
+
+        rp.setDefaultButton(btnSi);
+
+        dlg.pack();
+        Dimension sz = dlg.getSize();
+        int w = Math.max(640, Math.min(sz.width, 900));
+        int h = Math.max(440, Math.min(sz.height, 720));
+        dlg.setSize(w, h);
+        dlg.setLocationRelativeTo(this);
+        SwingUtilities.invokeLater(() -> btnSi.requestFocusInWindow());
+        dlg.setVisible(true); // modal: bloquea hasta cerrar
+        return resultado[0];
+    }
+
+    private void estiloBotonTactil(JButton b, Color bg) {
+        b.setFont(new Font("Segoe UI", Font.BOLD, 30));
+        b.setForeground(Color.WHITE);
+        b.setBackground(bg);
+        b.setFocusPainted(false);
+        b.setOpaque(true);
+        b.setBorderPainted(false);
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.setPreferredSize(new Dimension(240, 110));
     }
 
     // Pequeño layout vertical local: apila componentes uno debajo del otro

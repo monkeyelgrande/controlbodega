@@ -2,6 +2,7 @@ package com.bodega.appmovil;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
@@ -16,6 +17,10 @@ import com.google.android.material.tabs.TabLayoutMediator;
  * Pantalla principal con dos pestanas: Entregas y Consulta de inventario.
  */
 public class MainActivity extends AppCompatActivity {
+
+    private View headerBar;
+    private TabLayout tabs;
+    private ViewPager2 pager;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -40,12 +45,26 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .show());
 
-        ViewPager2 pager = findViewById(R.id.pager);
+        headerBar = findViewById(R.id.headerBar);
+        tabs = findViewById(R.id.tabs);
+        pager = findViewById(R.id.pager);
         pager.setAdapter(new MainPagerAdapter(this));
 
-        TabLayout tabs = findViewById(R.id.tabs);
         new TabLayoutMediator(tabs, pager, (tab, pos) ->
                 tab.setText(pos == 0 ? "Entregas" : "Inventario")
         ).attach();
+    }
+
+    /**
+     * Colapsa/expande la cabecera y las pestanas. Se usa desde la pestana
+     * de Entregas para dar mas espacio a la lista cuando hay una orden
+     * escaneada (y restaurarlas al volver a esperar escaneo).
+     */
+    public void setChromeVisible(boolean visible) {
+        int vis = visible ? View.VISIBLE : View.GONE;
+        if (headerBar != null) headerBar.setVisibility(vis);
+        if (tabs != null) tabs.setVisibility(vis);
+        // Mientras se procesa una orden, bloquea el swipe entre pestanas.
+        if (pager != null) pager.setUserInputEnabled(visible);
     }
 }

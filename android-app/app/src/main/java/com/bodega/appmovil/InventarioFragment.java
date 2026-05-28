@@ -14,6 +14,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.bodega.appmovil.net.ApiClient;
@@ -132,27 +133,74 @@ public class InventarioFragment extends Fragment {
         card.addView(titulo);
 
         TextView sub = new TextView(requireContext());
-        sub.setText("Codigo: " + safe(p.codigo)
-                + "    Total disp.: " + num(p.totalDisponible)
-                + "  (cant " + num(p.totalCantidad)
-                + " / pend " + num(p.totalPendientes) + ")");
+        sub.setText("Codigo: " + safe(p.codigo) + "      Total disponible: "
+                + num(p.totalDisponible));
         sub.setTextColor(Color.parseColor("#40493D"));
         sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         sub.setPadding(0, dp(2), 0, dp(8));
         card.addView(sub);
 
+        // Una fila por bodega: nombre + 3 tarjeticas (Cant / Pend / Disp)
         for (BodegaStock b : p.bodegas) {
-            TextView fila = new TextView(requireContext());
-            fila.setText("• " + safe(b.bodega)
-                    + "   →   disp: " + num(b.disponible)
-                    + "   (cant " + num(b.cantidad)
-                    + " / pend " + num(b.pendientes) + ")");
-            fila.setTextColor(Color.parseColor("#181D17"));
-            fila.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-            fila.setPadding(0, dp(4), 0, dp(4));
+            TextView nb = new TextView(requireContext());
+            nb.setText(safe(b.bodega));
+            nb.setTextColor(Color.parseColor("#181D17"));
+            nb.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            nb.setTypeface(Typeface.DEFAULT_BOLD);
+            nb.setPadding(0, dp(6), 0, dp(4));
+            card.addView(nb);
+
+            LinearLayout fila = new LinearLayout(requireContext());
+            fila.setOrientation(LinearLayout.HORIZONTAL);
+            fila.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT));
+
+            fila.addView(chip("CANT", num(b.cantidad),
+                    R.drawable.bg_chip_cant, R.color.chip_cant_tx, true));
+            fila.addView(chip("PEND", num(b.pendientes),
+                    R.drawable.bg_chip_pend, R.color.chip_pend_tx, true));
+            fila.addView(chip("DISP", num(b.disponible),
+                    R.drawable.bg_chip_disp, R.color.chip_disp_tx, false));
+
             card.addView(fila);
         }
         return card;
+    }
+
+    /** Mini tarjeta de color con etiqueta arriba y numero abajo. */
+    private View chip(String etiqueta, String valor, int bgRes, int txColorRes,
+                      boolean conMargenDerecho) {
+        LinearLayout chip = new LinearLayout(requireContext());
+        chip.setOrientation(LinearLayout.VERTICAL);
+        chip.setGravity(android.view.Gravity.CENTER);
+        chip.setBackgroundResource(bgRes);
+        int p = dp(8);
+        chip.setPadding(p, p, p, p);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        lp.setMargins(0, 0, conMargenDerecho ? dp(8) : 0, 0);
+        chip.setLayoutParams(lp);
+
+        int tx = ContextCompat.getColor(requireContext(), txColorRes);
+
+        TextView lbl = new TextView(requireContext());
+        lbl.setText(etiqueta);
+        lbl.setTextColor(tx);
+        lbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        lbl.setGravity(android.view.Gravity.CENTER);
+
+        TextView val = new TextView(requireContext());
+        val.setText(valor);
+        val.setTextColor(tx);
+        val.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        val.setTypeface(Typeface.DEFAULT_BOLD);
+        val.setGravity(android.view.Gravity.CENTER);
+
+        chip.addView(lbl);
+        chip.addView(val);
+        return chip;
     }
 
     private void estado(String s) {

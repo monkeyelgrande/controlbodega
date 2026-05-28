@@ -10,12 +10,12 @@
         android:id="@+id/txtOrden"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:padding="16dp"
+        android:layout_margin="12dp"
+        android:padding="14dp"
         android:background="@drawable/bg_card"
         android:textColor="@color/on_surface"
-        android:textSize="15sp"
-        android:lineSpacingExtra="3dp"
+        android:textSize="14sp"
+        android:lineSpacingExtra="2dp"
         android:text="Aun no has escaneado ninguna orden." />
 
     <ScrollView
@@ -29,8 +29,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="8dp" />
+            android:paddingHorizontal="12dp"
+            android:paddingBottom="8dp" />
     </ScrollView>
 
     <TextView
@@ -39,51 +39,66 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:paddingHorizontal="16dp"
-        android:paddingVertical="8dp"
+        android:paddingVertical="6dp"
         android:textColor="@color/exito"
         android:textStyle="bold"
-        android:textSize="15sp" />
+        android:textSize="14sp" />
 
-    <!-- Zona de acciones, fija abajo (comoda para el pulgar) -->
+    <!-- Zona de acciones -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="12dp"
+        android:padding="10dp"
         android:background="@color/surface_card">
 
+        <!-- Visible solo cuando hay una orden cargada -->
         <LinearLayout
+            android:id="@+id/zonaOrden"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnEntregaCompleta"
+                    style="@style/Widget.Bodega.Button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:text="Entrega completa" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnEntregaParcial"
+                    style="@style/Widget.Bodega.Button.Azul"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="Entregar cantidades" />
+            </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnEntregaCompleta"
-                style="@style/Widget.Bodega.Button"
-                android:layout_width="0dp"
+                android:id="@+id/btnCancelar"
+                style="@style/Widget.Bodega.Button.Outline"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="6dp"
-                android:enabled="false"
-                android:text="Entrega completa" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnEntregaParcial"
-                style="@style/Widget.Bodega.Button.Azul"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="6dp"
-                android:enabled="false"
-                android:text="Entregar cantidades" />
+                android:layout_marginTop="8dp"
+                android:text="Cancelar" />
         </LinearLayout>
 
+        <!-- Visible solo cuando NO hay orden (esperando escaneo) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnEscanear"
             style="@style/Widget.Bodega.Button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
             android:minHeight="60dp"
             app:icon="@android:drawable/ic_menu_camera"
             app:iconTint="@color/on_primary"

@@ -23,4 +23,12 @@
 
     <color name="nota_bg">#FFF8E1</color>
     <color name="nota_borde">#F9A825</color>
+
+    <!-- Chips de inventario (Cant / Pend / Disp) -->
+    <color name="chip_cant_bg">#E3F2FD</color>
+    <color name="chip_cant_tx">#0D47A1</color>
+    <color name="chip_pend_bg">#FFF3E0</color>
+    <color name="chip_pend_tx">#E65100</color>
+    <color name="chip_disp_bg">#E8F5E9</color>
+    <color name="chip_disp_tx">#1B5E20</color>
 </resources>
