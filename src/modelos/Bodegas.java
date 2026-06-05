@@ -19,6 +19,7 @@ public class Bodegas {
 
     String nombre;
     int id, imprime;
+    boolean generaOrdenAutomatica;
 
     public Bodegas() {
     }
@@ -29,6 +30,14 @@ public class Bodegas {
 
     public void setImprime(int imprime) {
         this.imprime = imprime;
+    }
+
+    public boolean isGeneraOrdenAutomatica() {
+        return generaOrdenAutomatica;
+    }
+
+    public void setGeneraOrdenAutomatica(boolean generaOrdenAutomatica) {
+        this.generaOrdenAutomatica = generaOrdenAutomatica;
     }
 
     public Bodegas(int id, String nombre) {

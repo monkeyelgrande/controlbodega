@@ -58,7 +58,7 @@ public class ImprimirTermica80MMOrden {
         this.observacion = observacion;
 
         // Carga de datos de negocio
-        String cadena = "select  from configuraciones";
+        String cadena = "select * from configuraciones";
         ResultSet rs = DB_consultas_R_D.getTabla(cadena);
         try {
             while (rs.next()) {

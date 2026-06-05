@@ -49,6 +49,7 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
         btn_editar = new javax.swing.JButton();
         rbtn_Si_imprime = new javax.swing.JRadioButton();
         rbtn_NO_imprime = new javax.swing.JRadioButton();
+        chk_genera_orden = new javax.swing.JCheckBox();
 
         setModal(true);
 
@@ -100,6 +101,8 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
         buttonGroup1.add(rbtn_NO_imprime);
         rbtn_NO_imprime.setText("No, imprime");
 
+        chk_genera_orden.setText("Genera orden de entrega automática al facturar venta");
+
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
@@ -126,7 +129,8 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
                             .addGroup(jPanel2Layout.createSequentialGroup()
                                 .addComponent(rbtn_Si_imprime)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(rbtn_NO_imprime)))))
+                                .addComponent(rbtn_NO_imprime))
+                            .addComponent(chk_genera_orden))))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel2Layout.setVerticalGroup(
@@ -146,6 +150,8 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(rbtn_Si_imprime)
                     .addComponent(rbtn_NO_imprime))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(chk_genera_orden)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btn_guardar)
@@ -190,6 +196,8 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
                 bodega.setImprime(1);
             }
 
+            bodega.setGeneraOrdenAutomatica(chk_genera_orden.isSelected());
+
             if (DB_consultas_R_D.consultarId(txt_id.getText(), "bodegas") == 1) {
                 dbmarcas.Actualizar(bodega);
             } else {
@@ -216,6 +224,7 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
     }//GEN-LAST:event_btn_editarActionPerformed
     public void limpiar() {
         txt_nombre.setText("");
+        chk_genera_orden.setSelected(false);
         txt_nombre.requestFocus();
     }
 
@@ -225,6 +234,7 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
     public static javax.swing.JButton btn_limpiar;
     private javax.swing.ButtonGroup buttonGroup1;
     public static javax.swing.JCheckBox chk_cerrar;
+    public static javax.swing.JCheckBox chk_genera_orden;
     private javax.swing.JLabel jLabel12;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JPanel jPanel2;

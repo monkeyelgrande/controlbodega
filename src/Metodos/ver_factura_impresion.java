@@ -260,7 +260,7 @@ public class ver_factura_impresion extends javax.swing.JDialog {
         String concepto = datosImpresa != null ? datosImpresa[1] : null;
 
         // 3. Productos agrupados por bodega + novedades sin bodega
-        ArrayList<ProductoImprimirOrden> productos = cargarProductosAgrupados(codigo, idBodegaFiltro);
+        ArrayList<ProductoImprimirOrden> productos = cargarProductosAgrupados(id_factura, codigo, idBodegaFiltro);
 
         // Total artículos
         double totalArticulos = 0.0;
@@ -289,18 +289,21 @@ public class ver_factura_impresion extends javax.swing.JDialog {
 
     /**
      * Trae los productos de la factura.
-     * Si {@code idBodegaFiltro} es null, devuelve todos los productos (de todas
-     * las bodegas) más las novedades sin bodega de wo-printer.
-     * Si es != null, devuelve sólo los productos asignados a esa bodega y omite
-     * la sección de novedades.
+     * La sección 3a (productos asignados) filtra por {@code idFactura} directamente
+     * (la llave primaria de facturas_cabeceras), lo que funciona tanto para órdenes
+     * generadas internamente (codigo vacío) como para las importadas de wo-printer.
+     * La sección 3b (novedades wo-printer) sí necesita el {@code numeroFactura}
+     * porque es el enlace con la tabla facturas_impresas — se omite si está vacío.
+     * Si {@code idBodegaFiltro} es null, devuelve todos los productos más las
+     * novedades sin bodega. Si es != null, devuelve sólo los productos asignados
+     * a esa bodega y omite la sección de novedades.
      */
-    private ArrayList<ProductoImprimirOrden> cargarProductosAgrupados(String numeroFactura,
-            Integer idBodegaFiltro) {
+    private ArrayList<ProductoImprimirOrden> cargarProductosAgrupados(String idFactura,
+            String numeroFactura, Integer idBodegaFiltro) {
         ArrayList<ProductoImprimirOrden> lista = new ArrayList<>();
-        if (numeroFactura == null || numeroFactura.isEmpty()) {
+        if (idFactura == null || idFactura.isEmpty()) {
             return lista;
         }
-        String numEsc = numeroFactura.replace("'", "''");
 
         // 3a. Productos asignados a alguna bodega (uno por línea de facturas_detalles)
         String filtroBodega = (idBodegaFiltro != null)
@@ -316,7 +319,7 @@ public class ver_factura_impresion extends javax.swing.JDialog {
                 + "JOIN productos p ON p.id = fd.id_producto "
                 + "LEFT JOIN unidades_medidas um ON um.id = p.id_unidad "
                 + "LEFT JOIN bodegas bod ON bod.id = fc.id_bodega "
-                + "WHERE fc.codigo = '" + numEsc + "' "
+                + "WHERE fc.id = " + idFactura + " "
                 + "  AND fc.tipo_factura <> 'Venta' "
                 + filtroBodega
                 + "ORDER BY bod.nombre NULLS LAST, p.descripcion";
@@ -343,7 +346,12 @@ public class ver_factura_impresion extends javax.swing.JDialog {
             return lista;
         }
 
-        // 3b. Novedades de wo-printer (productos no asignados a bodega)
+        // 3b. Novedades de wo-printer (productos no asignados a bodega) — solo si
+        // existe numero_factura WO (las órdenes internas no aplican).
+        if (numeroFactura == null || numeroFactura.isEmpty()) {
+            return lista;
+        }
+        String numEsc = numeroFactura.replace("'", "''");
         String sqlNovedades = "SELECT df.codigo_producto AS codigo, "
                 + "       df.descripcion, "
                 + "       df.cantidad "

@@ -6,52 +6,36 @@
 package Formularios;
 
 import JDBuscar.jd_buscar_contacto;
+import Metodos.GeneradorOrdenAuto;
+import Metodos.GeneradorOrdenAuto.ItemFacturado;
 import Metodos.ImprimirTermica80MM;
 import Metodos.TextPrompt;
 import Metodos.metodos;
-import Metodos.ver_factura_impresion;
 import conexiondb.DB_consultas_R_D;
 import conexiondb.DBcontactos;
 import conexiondb.DBfacturas_cabeceras;
 import conexiondb.DBstock_productos;
 import java.awt.Font;
-import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
-import java.awt.print.PageFormat;
 import java.awt.print.PrinterException;
-import java.awt.print.PrinterJob;
-import java.io.File;
 import java.io.IOException;
 import java.sql.*;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.DefaultComboBoxModel;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
-import javax.swing.RowFilter;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
-import javax.swing.table.TableRowSorter;
 import modelos.Contactos;
 import modelos.Facturas_cabeceras;
 import modelos.ProductoImprimir;
-import net.sf.jasperreports.engine.JRExporterParameter;
-import net.sf.jasperreports.engine.JasperCompileManager;
-import net.sf.jasperreports.engine.JasperFillManager;
-import net.sf.jasperreports.engine.JasperPrint;
-import net.sf.jasperreports.engine.JasperPrintManager;
-import net.sf.jasperreports.engine.JasperReport;
-import net.sf.jasperreports.engine.export.JRPrintServiceExporter;
-import net.sf.jasperreports.engine.export.JRPrintServiceExporterParameter;
 
 /**
  *
@@ -167,6 +151,7 @@ public class frm_facturacion_ventas extends javax.swing.JInternalFrame {
                 }
             }
         });
+        
         jtabla_filtro.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyPressed(KeyEvent me) {
                 char num = me.getKeyChar();
@@ -968,7 +953,6 @@ public class frm_facturacion_ventas extends javax.swing.JInternalFrame {
             txt_codigo_barras.requestFocus();
         } else {
             boolean flag = true;
-            // ... validación de stock existente (ya existe) ...
 
             if (flag) {
                 lbl_numerofactura.setText(DB_consultas_R_D.cargarId("facturas_cabeceras"));
@@ -1018,6 +1002,8 @@ public class frm_facturacion_ventas extends javax.swing.JInternalFrame {
 
                     int idFactura = Integer.parseInt(lbl_numerofactura.getText());
 
+                    List<ItemFacturado> itemsParaOrdenAuto = new ArrayList<>();
+
                     for (int i = 0; i < jtabla_Ventas.getRowCount(); i++) {
                         double can = 0;
                         try {
@@ -1034,10 +1020,13 @@ public class frm_facturacion_ventas extends javax.swing.JInternalFrame {
                         //   3. Fallback: bodega 1
                         int idBodega = DBstock_productos.seleccionarBodegaDescarga(idProducto);
 
+                        double subtotal = Double.parseDouble(
+                                metodos.EliminaCaracteres(modelo_ventas.getValueAt(i, 4).toString(), "."));
+
                         SSQL += "INSERT INTO facturas_detalles (id,id_cabecera,id_producto,cantidad, subtotal, id_factura) "
                                 + "VALUES ((select COALESCE(max(id),0)+1 from facturas_detalles),"
                                 + lbl_numerofactura.getText() + ",'" + modelo_ventas.getValueAt(i, 0).toString() + "',"
-                                + can + ", " + metodos.EliminaCaracteres(modelo_ventas.getValueAt(i, 4).toString(), ".") + ",0);\n";
+                                + can + ", " + subtotal + ",0);\n";
 
                         // ════════════════════════════════════════════════════════
                         // INTEGRACIÓN STOCK: Registrar venta (descuenta cantidad)
@@ -1051,11 +1040,13 @@ public class frm_facturacion_ventas extends javax.swing.JInternalFrame {
                                 "Venta directa - Factura: " + lbl_numerofactura.getText()
                         );
 
+                        itemsParaOrdenAuto.add(new ItemFacturado(idProducto, idBodega, can, subtotal));
+
                         if (imprimirSiNo == 1) {
                             ProductoImprimir prod = new ProductoImprimir();
                             prod.setNombre("" + modelo_ventas.getValueAt(i, 2));
                             prod.setCantidad("" + modelo_ventas.getValueAt(i, 3));
-                            prod.setPunitario(metodos.formateador_dinero().format(Double.parseDouble(metodos.EliminaCaracteres(modelo_ventas.getValueAt(i, 4).toString(), "."))));
+                            prod.setPunitario(metodos.formateador_dinero().format(subtotal));
                             prod.setPtotal("" + modelo_ventas.getValueAt(i, 5));
                             productos.add(prod);
                         }
@@ -1068,6 +1059,22 @@ public class frm_facturacion_ventas extends javax.swing.JInternalFrame {
                     } catch (SQLException ex) {
                         Logger.getLogger(frm_facturacion_ventas.class.getName()).log(Level.SEVERE, null, ex);
                     }
+
+                    // Generación automática de órdenes de entrega (tipo Salida) para
+                    // los productos descargados de bodegas marcadas con genera_orden_automatica=TRUE.
+                    // ORDEN_REFERENCIADA revierte el descuento de VENTA y reserva pendientes,
+                    // evitando el doble descuento cuando luego se haga la ENTREGA física.
+                    GeneradorOrdenAuto.generarSalidasDesdeVenta(
+                            idFactura,
+                            frm_main.id_user,
+                            fc.getId_cliente(),
+                            fc.getFecha(),
+                            fc.getHora(),
+                            fc.getCodigo(),
+                            fc.getTipo_pago(),
+                            fc.getObservacion(),
+                            itemsParaOrdenAuto
+                    );
                 }
 
                 if (tipo_fac_cre_apart) {

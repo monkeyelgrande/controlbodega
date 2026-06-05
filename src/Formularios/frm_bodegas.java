@@ -57,22 +57,30 @@ public class frm_bodegas extends javax.swing.JInternalFrame {
     public void TamanosTablaAbonos() {
         jtabla_clientes.getTableHeader().setReorderingAllowed(false);
         TableColumnModel columnModel = jtabla_clientes.getColumnModel();
-        columnModel.getColumn(0).setPreferredWidth(40);
-        columnModel.getColumn(1).setPreferredWidth(200);
-
+        if (columnModel.getColumnCount() >= 2) {
+            columnModel.getColumn(0).setPreferredWidth(40);
+            columnModel.getColumn(1).setPreferredWidth(200);
+        }
+        if (columnModel.getColumnCount() >= 4) {
+            columnModel.getColumn(2).setPreferredWidth(70);
+            columnModel.getColumn(3).setPreferredWidth(90);
+        }
     }
 
     public void mostrar() {
 
-        ResultSet rs = DB_consultas_R_D.getTabla("select * from bodegas order by id");
-        modelo.setColumnIdentifiers(new Object[]{"id", "Nombre"});
+        ResultSet rs = DB_consultas_R_D.getTabla("select id, nombre, imprime, genera_orden_automatica from bodegas order by id");
+        modelo.setColumnIdentifiers(new Object[]{"id", "Nombre", "Imprime", "Orden auto"});
         try {
             while (rs.next()) {
-                // añade los resultado a al modelo de tabla
-                modelo.addRow(new Object[]{rs.getString("id"), rs.getString("nombre")});
+                modelo.addRow(new Object[]{
+                    rs.getString("id"),
+                    rs.getString("nombre"),
+                    rs.getInt("imprime") == 1 ? "Sí" : "No",
+                    rs.getBoolean("genera_orden_automatica") ? "Sí" : "No"
+                });
             }
             rs.close();
-            // asigna el modelo a la tabla
             jtabla_clientes.setModel(modelo);
             TamanosTablaAbonos();
         } catch (Exception e) {
@@ -395,6 +403,7 @@ public class frm_bodegas extends javax.swing.JInternalFrame {
                     } else {
                         jif_crear_bodegas.rbtn_Si_imprime.setSelected(true);
                     }
+                    jif_crear_bodegas.chk_genera_orden.setSelected(rs.getBoolean("genera_orden_automatica"));
                 }
                 rs.close();
 
@@ -453,15 +462,18 @@ public class frm_bodegas extends javax.swing.JInternalFrame {
             modelo.removeRow(i);
             i -= 1;
         }
-        ResultSet rs = DB_consultas_R_D.getTabla("select * from bodegas order by id");
-        modelo.setColumnIdentifiers(new Object[]{"id", "Nombre"});
+        ResultSet rs = DB_consultas_R_D.getTabla("select id, nombre, imprime, genera_orden_automatica from bodegas order by id");
+        modelo.setColumnIdentifiers(new Object[]{"id", "Nombre", "Imprime", "Orden auto"});
         try {
             while (rs.next()) {
-                // añade los resultado a al modelo de tabla
-                modelo.addRow(new Object[]{rs.getString("id"), rs.getString("nombre")});
+                modelo.addRow(new Object[]{
+                    rs.getString("id"),
+                    rs.getString("nombre"),
+                    rs.getInt("imprime") == 1 ? "Sí" : "No",
+                    rs.getBoolean("genera_orden_automatica") ? "Sí" : "No"
+                });
             }
             rs.close();
-            // asigna el modelo a la tabla
             jtabla_clientes.setModel(modelo);
         } catch (Exception e) {
             System.out.println(e);
