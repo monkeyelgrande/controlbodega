@@ -453,13 +453,15 @@ public class login extends JFrame {
                 }
 
                 ResultSet rsU = getTabla(
-                        "SELECT imprime_ordenes, nombre_impresora, imp_ticket_bodega_asignada, barra_notificaciones FROM users WHERE id = " + id_u);
+                        "SELECT imprime_ordenes, nombre_impresora, imp_ticket_bodega_asignada, barra_notificaciones, panel_notificaciones, aprueba_compras FROM users WHERE id = " + id_u);
                 try {
                     if (rsU.next()) {
                         frm_main.imprime_ordenes = rsU.getBoolean("imprime_ordenes");
                         frm_main.nombre_impresora_user = rsU.getString("nombre_impresora");
                         frm_main.imp_ticket_bodega_asignada = rsU.getBoolean("imp_ticket_bodega_asignada");
                         frm_main.barra_notificaciones = rsU.getBoolean("barra_notificaciones");
+                        frm_main.panel_notificaciones = rsU.getBoolean("panel_notificaciones");
+                        frm_main.aprueba_compras = rsU.getBoolean("aprueba_compras");
                     }
                     rsU.close();
                 } catch (SQLException ex) {
@@ -487,6 +489,7 @@ public class login extends JFrame {
                 main.perfil = per;
                 main.permisos();
                 main.montarBarraNotificaciones();
+                main.montarPanelNotificaciones();
 
                 String nombrePerfil = DB_consultas_R_D.TraerNombrePerfil(per);
                 if (nombrePerfil != null && nombrePerfil.trim().equalsIgnoreCase("bodeguero")) {

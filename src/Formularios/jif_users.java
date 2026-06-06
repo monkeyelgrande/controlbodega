@@ -357,7 +357,7 @@ public class jif_users extends javax.swing.JInternalFrame {
                 String id = (String) jtabla_clientes.getValueAt(fila, 0);
                 String consulta = "select u.id, u.nombre, u.password, u.user_name, u.direccion, u.telefono, u.telefono2, u.estado, u.email, "
                         + "       p.perfil as perfil, b.nombre as bodega, "
-                        + "       u.imprime_ordenes, u.nombre_impresora, u.imp_ticket_bodega_asignada, u.barra_notificaciones "
+                        + "       u.imprime_ordenes, u.nombre_impresora, u.imp_ticket_bodega_asignada, u.barra_notificaciones, u.panel_notificaciones, u.aprueba_compras "
                         + "from users u "
                         + "left join perfiles p on p.id = u.id_perfil "
                         + "left join bodegas b on b.id = u.id_bodega "
@@ -414,6 +414,16 @@ public class jif_users extends javax.swing.JInternalFrame {
                         boolean barraNotif = rs.getBoolean("barra_notificaciones");
                         if (jif_crear_user.chk_barra_notificaciones != null) {
                             jif_crear_user.chk_barra_notificaciones.setSelected(barraNotif);
+                        }
+
+                        boolean panelNotif = rs.getBoolean("panel_notificaciones");
+                        if (jif_crear_user.chk_panel_notificaciones != null) {
+                            jif_crear_user.chk_panel_notificaciones.setSelected(panelNotif);
+                        }
+
+                        boolean apruebaCompras = rs.getBoolean("aprueba_compras");
+                        if (jif_crear_user.chk_aprueba_compras != null) {
+                            jif_crear_user.chk_aprueba_compras.setSelected(apruebaCompras);
                         }
 
                     }

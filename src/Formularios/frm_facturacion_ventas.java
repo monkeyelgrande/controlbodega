@@ -1187,10 +1187,13 @@ public class frm_facturacion_ventas extends javax.swing.JInternalFrame {
         int key = evt.getKeyCode();
         if ((key == KeyEvent.VK_X)) {
             int fila = jtabla_Ventas.getSelectedRow();
+            if (fila < 0) {
+                return;
+            }
             String codigo_barras = (String) jtabla_Ventas.getValueAt(fila, 1);
-            String consulta = "select p.descripcion,p.precio_costo,p.precio_venta,p.precio_venta2,p.precio_venta3, s.stock "
-                    + "from productos p, stock s "
-                    + "where p.codigo_barras=s.codigo_barras and p.codigo_barras='" + codigo_barras + "'";
+            String consulta = "select p.descripcion,p.precio_costo,p.precio_venta,p.precio_venta2,p.precio_venta3 "
+                    + "from productos p "
+                    + "where p.codigo_barras='" + codigo_barras + "'";
 //            System.out.println(consulta);
             ResultSet rs = DB_consultas_R_D.getTabla(consulta);
             String texto = "";
@@ -1201,7 +1204,8 @@ public class frm_facturacion_ventas extends javax.swing.JInternalFrame {
                             + "<br><b>Precio de venta 1:  $ " + metodos.formateador_dinero().format(rs.getDouble("precio_venta")) + "</b>"
                             + "<br><b>Precio de venta 2:  $ " + metodos.formateador_dinero().format(rs.getDouble("precio_venta2")) + "</b>"
                             + "<br><b>Precio de venta 3:  $ " + metodos.formateador_dinero().format(rs.getDouble("precio_venta3")) + "</b>" + "<hr>"
-                            + "<br><b>Stock Actual: " + rs.getDouble("stock") + "</b>"
+                            + "<br><b>Existencias por bodega</b><br>"
+                            + Metodos.StockBodegaDialog.tablaHtml(codigo_barras)
                             + "</html>";
 
                 }

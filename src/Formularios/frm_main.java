@@ -68,6 +68,11 @@ public class frm_main extends javax.swing.JFrame {
     public static boolean imp_ticket_bodega_asignada = false;
     public static boolean barra_notificaciones = false;
     public static Metodos.BarraNotificacionesPanel barraNotif = null;
+    public static boolean panel_notificaciones = false;
+    public static Metodos.PanelNotificacionesStock panelNotifStock = null;
+    // Permiso para analizar el histórico y aprobar/rechazar órdenes de compra.
+    public static boolean aprueba_compras = false;
+    frm_ordenes_compra frm_orden_compra = null;
 
     jif_users jif_user = null;
     jif_PrincipalReportes jif_reportes = null;
@@ -92,6 +97,8 @@ public class frm_main extends javax.swing.JFrame {
         }
 
         this.setTitle("Bodega - " + titulo);
+
+        montarMenuOrdenesCompra();
 
         // Detener el listener de auto-impresión al cerrar la app
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -130,6 +137,77 @@ public class frm_main extends javax.swing.JFrame {
         cp.repaint();
 
         Metodos.NotificacionesService.getInstance().iniciar();
+    }
+
+    /**
+     * Muestra dentro del escritorio (JDesktopPane) un panel con tarjetas de
+     * productos agotados o en negativo, cuando el usuario logueado tiene
+     * panel_notificaciones=true. Llamar despues del login.
+     */
+    public void montarPanelNotificaciones() {
+        if (!panel_notificaciones) {
+            return;
+        }
+        if (panelNotifStock != null && !panelNotifStock.isClosed()) {
+            panelNotifStock.toFront();
+            return;
+        }
+        panelNotifStock = new Metodos.PanelNotificacionesStock();
+        escritorio.add(panelNotifStock, javax.swing.JLayeredPane.PALETTE_LAYER);
+        panelNotifStock.setVisible(true);
+
+        // El posicionamiento se difiere: al montarse desde el login el escritorio
+        // aun no tiene ancho real (frm_main no se ha mostrado). invokeLater corre
+        // despues de show(), cuando ya hay bounds; si aun no, cae al tamano de pantalla.
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            @Override public void run() {
+                int ancho = panelNotifStock.getWidth();
+                int dispo = escritorio.getWidth() > 0
+                        ? escritorio.getWidth()
+                        : java.awt.Toolkit.getDefaultToolkit().getScreenSize().width;
+                int x = Math.max(0, dispo - ancho - 24);
+                panelNotifStock.setLocation(x, 24);
+                panelNotifStock.toFront();
+            }
+        });
+
+        panelNotifStock.iniciar();
+    }
+
+    /**
+     * Agrega al menú principal la entrada de Órdenes de compra. Se construye
+     * programáticamente (fuera de initComponents) para no tocar el código
+     * generado por el editor de formularios. El menú es visible para todos los
+     * perfiles; el permiso de análisis/aprobación se controla dentro del módulo.
+     */
+    private void montarMenuOrdenesCompra() {
+        javax.swing.JMenu menu = new javax.swing.JMenu("Compras");
+        javax.swing.JMenuItem item = new javax.swing.JMenuItem("Órdenes de compra");
+        item.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirOrdenesCompra();
+            }
+        });
+        menu.add(item);
+        jMenuBar1.add(menu);
+        jMenuBar1.revalidate();
+        jMenuBar1.repaint();
+    }
+
+    private void abrirOrdenesCompra() {
+        if (metodos.estacerrado(frm_orden_compra)) {
+            frm_orden_compra = new frm_ordenes_compra();
+            escritorio.add(frm_orden_compra);
+            try {
+                frm_orden_compra.setMaximum(true);
+            } catch (java.beans.PropertyVetoException ex) {
+                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            frm_orden_compra.show();
+        } else {
+            frm_orden_compra.toFront();
+        }
     }
 
     private void abrirAjusteInventario() {

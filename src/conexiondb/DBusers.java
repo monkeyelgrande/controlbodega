@@ -20,8 +20,8 @@ public class DBusers {
     public int Guardar(Users user) {
         int resultado = 0;
         Connection con = null;
-        String SSQL = "INSERT INTO users (id,nombre, password, user_name, direccion, telefono, telefono2, estado, email, id_perfil, id_bodega, imprime_ordenes, nombre_impresora, imp_ticket_bodega_asignada, barra_notificaciones) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String SSQL = "INSERT INTO users (id,nombre, password, user_name, direccion, telefono, telefono2, estado, email, id_perfil, id_bodega, imprime_ordenes, nombre_impresora, imp_ticket_bodega_asignada, barra_notificaciones, panel_notificaciones, aprueba_compras) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try {
             con = DB_consultas_R_D.getConexion();
             PreparedStatement psql = con.prepareStatement(SSQL);
@@ -40,6 +40,8 @@ public class DBusers {
             psql.setString(13, user.getNombre_impresora());
             psql.setBoolean(14, user.isImp_ticket_bodega_asignada());
             psql.setBoolean(15, user.isBarra_notificaciones());
+            psql.setBoolean(16, user.isPanel_notificaciones());
+            psql.setBoolean(17, user.isAprueba_compras());
 
             resultado = psql.executeUpdate();
             psql.close();
@@ -86,7 +88,9 @@ public class DBusers {
                 + "imprime_ordenes="+user.isImprime_ordenes()+", "
                 + "nombre_impresora="+impresoraSql+", "
                 + "imp_ticket_bodega_asignada="+user.isImp_ticket_bodega_asignada()+", "
-                + "barra_notificaciones="+user.isBarra_notificaciones()+" "
+                + "barra_notificaciones="+user.isBarra_notificaciones()+", "
+                + "panel_notificaciones="+user.isPanel_notificaciones()+", "
+                + "aprueba_compras="+user.isAprueba_compras()+" "
                 + "where id="+user.getId();
         try {
             con = DB_consultas_R_D.getConexion();

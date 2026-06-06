@@ -86,6 +86,8 @@ public class jif_crear_user extends JDialog {
     public static JComboBox<String> cmb_impresora;
     public static JCheckBox chk_imp_ticket_bodega;
     public static JCheckBox chk_barra_notificaciones;
+    public static JCheckBox chk_panel_notificaciones;
+    public static JCheckBox chk_aprueba_compras;
     public static JButton btn_guardar;
     public static JButton btn_limpiar;
     public static JButton btn_editar;
@@ -347,6 +349,36 @@ public class jif_crear_user extends JDialog {
         body.add(chkRow3);
         body.add(Box.createVerticalStrut(8));
 
+        chk_panel_notificaciones = new JCheckBox("Mostrar panel de productos agotados / en negativo");
+        chk_panel_notificaciones.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        chk_panel_notificaciones.setBackground(BG_FORM);
+        chk_panel_notificaciones.setFocusPainted(false);
+        chk_panel_notificaciones.setSelected(false);
+
+        JPanel chkRow4 = new JPanel();
+        chkRow4.setLayout(new BoxLayout(chkRow4, BoxLayout.X_AXIS));
+        chkRow4.setBackground(BG_FORM);
+        chkRow4.setAlignmentX(Component.LEFT_ALIGNMENT);
+        chkRow4.add(chk_panel_notificaciones);
+        chkRow4.add(Box.createHorizontalGlue());
+        body.add(chkRow4);
+        body.add(Box.createVerticalStrut(8));
+
+        chk_aprueba_compras = new JCheckBox("Puede analizar histórico y aprobar órdenes de compra");
+        chk_aprueba_compras.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        chk_aprueba_compras.setBackground(BG_FORM);
+        chk_aprueba_compras.setFocusPainted(false);
+        chk_aprueba_compras.setSelected(false);
+
+        JPanel chkRow5 = new JPanel();
+        chkRow5.setLayout(new BoxLayout(chkRow5, BoxLayout.X_AXIS));
+        chkRow5.setBackground(BG_FORM);
+        chkRow5.setAlignmentX(Component.LEFT_ALIGNMENT);
+        chkRow5.add(chk_aprueba_compras);
+        chkRow5.add(Box.createHorizontalGlue());
+        body.add(chkRow5);
+        body.add(Box.createVerticalStrut(8));
+
         return body;
     }
 
@@ -572,6 +604,10 @@ public class jif_crear_user extends JDialog {
                 chk_imp_ticket_bodega != null && chk_imp_ticket_bodega.isSelected());
         user.setBarra_notificaciones(
                 chk_barra_notificaciones != null && chk_barra_notificaciones.isSelected());
+        user.setPanel_notificaciones(
+                chk_panel_notificaciones != null && chk_panel_notificaciones.isSelected());
+        user.setAprueba_compras(
+                chk_aprueba_compras != null && chk_aprueba_compras.isSelected());
 
         if (DB_consultas_R_D.consultarId(txt_id.getText(), "users") == 1) {
             dbusers.Actualizar(user);
@@ -606,6 +642,12 @@ public class jif_crear_user extends JDialog {
         }
         if (chk_barra_notificaciones != null) {
             chk_barra_notificaciones.setSelected(false);
+        }
+        if (chk_panel_notificaciones != null) {
+            chk_panel_notificaciones.setSelected(false);
+        }
+        if (chk_aprueba_compras != null) {
+            chk_aprueba_compras.setSelected(false);
         }
         txt_nombre.requestFocus();
         txt_id.setText(DB_consultas_R_D.cargarId("users"));

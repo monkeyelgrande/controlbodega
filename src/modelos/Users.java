@@ -29,6 +29,16 @@ public class Users {
     String nombre_impresora;
     boolean imp_ticket_bodega_asignada;
     boolean barra_notificaciones;
+    boolean panel_notificaciones;
+    boolean aprueba_compras;
+
+    public boolean isAprueba_compras() {
+        return aprueba_compras;
+    }
+
+    public void setAprueba_compras(boolean aprueba_compras) {
+        this.aprueba_compras = aprueba_compras;
+    }
 
     public boolean isBarra_notificaciones() {
         return barra_notificaciones;
@@ -36,6 +46,14 @@ public class Users {
 
     public void setBarra_notificaciones(boolean barra_notificaciones) {
         this.barra_notificaciones = barra_notificaciones;
+    }
+
+    public boolean isPanel_notificaciones() {
+        return panel_notificaciones;
+    }
+
+    public void setPanel_notificaciones(boolean panel_notificaciones) {
+        this.panel_notificaciones = panel_notificaciones;
     }
 
     public boolean isImprime_ordenes() {

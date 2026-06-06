@@ -1486,9 +1486,11 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
         int key = evt.getKeyCode();
         if ((key == KeyEvent.VK_X)) {
             int fila = jtabla_Ventas.getSelectedRow();
+            if (fila < 0) {
+                return;
+            }
             String codigo_barras = (String) jtabla_Ventas.getValueAt(fila, 1);
-            double stock = DB_consultas_R_D.consultar_stock(codigo_barras);
-            JOptionPane.showConfirmDialog(rootPane, "E producto actual posee un stock de:\n" + stock);
+            Metodos.StockBodegaDialog.mostrar(rootPane, codigo_barras);
         }
 
     }//GEN-LAST:event_jtabla_VentasKeyPressed

@@ -111,6 +111,8 @@ CREATE TABLE users
   nombre_impresora character varying(150),
   imp_ticket_bodega_asignada boolean NOT NULL DEFAULT FALSE,
   barra_notificaciones boolean NOT NULL DEFAULT FALSE,
+  panel_notificaciones boolean NOT NULL DEFAULT FALSE,
+  aprueba_compras boolean NOT NULL DEFAULT FALSE,
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT fk_bodega_user FOREIGN KEY (id_bodega) REFERENCES bodegas (id),
   CONSTRAINT fk_perfil FOREIGN KEY (id_perfil)
@@ -876,3 +878,66 @@ CREATE INDEX idx_escaneos_qr_fecha      ON escaneos_qr_ordenes (fecha_escaneo);
 CREATE INDEX idx_escaneos_qr_user       ON escaneos_qr_ordenes (id_user);
 CREATE INDEX idx_escaneos_qr_bodega     ON escaneos_qr_ordenes (id_bodega);
 CREATE INDEX idx_novedades_fecha   ON novedades_facturas (fecha_deteccion DESC);
+
+
+-- ============================================================================
+-- ÓRDENES DE COMPRA (solicitudes de pedido por escalas)
+-- Cualquier usuario crea una orden con productos y cantidades (sin proveedor ni
+-- precios). Un usuario con users.aprueba_compras analiza el histórico y aprueba
+-- o rechaza, asignando proveedor y precio POR LÍNEA.
+-- estado: 0=BORRADOR, 1=PENDIENTE, 2=APROBADA, 3=RECHAZADA
+-- ============================================================================
+CREATE TABLE ordenes_compra_cabecera
+(
+  id integer NOT NULL,
+  numero character varying(50),
+  id_user_crea integer NOT NULL,
+  fecha date,
+  hora time without time zone,
+  estado integer NOT NULL DEFAULT 0,
+  observacion text,
+  id_bodega integer,
+  id_user_aprueba integer,
+  fecha_aprobacion timestamp without time zone,
+  CONSTRAINT pk_ordenes_compra_cabecera PRIMARY KEY (id),
+  CONSTRAINT fk_oc_user_crea FOREIGN KEY (id_user_crea)
+      REFERENCES users (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION,
+  CONSTRAINT fk_oc_user_aprueba FOREIGN KEY (id_user_aprueba)
+      REFERENCES users (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION,
+  CONSTRAINT fk_oc_bodega FOREIGN KEY (id_bodega)
+      REFERENCES bodegas (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION
+)
+WITH (
+  OIDS=FALSE
+);
+
+
+
+CREATE TABLE ordenes_compra_detalle
+(
+  id integer NOT NULL,
+  id_orden_cabecera integer NOT NULL,
+  id_producto integer NOT NULL,
+  cantidad numeric(18,4) NOT NULL,
+  id_proveedor integer,
+  precio_unitario numeric(18,4),
+  observacion text,
+  CONSTRAINT pk_ordenes_compra_detalle PRIMARY KEY (id),
+  CONSTRAINT fk_ocd_cabecera FOREIGN KEY (id_orden_cabecera)
+      REFERENCES ordenes_compra_cabecera (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE CASCADE,
+  CONSTRAINT fk_ocd_producto FOREIGN KEY (id_producto)
+      REFERENCES productos (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION,
+  CONSTRAINT fk_ocd_proveedor FOREIGN KEY (id_proveedor)
+      REFERENCES contactos (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION
+)
+WITH (
+  OIDS=FALSE
+);
+
+CREATE INDEX idx_ordenes_compra_detalle_cabecera ON ordenes_compra_detalle (id_orden_cabecera);
