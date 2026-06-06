@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 package Formularios;
-
+ 
 import Formularios_internos.jd_Relacionar;
 import JDBuscar.jd_buscar_contacto;
 import Metodos.TextPrompt;
@@ -110,6 +110,13 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
                 jbox_bodega.setSelectedIndex(total_bodegas - 1);
             }
         }
+
+        // La bodega ya no se elige a mano: cada producto trae su bodega de
+        // descarga automática (la de mayor inventario) en la columna BODEGA.
+        // Ocultamos el combo y su etiqueta; el resto del código que aún lo
+        // referencia sigue funcionando porque el combo queda poblado.
+        jbox_bodega.setVisible(false);
+        jLabel8.setVisible(false);
 
         lbl_id_cliente.setText("1");
         lbl_numerofactura.setText(DB_consultas_R_D.cargarId("facturas_cabeceras"));
@@ -316,7 +323,9 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
                 return columna == 3;
             }
         };
-        modelo_ventas.setColumnIdentifiers(new Object[]{"ID", "CODIGO", "DESCRIPCIÓN", "CANTIDAD", "R"});
+        // Columnas BODEGA (nombre visible) e IDBOD (id para guardar) se añaden al
+        // final para no correr los índices que usa el resto del código (0..4).
+        modelo_ventas.setColumnIdentifiers(new Object[]{"ID", "CODIGO", "DESCRIPCIÓN", "CANTIDAD", "R", "BODEGA", "IDBOD"});
 
     }
 
@@ -753,6 +762,7 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
         btn_relacionar.setForeground(new java.awt.Color(255, 255, 255));
         btn_relacionar.setIcon(new javax.swing.ImageIcon(getClass().getResource("/imagenes/Chain.png"))); // NOI18N
         btn_relacionar.setText("Relacionar Factura");
+        btn_relacionar.setEnabled(false);
         btn_relacionar.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btn_relacionarActionPerformed(evt);
@@ -948,6 +958,14 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
         columnModel.getColumn(1).setPreferredWidth(100);
         columnModel.getColumn(2).setPreferredWidth(600);
         columnModel.getColumn(3).setPreferredWidth(100);
+        // Columna BODEGA (5): visible con el nombre de la bodega de descarga.
+        // Columna IDBOD (6): id numérico solo para uso interno, se oculta.
+        if (columnModel.getColumnCount() > 6) {
+            columnModel.getColumn(5).setPreferredWidth(160);
+            columnModel.getColumn(6).setMinWidth(0);
+            columnModel.getColumn(6).setMaxWidth(0);
+            columnModel.getColumn(6).setPreferredWidth(0);
+        }
 
     }
 
@@ -970,7 +988,8 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
                     try {
                         while (rs.next()) {
 
-                            modelo_ventas.addRow(new Object[]{rs.getString("id"), rs.getString("codigo_barras"), rs.getString("descripcion"), cantidad, "0"});
+                            int idBodAuto = DBstock_productos.seleccionarBodegaDescarga(Integer.parseInt(rs.getString("id")));
+                            modelo_ventas.addRow(new Object[]{rs.getString("id"), rs.getString("codigo_barras"), rs.getString("descripcion"), cantidad, "0", DBstock_productos.nombreBodega(idBodAuto), idBodAuto});
 
                         }
                         rs.close();
@@ -1001,7 +1020,8 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
 
                         try {
                             while (rs.next()) {
-                                modelo_ventas.addRow(new Object[]{rs.getString("id"), rs.getString("codigo_barras"), rs.getString("descripcion"), cantidad, "0"});
+                                int idBodAuto = DBstock_productos.seleccionarBodegaDescarga(Integer.parseInt(rs.getString("id")));
+                                modelo_ventas.addRow(new Object[]{rs.getString("id"), rs.getString("codigo_barras"), rs.getString("descripcion"), cantidad, "0", DBstock_productos.nombreBodega(idBodAuto), idBodAuto});
 
                             }
                             rs.close();
@@ -1082,6 +1102,15 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
     public void imprimir_factura() {
         try {
             int idFactura = Integer.parseInt(lbl_numerofactura.getText());
+            imprimir_factura(idFactura);
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "No se pudo imprimir: " + e.getMessage());
+        }
+    }
+
+    public void imprimir_factura(int idFactura) {
+        try {
             new Metodos.ImprimirFacturaPDF().imprimir(idFactura);
         } catch (Exception e) {
             e.printStackTrace();
@@ -1126,15 +1155,9 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
             txt_codigo_barras.requestFocus();
         } else {
             boolean flag = true;
-            int idBodegaValidacion;
-            String nombreBodegaValidacion;
-            try {
-                idBodegaValidacion = jbox_bodega.getItemAt(jbox_bodega.getSelectedIndex()).getId();
-                nombreBodegaValidacion = jbox_bodega.getSelectedItem().toString();
-            } catch (Exception e) {
-                idBodegaValidacion = id_bodega;
-                nombreBodegaValidacion = "asignada";
-            }
+            // Validacion de stock POR PRODUCTO contra su propia bodega de descarga
+            // (columna 6 = IDBOD, columna 5 = nombre). Las filas referenciadas (WO,
+            // columna 4 != 0) se saltan igual que antes.
             for (int i = 0; i < jtabla_Ventas.getRowCount(); i++) {
                 int idFacturaRef = 0;
                 try {
@@ -1151,12 +1174,19 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
                 } catch (NumberFormatException e) {
                     can = 1;
                 }
-                double stock = DB_consultas_R_D.consultar_stock_x_bodega("" + modelo_ventas.getValueAt(i, 1), idBodegaValidacion);
+                int idBodValid;
+                try {
+                    idBodValid = Integer.parseInt("" + modelo_ventas.getValueAt(i, 6));
+                } catch (Exception e) {
+                    idBodValid = id_bodega;
+                }
+                String nombreBodValid = "" + modelo_ventas.getValueAt(i, 5);
+                double stock = DB_consultas_R_D.consultar_stock_x_bodega("" + modelo_ventas.getValueAt(i, 1), idBodValid);
                 if (can > stock) {
                     flag = false;
                     int dialogButton = JOptionPane.YES_NO_OPTION;
                     int dialogResult = JOptionPane.showConfirmDialog(null, "El producto " + modelo_ventas.getValueAt(i, 2) + " solo cuenta con un inventario de:\n"
-                            + stock + " en la bodega " + nombreBodegaValidacion + "\n¿Desea continuar esta  orden sin inventario suficiente?\n"
+                            + stock + " en la bodega " + nombreBodValid + "\n¿Desea continuar esta  orden sin inventario suficiente?\n"
                             + "el balance le dara negativo", "Alerta", dialogButton);
                     if (dialogResult == JOptionPane.YES_OPTION) {
                         flag = true;
@@ -1165,111 +1195,169 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
             }
 
             if (flag) {
-                lbl_numerofactura.setText(DB_consultas_R_D.cargarId("facturas_cabeceras"));
                 DBfacturas_cabeceras dbfactura = new DBfacturas_cabeceras();
-                DBstock_productos dbStock = new DBstock_productos();  // ◄── NUEVO
-                Facturas_cabeceras fc = new Facturas_cabeceras();
+                DBstock_productos dbStock = new DBstock_productos();
 
-                try {
-                    fc.setId(Integer.parseInt(lbl_numerofactura.getText()));
-                    fc.setId_cliente(Integer.parseInt(lbl_id_cliente.getText()));
-                    fc.setId_user(frm_main.id_user);
-
-                    int dia, mes, ano;
-                    ano = jdate_fecha.getCalendar().get(Calendar.YEAR);
-                    mes = jdate_fecha.getCalendar().get(Calendar.MARCH) + 1;
-                    dia = jdate_fecha.getCalendar().get(Calendar.DAY_OF_MONTH);
-                    fc.setFecha(ano + "-" + mes + "-" + dia);
-
-                    if (txt_codigo.getText().equals("")) {
-                        fc.setCodigo("");
-                    } else {
-                        fc.setCodigo(txt_codigo.getText());
-                    }
-                    if (rb_salida.isSelected()) {
-                        fc.setTipo("Salida");
-                    }
-                    if (rb_prestamo.isSelected()) {
-                        fc.setTipo("Préstamo");
-                    }
-                    if (rb_eliminacion.isSelected()) {
-                        fc.setTipo("Eliminación");
-                    }
-                    fc.setHora(DB_consultas_R_D.obtener_hora());
-                    fc.setObservacion(txt_observaciones.getText());
-                    fc.setAnulado(1);
-
-                    try {
-                        fc.setId_bodega(jbox_bodega.getItemAt(jbox_bodega.getSelectedIndex()).getId());
-                    } catch (Exception e) {
-                        fc.setId_bodega(id_bodega);
-                    }
-                } catch (NumberFormatException e) {
-                    JOptionPane.showMessageDialog(this, e);
+                // Tipo de la orden segun el radio seleccionado.
+                String tipoOrden = "Salida";
+                if (rb_prestamo.isSelected()) {
+                    tipoOrden = "Préstamo";
+                }
+                if (rb_eliminacion.isSelected()) {
+                    tipoOrden = "Eliminación";
                 }
 
-                if (dbfactura.Guardar(fc) == 1) {
-                    Connection con = null;
-                    con = DB_consultas_R_D.getConexion();
-                    PreparedStatement psql = null;
+                // Fecha/hora comunes a todas las ordenes generadas.
+                int dia, mes, ano;
+                ano = jdate_fecha.getCalendar().get(Calendar.YEAR);
+                mes = jdate_fecha.getCalendar().get(Calendar.MARCH) + 1;
+                dia = jdate_fecha.getCalendar().get(Calendar.DAY_OF_MONTH);
+                String fechaOrden = ano + "-" + mes + "-" + dia;
+                String horaOrden = DB_consultas_R_D.obtener_hora();
+
+                // Agrupar las filas por bodega de descarga (columna 6 = IDBOD).
+                // LinkedHashMap conserva el orden en que se agregaron los productos.
+                Map<Integer, List<Integer>> filasPorBodega = new java.util.LinkedHashMap<>();
+                for (int i = 0; i < jtabla_Ventas.getRowCount(); i++) {
+                    int idBod;
+                    try {
+                        idBod = Integer.parseInt("" + modelo_ventas.getValueAt(i, 6));
+                    } catch (Exception e) {
+                        idBod = id_bodega;
+                    }
+                    filasPorBodega.computeIfAbsent(idBod, k -> new ArrayList<>()).add(i);
+                }
+
+                List<Integer> ordenesCreadas = new ArrayList<>();
+
+                // Una cabecera (orden) por cada bodega. Se saca el id, se guarda la
+                // cabecera y luego se insertan detalles y movimientos de pendientes.
+                // Guardar antes de pedir el siguiente id evita ids duplicados.
+                for (Map.Entry<Integer, List<Integer>> grupo : filasPorBodega.entrySet()) {
+                    int idBodega = grupo.getKey();
+                    List<Integer> filas = grupo.getValue();
+
+                    int idOrden;
+                    try {
+                        idOrden = Integer.parseInt(DB_consultas_R_D.cargarId("facturas_cabeceras"));
+                    } catch (NumberFormatException ex) {
+                        JOptionPane.showMessageDialog(this, "No se pudo generar el id de la orden para la bodega " + idBodega);
+                        continue;
+                    }
+
+                    Facturas_cabeceras fc = new Facturas_cabeceras();
+                    try {
+                        fc.setId(idOrden);
+                        fc.setId_cliente(Integer.parseInt(lbl_id_cliente.getText()));
+                        fc.setId_user(frm_main.id_user);
+                        fc.setFecha(fechaOrden);
+                        fc.setCodigo(txt_codigo.getText() == null ? "" : txt_codigo.getText());
+                        fc.setTipo(tipoOrden);
+                        fc.setHora(horaOrden);
+                        fc.setObservacion(txt_observaciones.getText());
+                        fc.setAnulado(1);
+                        fc.setId_bodega(idBodega);
+                    } catch (NumberFormatException e) {
+                        JOptionPane.showMessageDialog(this, e);
+                        continue;
+                    }
+
+                    // Detalles de esta bodega (se confirman junto con la cabecera).
                     String SSQL = "";
-
-                    int idOrden = Integer.parseInt(lbl_numerofactura.getText());
-                    int idBodega = fc.getId_bodega();
-
-                    for (int i = 0; i < jtabla_Ventas.getRowCount(); i++) {
+                    for (int idx : filas) {
                         double can = 0;
                         try {
-                            can = Double.parseDouble("" + modelo_ventas.getValueAt(i, 3));
+                            can = Double.parseDouble("" + modelo_ventas.getValueAt(idx, 3));
                         } catch (Exception e) {
                             can = 1;
                         }
-
-                        int idProducto = Integer.parseInt(modelo_ventas.getValueAt(i, 0).toString());
+                        int idProducto = Integer.parseInt(modelo_ventas.getValueAt(idx, 0).toString());
                         int idFacturaRef = 0;
                         try {
-                            idFacturaRef = Integer.parseInt(modelo_ventas.getValueAt(i, 4).toString());
+                            idFacturaRef = Integer.parseInt(modelo_ventas.getValueAt(idx, 4).toString());
                         } catch (Exception e) {
                             idFacturaRef = 0;
                         }
-
                         SSQL += "INSERT INTO facturas_detalles (id,id_cabecera, id_producto, cantidad, subtotal, id_factura) "
                                 + "VALUES ((select COALESCE(max(id),0)+1 from facturas_detalles),"
-                                + lbl_numerofactura.getText() + "," + modelo_ventas.getValueAt(i, 0).toString() + ","
+                                + idOrden + "," + idProducto + ","
                                 + can + ",0," + idFacturaRef + ");\n";
-
-                        // ════════════════════════════════════════════════════════════════════
-// INTEGRACIÓN STOCK: Registrar orden
-// ════════════════════════════════════════════════════════════════════
-                        if (idFacturaRef == 0) {
-                            // Orden normal: solo compromete pendientes
-                            dbStock.orden(
-                                    idProducto,
-                                    idBodega,
-                                    frm_main.id_user,
-                                    can,
-                                    idOrden,
-                                    "Orden - " + fc.getTipo()
-                            );
-                        } else {
-                            // Orden referenciada: ingresa cantidad Y compromete pendientes
-                            dbStock.ordenReferenciada(
-                                    idProducto,
-                                    idBodega,
-                                    frm_main.id_user,
-                                    can,
-                                    idOrden,
-                                    "Orden referenciada - Factura WO: " + idFacturaRef // ◄── idFacturaRef va aquí en observación
-                            );
-                        }
                     }
+
+                    // Cabecera + detalles en UNA sola transacción. El trigger
+                    // trg_notify_orden_nueva hace pg_notify en el AFTER INSERT de la
+                    // cabecera, pero PostgreSQL entrega la notificación solo al COMMIT.
+                    // Al confirmar cabecera y detalles juntos, cuando el servicio de
+                    // impresión automática recibe el NOTIFY los artículos ya existen
+                    // y la orden no sale vacía.
+                    boolean guardado = false;
+                    Connection con = null;
                     try {
-                        psql = con.prepareStatement(SSQL);
-                        psql.executeUpdate();
-                        psql.close();
-                        con.close();
+                        con = DB_consultas_R_D.getConexion();
+                        con.setAutoCommit(false);
+                        dbfactura.Guardar(fc, con);            // cabecera
+                        try (PreparedStatement psql = con.prepareStatement(SSQL)) {
+                            psql.executeUpdate();              // detalles
+                        }
+                        con.commit();                          // aquí se entrega el NOTIFY
+                        guardado = true;
                     } catch (SQLException ex) {
                         Logger.getLogger(frm_Crear_Orden.class.getName()).log(Level.SEVERE, null, ex);
+                        if (con != null) {
+                            try {
+                                con.rollback();
+                            } catch (SQLException ignored) {
+                            }
+                        }
+                        JOptionPane.showMessageDialog(this, "No se pudo guardar la orden para la bodega "
+                                + idBodega + ":\n" + ex.getMessage());
+                    } finally {
+                        if (con != null) {
+                            try {
+                                con.setAutoCommit(true);
+                                con.close();
+                            } catch (SQLException ignored) {
+                            }
+                        }
+                    }
+
+                    if (!guardado) {
+                        continue;
+                    }
+
+                    // Movimientos de stock (pendientes) DESPUÉS del commit: no afectan
+                    // la impresión y gestionan su propia conexión.
+                    for (int idx : filas) {
+                        double can = 0;
+                        try {
+                            can = Double.parseDouble("" + modelo_ventas.getValueAt(idx, 3));
+                        } catch (Exception e) {
+                            can = 1;
+                        }
+                        int idProducto = Integer.parseInt(modelo_ventas.getValueAt(idx, 0).toString());
+                        int idFacturaRef = 0;
+                        try {
+                            idFacturaRef = Integer.parseInt(modelo_ventas.getValueAt(idx, 4).toString());
+                        } catch (Exception e) {
+                            idFacturaRef = 0;
+                        }
+                        if (idFacturaRef == 0) {
+                            // Orden normal: solo compromete pendientes
+                            dbStock.orden(idProducto, idBodega, frm_main.id_user, can, idOrden,
+                                    "Orden - " + tipoOrden);
+                        } else {
+                            // Orden referenciada: ingresa cantidad Y compromete pendientes
+                            dbStock.ordenReferenciada(idProducto, idBodega, frm_main.id_user, can, idOrden,
+                                    "Orden referenciada - Factura WO: " + idFacturaRef);
+                        }
+                    }
+
+                    ordenesCreadas.add(idOrden);
+
+                    // Impresion por orden, respetando el flag de impresion de la bodega.
+                    int imprimeBodega = DB_consultas_R_D.Imprimir_Bodega_si_no(DBstock_productos.nombreBodega(idBodega));
+                    if (imprimirSiNo == 1 && imprimeBodega == 1) {
+                        imprimir_factura(idOrden);
                     }
                 }
 
@@ -1277,10 +1365,9 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
                     tipo_fac_cre_apart = false;
                 }
 
-                imprimirBodegaSiNo = DB_consultas_R_D.Imprimir_Bodega_si_no(jbox_bodega.getSelectedItem().toString());
-                System.out.println(imprimirBodegaSiNo);
-                if (imprimirSiNo == 1 && imprimirBodegaSiNo == 1) {
-                    imprimir_factura();
+                if (ordenesCreadas.size() > 1) {
+                    JOptionPane.showMessageDialog(this, "Se crearon " + ordenesCreadas.size()
+                            + " órdenes (una por bodega): " + ordenesCreadas);
                 }
                 limpiar();
 

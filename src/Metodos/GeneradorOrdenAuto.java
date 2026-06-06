@@ -120,15 +120,20 @@ public class GeneradorOrdenAuto {
             fc.setTipo_pago(tipoPago);
             fc.setId_bodega(idBodega);
 
-            if (dbCab.Guardar(fc) != 1) {
-                System.err.println("[GeneradorOrdenAuto] Falló guardar cabecera Salida para bodega " + idBodega);
+            // Cabecera + detalles en una sola transacción: el NOTIFY del trigger se
+            // entrega al COMMIT, ya con los artículos presentes, para que la
+            // impresión automática no salga sin productos.
+            if (!insertarCabeceraYDetalles(fc, idSalida, idVenta, idBodega, grupo, dbCab)) {
+                System.err.println("[GeneradorOrdenAuto] Falló guardar Salida para bodega " + idBodega
+                        + " (cabecera+detalles). No se generó la orden.");
                 continue;
             }
 
-            if (!insertarDetallesYMovimientos(idSalida, idVenta, idBodega, idUser, grupo, dbStock)) {
-                System.err.println("[GeneradorOrdenAuto] Falló insertar detalles de Salida " + idSalida
-                        + ". La cabecera quedó creada pero sin detalles — revisar manualmente.");
-                continue;
+            // Movimientos de pendientes después del commit (revierten la VENTA y
+            // dejan el producto en pendientes). Gestionan su propia conexión.
+            for (ItemFacturado it : grupo) {
+                dbStock.ordenReferenciada(it.idProducto, idBodega, idUser, it.cantidad, idSalida,
+                        "Orden auto bodega " + idBodega + " - Venta " + idVenta);
             }
 
             salidasCreadas.add(idSalida);
@@ -164,13 +169,22 @@ public class GeneradorOrdenAuto {
         return result;
     }
 
-    private static boolean insertarDetallesYMovimientos(
-            int idSalida, int idVenta, int idBodega, int idUser,
-            List<ItemFacturado> items, DBstock_productos dbStock) {
+    /**
+     * Inserta la cabecera y sus detalles en UNA sola transacción y hace commit.
+     * Así el NOTIFY del trigger trg_notify_orden_nueva (que PostgreSQL entrega al
+     * COMMIT) llega cuando los artículos ya existen, evitando que la impresión
+     * automática salga sin productos.
+     *
+     * @return true si cabecera y detalles quedaron confirmados; false si hubo
+     * error (se hace rollback y no se genera la orden).
+     */
+    private static boolean insertarCabeceraYDetalles(
+            Facturas_cabeceras fc, int idSalida, int idVenta, int idBodega,
+            List<ItemFacturado> items, DBfacturas_cabeceras dbCab) {
 
         StringBuilder sql = new StringBuilder();
         for (ItemFacturado it : items) {
-            // Mismo patrón que frm_Crear_Orden línea 1236: id_factura apunta a la Venta origen.
+            // Mismo patrón que frm_Crear_Orden: id_factura apunta a la Venta origen.
             sql.append("INSERT INTO facturas_detalles (id, id_cabecera, id_producto, cantidad, subtotal, id_factura) ")
                     .append("VALUES ((SELECT COALESCE(MAX(id),0)+1 FROM facturas_detalles),")
                     .append(idSalida).append(",")
@@ -183,32 +197,30 @@ public class GeneradorOrdenAuto {
         Connection con = null;
         try {
             con = DB_consultas_R_D.getConexion();
+            con.setAutoCommit(false);
+            dbCab.Guardar(fc, con);                       // cabecera
             try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
-                ps.executeUpdate();
+                ps.executeUpdate();                       // detalles
             }
+            con.commit();                                 // aquí se entrega el NOTIFY
+            return true;
         } catch (SQLException e) {
-            System.err.println("[GeneradorOrdenAuto] Error insertando detalles: " + e.getMessage());
+            System.err.println("[GeneradorOrdenAuto] Error guardando cabecera+detalles: " + e.getMessage());
+            if (con != null) {
+                try {
+                    con.rollback();
+                } catch (SQLException ignored) {
+                }
+            }
             return false;
         } finally {
             if (con != null) {
                 try {
+                    con.setAutoCommit(true);
                     con.close();
                 } catch (SQLException ignored) {
                 }
             }
         }
-
-        // Movimientos: ORDEN_REFERENCIADA por cada item — revierte VENTA y reserva pendiente.
-        for (ItemFacturado it : items) {
-            dbStock.ordenReferenciada(
-                    it.idProducto,
-                    idBodega,
-                    idUser,
-                    it.cantidad,
-                    idSalida,
-                    "Orden auto bodega " + idBodega + " - Venta " + idVenta
-            );
-        }
-        return true;
     }
 }

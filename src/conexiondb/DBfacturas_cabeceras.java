@@ -45,16 +45,19 @@ public class DBfacturas_cabeceras {
         return resultado;
     }
 
+    private String sqlInsertCabecera(Facturas_cabeceras fc) {
+        return "INSERT INTO facturas_cabeceras (id,id_contacto,id_user,fecha,hora,tipo_factura,codigo,observacion, observacion_entrega, anulado, tipo_pago, id_bodega) "
+                + "VALUES (" + fc.getId() + ", " + fc.getId_cliente() + "," + fc.getId_user() + ",'" + fc.getFecha() + "',"
+                + "'" + fc.getHora() + "','" + fc.getTipo() + "','" + fc.getCodigo() + "','" + fc.getObservacion() + "','" + fc.getObservacion_entrega() + "',"
+                + fc.getAnulado() + "," + fc.getTipo_pago() + " ," + fc.getId_bodega() + " )";
+    }
+
     public int Guardar(Facturas_cabeceras fc) {
         int resultado = 0;
         Connection con = null;
-        String SSQL = "INSERT INTO facturas_cabeceras (id,id_contacto,id_user,fecha,hora,tipo_factura,codigo,observacion, observacion_entrega, anulado, tipo_pago, id_bodega) "
-                + "VALUES (" + fc.getId() + ", " + fc.getId_cliente() + "," + fc.getId_user() + ",'" + fc.getFecha() + "',"
-                + "'" + fc.getHora() + "','" + fc.getTipo() + "','" + fc.getCodigo() + "','" + fc.getObservacion() + "','" + fc.getObservacion_entrega() + "',"
-                + fc.getAnulado() + "," + fc.getTipo_pago() + " ," + fc.getId_bodega()+ " )";
         try {
             con = DB_consultas_R_D.getConexion();
-            PreparedStatement psql = con.prepareStatement(SSQL);
+            PreparedStatement psql = con.prepareStatement(sqlInsertCabecera(fc));
             resultado = psql.executeUpdate();
             psql.close();
 
@@ -73,6 +76,28 @@ public class DBfacturas_cabeceras {
             }
         }
         return resultado;
+    }
+
+    /**
+     * Inserta la cabecera usando una conexión provista por el llamador, SIN
+     * hacer commit ni cerrar la conexión. Permite agrupar la cabecera y sus
+     * facturas_detalles dentro de una sola transacción.
+     *
+     * Importante para la impresión automática: el trigger trg_notify_orden_nueva
+     * hace pg_notify en el AFTER INSERT de la cabecera, pero PostgreSQL entrega
+     * la notificación solo al COMMIT. Si la cabecera y sus detalles se confirman
+     * en la misma transacción, cuando el servicio de impresión recibe el NOTIFY
+     * los artículos ya existen y la orden no sale vacía.
+     *
+     * @param fc cabecera a insertar
+     * @param con conexión con la transacción abierta (autoCommit = false)
+     * @return filas afectadas por el INSERT
+     * @throws SQLException si falla el INSERT (el llamador debe hacer rollback)
+     */
+    public int Guardar(Facturas_cabeceras fc, Connection con) throws SQLException {
+        try (PreparedStatement psql = con.prepareStatement(sqlInsertCabecera(fc))) {
+            return psql.executeUpdate();
+        }
     }
 
     public int Actualizar(Facturas_cabeceras fc) {

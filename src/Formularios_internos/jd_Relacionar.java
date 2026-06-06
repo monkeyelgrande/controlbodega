@@ -8,6 +8,7 @@ package Formularios_internos;
 import Formularios.frm_Crear_Orden;
 import Metodos.metodos;
 import conexiondb.DB_consultas_R_D;
+import conexiondb.DBstock_productos;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.sql.ResultSet;
@@ -60,10 +61,12 @@ public class jd_Relacionar extends javax.swing.JDialog {
                 if (me.getClickCount() == 2) {
                     int fila = jtabla_factura.getSelectedRow();
 
-                    frm_Crear_Orden.modelo_ventas.setColumnIdentifiers(new Object[]{"ID", "CODIGO", "DESCRIPCIÓN", "CANTIDAD", "R"});
+                    frm_Crear_Orden.modelo_ventas.setColumnIdentifiers(new Object[]{"ID", "CODIGO", "DESCRIPCIÓN", "CANTIDAD", "R", "BODEGA", "IDBOD"});
 
+                    int idBodAuto = DBstock_productos.seleccionarBodegaDescarga(Integer.parseInt(jtabla_factura.getValueAt(fila, 0).toString()));
                     frm_Crear_Orden.modelo_ventas.addRow(new Object[]{jtabla_factura.getValueAt(fila, 0).toString(), jtabla_factura.getValueAt(fila, 1).toString(),
-                        jtabla_factura.getValueAt(fila, 2).toString(), jtabla_factura.getValueAt(fila, 3).toString(), lbl_id_factura.getText()});
+                        jtabla_factura.getValueAt(fila, 2).toString(), jtabla_factura.getValueAt(fila, 3).toString(), lbl_id_factura.getText(),
+                        DBstock_productos.nombreBodega(idBodAuto), idBodAuto});
 
                     frm_Crear_Orden.jtabla_Ventas.setModel(frm_Crear_Orden.modelo_ventas);
                 }

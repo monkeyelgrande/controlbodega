@@ -790,6 +790,29 @@ public class DBstock_productos {
         return 1;
     }
 
+    /**
+     * Nombre de una bodega por su id. Devuelve "" si no existe.
+     * Usado para mostrar la bodega de descarga en la tabla de la orden.
+     *
+     * @param idBodega ID de la bodega
+     * @return nombre de la bodega, o "" si no se encuentra
+     */
+    public static String nombreBodega(int idBodega) {
+        String sql = "SELECT nombre FROM bodegas WHERE id = " + idBodega;
+        try {
+            java.sql.ResultSet rs = DB_consultas_R_D.getTabla(sql);
+            if (rs.next()) {
+                String nombre = rs.getString("nombre");
+                rs.close();
+                return nombre == null ? "" : nombre;
+            }
+            rs.close();
+        } catch (Exception e) {
+            System.err.println("Error consultando nombre de bodega: " + e.getMessage());
+        }
+        return "";
+    }
+
     // ========================================================================
     // MÉTODOS DE CONSULTA
     // ========================================================================
