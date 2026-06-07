@@ -748,7 +748,8 @@ public class DBstock_productos {
      * Logica:
      *   1. Bodega con MAYOR stock disponible (cantidad > 0)
      *   2. Si ninguna tiene stock positivo, ultima bodega con movimiento donde hubo stock
-     *   3. Fallback: bodega ID 1
+     *   3. Si no hay movimientos, bodega del ultimo ingreso de mercancia del producto
+     *   4. Fallback: bodega ID 1
      *
      * @param idProducto ID del producto
      * @return ID de la bodega seleccionada
@@ -786,7 +787,24 @@ public class DBstock_productos {
             System.err.println("Error consultando ultima bodega con stock: " + e.getMessage());
         }
 
-        // 3. Fallback
+        // 3. Bodega del ultimo ingreso de mercancia de este producto
+        String sql3 = "SELECT ic.id_bodega FROM ingresos_mercancias_detalle imd "
+                + "INNER JOIN ingresos_mercancias_cabecera ic ON imd.id_ingreso_cabecera = ic.id "
+                + "WHERE imd.id_producto = " + idProducto + " "
+                + "ORDER BY ic.fecha DESC, ic.id DESC LIMIT 1";
+        try {
+            java.sql.ResultSet rs = DB_consultas_R_D.getTabla(sql3);
+            if (rs.next()) {
+                int id = rs.getInt("id_bodega");
+                rs.close();
+                return id;
+            }
+            rs.close();
+        } catch (Exception e) {
+            System.err.println("Error consultando bodega del ultimo ingreso: " + e.getMessage());
+        }
+
+        // 4. Fallback
         return 1;
     }
 
