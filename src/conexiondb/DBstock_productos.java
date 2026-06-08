@@ -743,18 +743,39 @@ public class DBstock_productos {
     // SELECCION INTELIGENTE DE BODEGA
     // ========================================================================
     /**
+     * Compatibilidad: selecciona bodega sin contexto de cantidad. Omite la
+     * regla 0 (configuracion por rangos) y aplica las 4 reglas automaticas.
+     *
+     * @param idProducto ID del producto
+     * @return ID de la bodega seleccionada
+     */
+    public static int seleccionarBodegaDescarga(int idProducto) {
+        return seleccionarBodegaDescarga(idProducto, -1);
+    }
+
+    /**
      * Determina de que bodega se debe descargar un producto en una venta/orden.
      *
      * Logica:
+     *   0. Si el producto tiene rangos de cantidad configurados
+     *      (productos_bodega_rangos), se resuelve por la cantidad solicitada
+     *      y NO se aplican las reglas siguientes.
      *   1. Bodega con MAYOR stock disponible (cantidad > 0)
      *   2. Si ninguna tiene stock positivo, ultima bodega con movimiento donde hubo stock
      *   3. Si no hay movimientos, bodega del ultimo ingreso de mercancia del producto
      *   4. Fallback: bodega ID 1
      *
      * @param idProducto ID del producto
+     * @param cantidad cantidad solicitada (use valor negativo si no aplica)
      * @return ID de la bodega seleccionada
      */
-    public static int seleccionarBodegaDescarga(int idProducto) {
+    public static int seleccionarBodegaDescarga(int idProducto, double cantidad) {
+        // 0. Configuracion por rangos de cantidad del producto (si existe)
+        Integer porRango = seleccionarBodegaPorRango(idProducto, cantidad);
+        if (porRango != null) {
+            return porRango;
+        }
+
         // 1. Bodega con mayor stock positivo
         String sql1 = "SELECT id_bodega FROM stock_productos "
                 + "WHERE id_producto = " + idProducto + " AND cantidad > 0 "
@@ -806,6 +827,63 @@ public class DBstock_productos {
 
         // 4. Fallback
         return 1;
+    }
+
+    /**
+     * Regla 0: resuelve la bodega segun los rangos de cantidad configurados para
+     * el producto (tabla productos_bodega_rangos).
+     *
+     *   - Si la cantidad es negativa (sin contexto): no aplica -> null.
+     *   - Si la cantidad cae en un rango: devuelve esa bodega.
+     *   - Si el producto tiene rangos pero la cantidad no cae en ninguno (hueco
+     *     o por debajo del minimo): devuelve la bodega del rango mayor.
+     *   - Si el producto no tiene rangos: no aplica -> null (cae a las 4 reglas).
+     *
+     * @param idProducto ID del producto
+     * @param cantidad cantidad solicitada
+     * @return ID de bodega segun configuracion, o null si no aplica
+     */
+    private static Integer seleccionarBodegaPorRango(int idProducto, double cantidad) {
+        if (cantidad < 0) {
+            return null; // sin contexto de cantidad: omitir configuracion
+        }
+
+        // a) Coincidencia exacta de rango para la cantidad solicitada
+        String sqlMatch = "SELECT id_bodega FROM productos_bodega_rangos "
+                + "WHERE id_producto = " + idProducto + " "
+                + "AND " + cantidad + " >= cantidad_min "
+                + "AND (cantidad_max IS NULL OR " + cantidad + " <= cantidad_max) "
+                + "ORDER BY cantidad_min DESC LIMIT 1";
+        try {
+            java.sql.ResultSet rs = DB_consultas_R_D.getTabla(sqlMatch);
+            if (rs.next()) {
+                int id = rs.getInt("id_bodega");
+                rs.close();
+                return id;
+            }
+            rs.close();
+        } catch (Exception e) {
+            System.err.println("Error consultando rango de bodega: " + e.getMessage());
+        }
+
+        // b) Sin coincidencia: si el producto tiene rangos, usar el rango mayor
+        String sqlMayor = "SELECT id_bodega FROM productos_bodega_rangos "
+                + "WHERE id_producto = " + idProducto + " "
+                + "ORDER BY cantidad_min DESC LIMIT 1";
+        try {
+            java.sql.ResultSet rs = DB_consultas_R_D.getTabla(sqlMayor);
+            if (rs.next()) {
+                int id = rs.getInt("id_bodega");
+                rs.close();
+                return id;
+            }
+            rs.close();
+        } catch (Exception e) {
+            System.err.println("Error consultando rango mayor de bodega: " + e.getMessage());
+        }
+
+        // c) El producto no tiene rangos configurados: no aplica
+        return null;
     }
 
     /**

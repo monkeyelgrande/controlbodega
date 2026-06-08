@@ -1014,11 +1014,10 @@ public class frm_facturacion_ventas extends javax.swing.JInternalFrame {
 
                         int idProducto = Integer.parseInt(modelo_ventas.getValueAt(i, 0).toString());
 
-                        // Seleccion inteligente de bodega de descarga por producto:
-                        //   1. Bodega con mayor stock positivo
-                        //   2. Ultima bodega donde tuvo stock (movimientos)
-                        //   3. Fallback: bodega 1
-                        int idBodega = DBstock_productos.seleccionarBodegaDescarga(idProducto);
+                        // Seleccion inteligente de bodega de descarga por producto.
+                        // Si el producto tiene rangos de cantidad configurados, se
+                        // resuelve por la cantidad (can); si no, por las 4 reglas.
+                        int idBodega = DBstock_productos.seleccionarBodegaDescarga(idProducto, can);
 
                         double subtotal = Double.parseDouble(
                                 metodos.EliminaCaracteres(modelo_ventas.getValueAt(i, 4).toString(), "."));

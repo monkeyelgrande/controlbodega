@@ -988,7 +988,7 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
                     try {
                         while (rs.next()) {
 
-                            int idBodAuto = DBstock_productos.seleccionarBodegaDescarga(Integer.parseInt(rs.getString("id")));
+                            int idBodAuto = DBstock_productos.seleccionarBodegaDescarga(Integer.parseInt(rs.getString("id")), cantidad);
                             modelo_ventas.addRow(new Object[]{rs.getString("id"), rs.getString("codigo_barras"), rs.getString("descripcion"), cantidad, "0", DBstock_productos.nombreBodega(idBodAuto), idBodAuto});
 
                         }
@@ -1020,7 +1020,7 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
 
                         try {
                             while (rs.next()) {
-                                int idBodAuto = DBstock_productos.seleccionarBodegaDescarga(Integer.parseInt(rs.getString("id")));
+                                int idBodAuto = DBstock_productos.seleccionarBodegaDescarga(Integer.parseInt(rs.getString("id")), cantidad);
                                 modelo_ventas.addRow(new Object[]{rs.getString("id"), rs.getString("codigo_barras"), rs.getString("descripcion"), cantidad, "0", DBstock_productos.nombreBodega(idBodAuto), idBodAuto});
 
                             }

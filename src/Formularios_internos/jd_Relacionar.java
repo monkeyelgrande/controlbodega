@@ -63,7 +63,14 @@ public class jd_Relacionar extends javax.swing.JDialog {
 
                     frm_Crear_Orden.modelo_ventas.setColumnIdentifiers(new Object[]{"ID", "CODIGO", "DESCRIPCIÓN", "CANTIDAD", "R", "BODEGA", "IDBOD"});
 
-                    int idBodAuto = DBstock_productos.seleccionarBodegaDescarga(Integer.parseInt(jtabla_factura.getValueAt(fila, 0).toString()));
+                    double cantRel;
+                    try {
+                        // La columna 3 viene formateada (separador de miles ','): se limpia para parsear.
+                        cantRel = Double.parseDouble(jtabla_factura.getValueAt(fila, 3).toString().replace(",", ""));
+                    } catch (Exception ex) {
+                        cantRel = -1; // sin cantidad valida: omite configuracion por rangos
+                    }
+                    int idBodAuto = DBstock_productos.seleccionarBodegaDescarga(Integer.parseInt(jtabla_factura.getValueAt(fila, 0).toString()), cantRel);
                     frm_Crear_Orden.modelo_ventas.addRow(new Object[]{jtabla_factura.getValueAt(fila, 0).toString(), jtabla_factura.getValueAt(fila, 1).toString(),
                         jtabla_factura.getValueAt(fila, 2).toString(), jtabla_factura.getValueAt(fila, 3).toString(), lbl_id_factura.getText(),
                         DBstock_productos.nombreBodega(idBodAuto), idBodAuto});

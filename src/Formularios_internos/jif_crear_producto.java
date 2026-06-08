@@ -34,6 +34,11 @@ public class jif_crear_producto extends javax.swing.JDialog {
     private javax.swing.JTable tablaKardex;
     private javax.swing.table.DefaultTableModel modeloKardex;
     private javax.swing.JPanel panelKardex;
+    // Tab "Bodegas por cantidad" (rangos de cantidad -> bodega, por producto)
+    private javax.swing.JTable tablaRangos;
+    private javax.swing.table.DefaultTableModel modeloRangos;
+    private javax.swing.JPanel panelRangos;
+    private java.util.List<modelos.Bodegas> listaBodegasRangos = new java.util.ArrayList<>();
 
     public jif_crear_producto() {
         initComponents();
@@ -66,11 +71,25 @@ public class jif_crear_producto extends javax.swing.JDialog {
         // Tab 2: Kardex
         panelKardex = construirPanelKardex();
 
+        // Tab 3: Bodegas por cantidad
+        panelRangos = construirPanelBodegaRangos();
+
         // Crear TabbedPane
         tabbedPane = new javax.swing.JTabbedPane();
         tabbedPane.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 13));
         tabbedPane.addTab("Producto", tabProducto);
         tabbedPane.addTab("Kardex", panelKardex);
+        tabbedPane.addTab("Bodegas por cantidad", panelRangos);
+
+        // Al seleccionar la pestaña de rangos, cargar la configuración del producto actual
+        tabbedPane.addChangeListener(new javax.swing.event.ChangeListener() {
+            @Override
+            public void stateChanged(javax.swing.event.ChangeEvent e) {
+                if (tabbedPane.getSelectedComponent() == panelRangos) {
+                    cargarRangos(txt_id.getText());
+                }
+            }
+        });
 
         getContentPane().setLayout(new java.awt.BorderLayout());
         getContentPane().add(tabbedPane, java.awt.BorderLayout.CENTER);
@@ -238,6 +257,235 @@ public class jif_crear_producto extends javax.swing.JDialog {
 
         // Actualizar titulo del tab
         tabbedPane.setTitleAt(1, "Kardex (" + modeloKardex.getRowCount() + ")");
+    }
+
+    /**
+     * Construye la pestaña "Bodegas por cantidad": permite definir, por
+     * producto, de qué bodega se descarga según la cantidad solicitada.
+     * Si el producto no tiene rangos, se usa la selección automática normal.
+     */
+    private javax.swing.JPanel construirPanelBodegaRangos() {
+        javax.swing.JPanel panel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
+        panel.setBackground(java.awt.Color.WHITE);
+        panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Info superior
+        javax.swing.JPanel norte = new javax.swing.JPanel(new java.awt.BorderLayout());
+        norte.setOpaque(false);
+        javax.swing.JLabel lblInfo = new javax.swing.JLabel("Entrega de este producto por bodega según la cantidad solicitada");
+        lblInfo.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 14));
+        lblInfo.setForeground(new java.awt.Color(40, 53, 147));
+        javax.swing.JLabel lblNota = new javax.swing.JLabel("<html>Deje \"Cantidad máx.\" en blanco para \"en adelante\". "
+                + "Si no define rangos, el producto usa la selección automática de bodega. "
+                + "Si la cantidad no cae en ningún rango, se usa la bodega del rango mayor.</html>");
+        lblNota.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, 11));
+        lblNota.setForeground(new java.awt.Color(97, 97, 97));
+        norte.add(lblInfo, java.awt.BorderLayout.NORTH);
+        norte.add(lblNota, java.awt.BorderLayout.SOUTH);
+        panel.add(norte, java.awt.BorderLayout.NORTH);
+
+        // Tabla de rangos
+        modeloRangos = new javax.swing.table.DefaultTableModel(
+                new Object[]{"Cantidad mín.", "Cantidad máx.", "Bodega"}, 0);
+        tablaRangos = new javax.swing.JTable(modeloRangos);
+        tablaRangos.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, 13));
+        tablaRangos.setRowHeight(30);
+        tablaRangos.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        tablaRangos.getTableHeader().setReorderingAllowed(false);
+        tablaRangos.getTableHeader().setDefaultRenderer(new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public java.awt.Component getTableCellRendererComponent(javax.swing.JTable t, Object value,
+                    boolean sel, boolean focus, int row, int col) {
+                javax.swing.JLabel l = (javax.swing.JLabel) super.getTableCellRendererComponent(t, value, sel, focus, row, col);
+                l.setBackground(new java.awt.Color(40, 53, 147));
+                l.setForeground(java.awt.Color.WHITE);
+                l.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 12));
+                l.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 8, 6, 8));
+                l.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+                return l;
+            }
+        });
+        tablaRangos.getTableHeader().setPreferredSize(new java.awt.Dimension(0, 36));
+
+        // Combo de bodegas para la columna "Bodega"
+        javax.swing.JComboBox<modelos.Bodegas> comboBodega = new javax.swing.JComboBox<>();
+        listaBodegasRangos.clear();
+        try {
+            java.sql.ResultSet rs = conexiondb.DB_consultas_R_D.getTabla("select id,nombre from bodegas order by nombre");
+            while (rs.next()) {
+                modelos.Bodegas b = new modelos.Bodegas(rs.getInt("id"), rs.getString("nombre"));
+                listaBodegasRangos.add(b);
+                comboBodega.addItem(b);
+            }
+            rs.close();
+        } catch (Exception e) {
+            System.err.println("Error cargando bodegas para rangos: " + e.getMessage());
+        }
+        tablaRangos.getColumnModel().getColumn(2).setCellEditor(new javax.swing.DefaultCellEditor(comboBodega));
+
+        panel.add(new javax.swing.JScrollPane(tablaRangos), java.awt.BorderLayout.CENTER);
+
+        // Botonera
+        javax.swing.JPanel sur = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 8, 0));
+        sur.setOpaque(false);
+        javax.swing.JButton btnAgregar = new javax.swing.JButton("Agregar rango");
+        javax.swing.JButton btnEliminar = new javax.swing.JButton("Eliminar rango");
+        javax.swing.JButton btnGuardar = new javax.swing.JButton("Guardar configuración");
+        btnGuardar.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 13));
+
+        btnAgregar.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                modelos.Bodegas bodPorDefecto = listaBodegasRangos.isEmpty() ? null : listaBodegasRangos.get(0);
+                modeloRangos.addRow(new Object[]{"", "", bodPorDefecto});
+            }
+        });
+        btnEliminar.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (tablaRangos.isEditing()) {
+                    tablaRangos.getCellEditor().stopCellEditing();
+                }
+                int fila = tablaRangos.getSelectedRow();
+                if (fila >= 0) {
+                    modeloRangos.removeRow(fila);
+                }
+            }
+        });
+        btnGuardar.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                guardarRangosUI();
+            }
+        });
+        sur.add(btnAgregar);
+        sur.add(btnEliminar);
+        sur.add(btnGuardar);
+        panel.add(sur, java.awt.BorderLayout.SOUTH);
+
+        return panel;
+    }
+
+    /**
+     * Carga en la tabla los rangos del producto indicado.
+     *
+     * @param idProductoTxt ID del producto (texto del campo txt_id)
+     */
+    public void cargarRangos(String idProductoTxt) {
+        if (modeloRangos == null) {
+            return;
+        }
+        modeloRangos.setRowCount(0);
+        int idProducto;
+        try {
+            idProducto = Integer.parseInt(idProductoTxt.trim());
+        } catch (Exception e) {
+            tabbedPane.setTitleAt(2, "Bodegas por cantidad");
+            return;
+        }
+
+        java.util.List<modelos.ProductoBodegaRango> rangos =
+                conexiondb.DBproductoBodegaRango.listarPorProducto(idProducto);
+        for (modelos.ProductoBodegaRango r : rangos) {
+            modeloRangos.addRow(new Object[]{
+                fmtCantidad(r.getCantidad_min()),
+                r.getCantidad_max() == null ? "" : fmtCantidad(r.getCantidad_max()),
+                buscarBodega(r.getId_bodega())
+            });
+        }
+        tabbedPane.setTitleAt(2, "Bodegas por cantidad (" + modeloRangos.getRowCount() + ")");
+    }
+
+    /**
+     * Valida y persiste los rangos de la tabla para el producto actual.
+     */
+    private void guardarRangosUI() {
+        // El producto debe existir (FK por id_producto)
+        if (conexiondb.DB_consultas_R_D.consultarId(txt_id.getText(), "productos") != 1) {
+            JOptionPane.showMessageDialog(this, "Guarde el producto primero para poder configurar sus bodegas por cantidad.",
+                    "Producto no guardado", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (tablaRangos.isEditing()) {
+            tablaRangos.getCellEditor().stopCellEditing();
+        }
+        int idProducto = Integer.parseInt(txt_id.getText().trim());
+
+        java.util.List<modelos.ProductoBodegaRango> rangos = new java.util.ArrayList<>();
+        for (int i = 0; i < modeloRangos.getRowCount(); i++) {
+            // Cantidad minima (obligatoria, >= 0)
+            double min;
+            try {
+                min = Double.parseDouble(("" + modeloRangos.getValueAt(i, 0)).replace(",", "").trim());
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Fila " + (i + 1) + ": la cantidad mínima no es válida.",
+                        "Datos inválidos", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            if (min < 0) {
+                JOptionPane.showMessageDialog(this, "Fila " + (i + 1) + ": la cantidad mínima no puede ser negativa.",
+                        "Datos inválidos", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Cantidad maxima (opcional; vacio = sin tope)
+            Double max = null;
+            String maxTxt = ("" + (modeloRangos.getValueAt(i, 1) == null ? "" : modeloRangos.getValueAt(i, 1))).trim();
+            if (!maxTxt.isEmpty()) {
+                try {
+                    max = Double.parseDouble(maxTxt.replace(",", ""));
+                } catch (Exception e) {
+                    JOptionPane.showMessageDialog(this, "Fila " + (i + 1) + ": la cantidad máxima no es válida.",
+                            "Datos inválidos", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                if (max < min) {
+                    JOptionPane.showMessageDialog(this, "Fila " + (i + 1) + ": la cantidad máxima no puede ser menor que la mínima.",
+                            "Datos inválidos", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+            }
+
+            // Bodega (obligatoria)
+            Object bodObj = modeloRangos.getValueAt(i, 2);
+            if (!(bodObj instanceof modelos.Bodegas)) {
+                JOptionPane.showMessageDialog(this, "Fila " + (i + 1) + ": seleccione una bodega.",
+                        "Datos inválidos", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int idBodega = ((modelos.Bodegas) bodObj).getId();
+
+            rangos.add(new modelos.ProductoBodegaRango(idProducto, min, max, idBodega));
+        }
+
+        boolean ok = conexiondb.DBproductoBodegaRango.guardarRangos(idProducto, rangos);
+        if (ok) {
+            JOptionPane.showMessageDialog(this, "Configuración de bodegas por cantidad guardada.",
+                    "Listo", JOptionPane.INFORMATION_MESSAGE);
+            cargarRangos(txt_id.getText());
+        }
+    }
+
+    /**
+     * Busca un objeto Bodegas (ya cargado) por su id. Null si no existe.
+     */
+    private modelos.Bodegas buscarBodega(int idBodega) {
+        for (modelos.Bodegas b : listaBodegasRangos) {
+            if (b.getId() == idBodega) {
+                return b;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Formatea una cantidad: entero sin decimales, o con decimales si los tiene.
+     */
+    private String fmtCantidad(double v) {
+        if (v == Math.rint(v) && !Double.isInfinite(v)) {
+            return String.valueOf((long) v);
+        }
+        return String.valueOf(v);
     }
 
     public void holders() {

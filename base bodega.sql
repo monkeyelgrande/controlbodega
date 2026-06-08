@@ -514,6 +514,33 @@ WITH (
 CREATE INDEX idx_stock_bodega ON stock_productos (id_bodega);
 
 -- ----------------------------------------------------------------------------
+-- Prioridad de bodega por rangos de cantidad, por producto (opcional)
+--   cantidad_max NULL = "en adelante" (sin tope superior).
+--   Si un producto no tiene filas aqui, usa la seleccion automatica normal.
+-- ----------------------------------------------------------------------------
+CREATE TABLE productos_bodega_rangos
+(
+  id            serial NOT NULL,
+  id_producto   integer NOT NULL,
+  cantidad_min  double precision NOT NULL,
+  cantidad_max  double precision,
+  id_bodega     integer NOT NULL,
+
+  CONSTRAINT pk_productos_bodega_rangos PRIMARY KEY (id),
+  CONSTRAINT fk_pbr_producto FOREIGN KEY (id_producto)
+      REFERENCES productos (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE CASCADE,
+  CONSTRAINT fk_pbr_bodega FOREIGN KEY (id_bodega)
+      REFERENCES bodegas (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION
+)
+WITH (
+  OIDS=FALSE
+);
+
+CREATE INDEX idx_pbr_producto ON productos_bodega_rangos (id_producto);
+
+-- ----------------------------------------------------------------------------
 -- Tabla de movimientos de inventario (histórico/auditoría)
 -- ----------------------------------------------------------------------------
 CREATE TABLE movimientos_inventario
