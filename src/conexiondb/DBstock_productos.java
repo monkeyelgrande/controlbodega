@@ -743,39 +743,20 @@ public class DBstock_productos {
     // SELECCION INTELIGENTE DE BODEGA
     // ========================================================================
     /**
-     * Compatibilidad: selecciona bodega sin contexto de cantidad. Omite la
-     * regla 0 (configuracion por rangos) y aplica las 4 reglas automaticas.
+     * Determina de que bodega se descarga un producto (sin partir la cantidad),
+     * con las 4 reglas automaticas:
+     *   1. Bodega con MAYOR stock disponible (cantidad > 0)
+     *   2. Ultima bodega con movimiento donde hubo stock
+     *   3. Bodega del ultimo ingreso de mercancia del producto
+     *   4. Fallback: bodega ID 1
+     *
+     * Para productos con unidades de entrega configuradas use
+     * asignarBodegasEntrega(int, double), que parte la cantidad entre bodegas.
      *
      * @param idProducto ID del producto
      * @return ID de la bodega seleccionada
      */
     public static int seleccionarBodegaDescarga(int idProducto) {
-        return seleccionarBodegaDescarga(idProducto, -1);
-    }
-
-    /**
-     * Determina de que bodega se debe descargar un producto en una venta/orden.
-     *
-     * Logica:
-     *   0. Si el producto tiene rangos de cantidad configurados
-     *      (productos_bodega_rangos), se resuelve por la cantidad solicitada
-     *      y NO se aplican las reglas siguientes.
-     *   1. Bodega con MAYOR stock disponible (cantidad > 0)
-     *   2. Si ninguna tiene stock positivo, ultima bodega con movimiento donde hubo stock
-     *   3. Si no hay movimientos, bodega del ultimo ingreso de mercancia del producto
-     *   4. Fallback: bodega ID 1
-     *
-     * @param idProducto ID del producto
-     * @param cantidad cantidad solicitada (use valor negativo si no aplica)
-     * @return ID de la bodega seleccionada
-     */
-    public static int seleccionarBodegaDescarga(int idProducto, double cantidad) {
-        // 0. Configuracion por rangos de cantidad del producto (si existe)
-        Integer porRango = seleccionarBodegaPorRango(idProducto, cantidad);
-        if (porRango != null) {
-            return porRango;
-        }
-
         // 1. Bodega con mayor stock positivo
         String sql1 = "SELECT id_bodega FROM stock_productos "
                 + "WHERE id_producto = " + idProducto + " AND cantidad > 0 "
@@ -830,60 +811,94 @@ public class DBstock_productos {
     }
 
     /**
-     * Regla 0: resuelve la bodega segun los rangos de cantidad configurados para
-     * el producto (tabla productos_bodega_rangos).
+     * Una porcion de la cantidad solicitada asignada a una bodega.
+     * cantidad esta en UNIDADES (no en numero de paquetes).
+     */
+    public static class AsignacionBodega {
+
+        public final int idBodega;
+        public final double cantidad;
+
+        public AsignacionBodega(int idBodega, double cantidad) {
+            this.idBodega = idBodega;
+            this.cantidad = cantidad;
+        }
+    }
+
+    /**
+     * Descompone la cantidad solicitada de un producto en una o varias
+     * asignaciones (bodega, cantidad) segun sus "unidades de entrega"
+     * (tabla productos_unidades_entrega).
      *
-     *   - Si la cantidad es negativa (sin contexto): no aplica -> null.
-     *   - Si la cantidad cae en un rango: devuelve esa bodega.
-     *   - Si el producto tiene rangos pero la cantidad no cae en ninguno (hueco
-     *     o por debajo del minimo): devuelve la bodega del rango mayor.
-     *   - Si el producto no tiene rangos: no aplica -> null (cae a las 4 reglas).
+     *   - Sin unidades configuradas: una sola asignacion con la bodega de las
+     *     4 reglas (seleccionarBodegaDescarga). Comportamiento actual.
+     *   - Con unidades: greedy de mayor a menor tamano de paquete; cada
+     *     paquete completo se asigna a su bodega; el renglon de paquete = 1
+     *     (bodega por unidad) absorbe el sobrante. Las cantidades se acumulan
+     *     por bodega (una sola asignacion por bodega).
+     *
+     * Las cantidades devueltas estan en UNIDADES.
      *
      * @param idProducto ID del producto
-     * @param cantidad cantidad solicitada
-     * @return ID de bodega segun configuracion, o null si no aplica
+     * @param cantidad cantidad total solicitada (en unidades)
+     * @return lista de asignaciones (bodega, cantidad)
      */
-    private static Integer seleccionarBodegaPorRango(int idProducto, double cantidad) {
-        if (cantidad < 0) {
-            return null; // sin contexto de cantidad: omitir configuracion
-        }
+    public static java.util.List<AsignacionBodega> asignarBodegasEntrega(int idProducto, double cantidad) {
+        java.util.List<AsignacionBodega> resultado = new java.util.ArrayList<>();
 
-        // a) Coincidencia exacta de rango para la cantidad solicitada
-        String sqlMatch = "SELECT id_bodega FROM productos_bodega_rangos "
+        // Cargar unidades de entrega del producto, de mayor a menor paquete.
+        // Cada elemento: [cantidad_paquete, id_bodega]
+        java.util.List<double[]> unidades = new java.util.ArrayList<>();
+        String sql = "SELECT cantidad_paquete, id_bodega FROM productos_unidades_entrega "
                 + "WHERE id_producto = " + idProducto + " "
-                + "AND " + cantidad + " >= cantidad_min "
-                + "AND (cantidad_max IS NULL OR " + cantidad + " <= cantidad_max) "
-                + "ORDER BY cantidad_min DESC LIMIT 1";
+                + "ORDER BY cantidad_paquete DESC";
         try {
-            java.sql.ResultSet rs = DB_consultas_R_D.getTabla(sqlMatch);
-            if (rs.next()) {
-                int id = rs.getInt("id_bodega");
-                rs.close();
-                return id;
+            java.sql.ResultSet rs = DB_consultas_R_D.getTabla(sql);
+            while (rs.next()) {
+                unidades.add(new double[]{rs.getDouble("cantidad_paquete"), rs.getInt("id_bodega")});
             }
             rs.close();
         } catch (Exception e) {
-            System.err.println("Error consultando rango de bodega: " + e.getMessage());
+            System.err.println("Error consultando unidades de entrega: " + e.getMessage());
         }
 
-        // b) Sin coincidencia: si el producto tiene rangos, usar el rango mayor
-        String sqlMayor = "SELECT id_bodega FROM productos_bodega_rangos "
-                + "WHERE id_producto = " + idProducto + " "
-                + "ORDER BY cantidad_min DESC LIMIT 1";
-        try {
-            java.sql.ResultSet rs = DB_consultas_R_D.getTabla(sqlMayor);
-            if (rs.next()) {
-                int id = rs.getInt("id_bodega");
-                rs.close();
-                return id;
+        // Sin configuracion: una sola bodega por las 4 reglas (comportamiento actual)
+        if (unidades.isEmpty()) {
+            resultado.add(new AsignacionBodega(seleccionarBodegaDescarga(idProducto), cantidad));
+            return resultado;
+        }
+
+        // Greedy de mayor a menor; acumular por bodega conservando el orden
+        java.util.LinkedHashMap<Integer, Double> porBodega = new java.util.LinkedHashMap<>();
+        double restante = cantidad;
+        for (double[] u : unidades) {
+            double paquete = u[0];
+            int idBodega = (int) u[1];
+            if (paquete <= 0) {
+                continue;
             }
-            rs.close();
-        } catch (Exception e) {
-            System.err.println("Error consultando rango mayor de bodega: " + e.getMessage());
+            long n = (long) Math.floor(restante / paquete);
+            if (n > 0) {
+                double asignado = n * paquete;
+                porBodega.merge(idBodega, asignado, Double::sum);
+                restante -= asignado;
+            }
         }
 
-        // c) El producto no tiene rangos configurados: no aplica
-        return null;
+        // Defensivo: si quedo sobrante (config sin renglon de paquete = 1, que la
+        // UI no deberia permitir), asignarlo por las 4 reglas.
+        if (restante > 1e-9) {
+            int idBodega = seleccionarBodegaDescarga(idProducto);
+            porBodega.merge(idBodega, restante, Double::sum);
+            System.err.println("[asignarBodegasEntrega] Producto " + idProducto
+                    + " sin bodega por unidad (paquete=1); sobrante " + restante
+                    + " asignado por las 4 reglas.");
+        }
+
+        for (java.util.Map.Entry<Integer, Double> e : porBodega.entrySet()) {
+            resultado.add(new AsignacionBodega(e.getKey(), e.getValue()));
+        }
+        return resultado;
     }
 
     /**

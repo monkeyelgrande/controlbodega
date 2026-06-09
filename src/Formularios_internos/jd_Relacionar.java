@@ -63,17 +63,33 @@ public class jd_Relacionar extends javax.swing.JDialog {
 
                     frm_Crear_Orden.modelo_ventas.setColumnIdentifiers(new Object[]{"ID", "CODIGO", "DESCRIPCIÓN", "CANTIDAD", "R", "BODEGA", "IDBOD"});
 
+                    int idProducto = Integer.parseInt(jtabla_factura.getValueAt(fila, 0).toString());
+                    String codigo = jtabla_factura.getValueAt(fila, 1).toString();
+                    String descripcion = jtabla_factura.getValueAt(fila, 2).toString();
+                    String refWO = lbl_id_factura.getText();
+
                     double cantRel;
                     try {
                         // La columna 3 viene formateada (separador de miles ','): se limpia para parsear.
                         cantRel = Double.parseDouble(jtabla_factura.getValueAt(fila, 3).toString().replace(",", ""));
                     } catch (Exception ex) {
-                        cantRel = -1; // sin cantidad valida: omite configuracion por rangos
+                        cantRel = -1; // sin cantidad valida
                     }
-                    int idBodAuto = DBstock_productos.seleccionarBodegaDescarga(Integer.parseInt(jtabla_factura.getValueAt(fila, 0).toString()), cantRel);
-                    frm_Crear_Orden.modelo_ventas.addRow(new Object[]{jtabla_factura.getValueAt(fila, 0).toString(), jtabla_factura.getValueAt(fila, 1).toString(),
-                        jtabla_factura.getValueAt(fila, 2).toString(), jtabla_factura.getValueAt(fila, 3).toString(), lbl_id_factura.getText(),
-                        DBstock_productos.nombreBodega(idBodAuto), idBodAuto});
+
+                    if (cantRel < 0) {
+                        // Sin cantidad válida: una sola fila, bodega por las 4 reglas
+                        int idBodAuto = DBstock_productos.seleccionarBodegaDescarga(idProducto);
+                        frm_Crear_Orden.modelo_ventas.addRow(new Object[]{"" + idProducto, codigo, descripcion,
+                            jtabla_factura.getValueAt(fila, 3).toString(), refWO,
+                            DBstock_productos.nombreBodega(idBodAuto), idBodAuto});
+                    } else {
+                        // Partición por bodegas según las unidades de entrega del producto
+                        for (DBstock_productos.AsignacionBodega asig : DBstock_productos.asignarBodegasEntrega(idProducto, cantRel)) {
+                            frm_Crear_Orden.modelo_ventas.addRow(new Object[]{"" + idProducto, codigo, descripcion,
+                                asig.cantidad, refWO,
+                                DBstock_productos.nombreBodega(asig.idBodega), asig.idBodega});
+                        }
+                    }
 
                     frm_Crear_Orden.jtabla_Ventas.setModel(frm_Crear_Orden.modelo_ventas);
                 }

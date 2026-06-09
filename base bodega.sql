@@ -514,23 +514,25 @@ WITH (
 CREATE INDEX idx_stock_bodega ON stock_productos (id_bodega);
 
 -- ----------------------------------------------------------------------------
--- Prioridad de bodega por rangos de cantidad, por producto (opcional)
---   cantidad_max NULL = "en adelante" (sin tope superior).
+-- Unidades de entrega por producto (opcional): partición de cantidad entre
+-- bodegas según el tamaño de paquete.
+--   cantidad_paquete = 1  -> bodega para entregas por unidad (sobrante).
+--   cantidad_paquete > 1  -> paquete (ej. caja de 50) con su bodega.
 --   Si un producto no tiene filas aqui, usa la seleccion automatica normal.
 -- ----------------------------------------------------------------------------
-CREATE TABLE productos_bodega_rangos
+CREATE TABLE productos_unidades_entrega
 (
-  id            serial NOT NULL,
-  id_producto   integer NOT NULL,
-  cantidad_min  double precision NOT NULL,
-  cantidad_max  double precision,
-  id_bodega     integer NOT NULL,
+  id               serial NOT NULL,
+  id_producto      integer NOT NULL,
+  nombre           character varying(60),
+  cantidad_paquete double precision NOT NULL,
+  id_bodega        integer NOT NULL,
 
-  CONSTRAINT pk_productos_bodega_rangos PRIMARY KEY (id),
-  CONSTRAINT fk_pbr_producto FOREIGN KEY (id_producto)
+  CONSTRAINT pk_productos_unidades_entrega PRIMARY KEY (id),
+  CONSTRAINT fk_pue_producto FOREIGN KEY (id_producto)
       REFERENCES productos (id) MATCH SIMPLE
       ON UPDATE NO ACTION ON DELETE CASCADE,
-  CONSTRAINT fk_pbr_bodega FOREIGN KEY (id_bodega)
+  CONSTRAINT fk_pue_bodega FOREIGN KEY (id_bodega)
       REFERENCES bodegas (id) MATCH SIMPLE
       ON UPDATE NO ACTION ON DELETE NO ACTION
 )
@@ -538,7 +540,7 @@ WITH (
   OIDS=FALSE
 );
 
-CREATE INDEX idx_pbr_producto ON productos_bodega_rangos (id_producto);
+CREATE INDEX idx_pue_producto ON productos_unidades_entrega (id_producto);
 
 -- ----------------------------------------------------------------------------
 -- Tabla de movimientos de inventario (histórico/auditoría)

@@ -327,6 +327,101 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
         // final para no correr los índices que usa el resto del código (0..4).
         modelo_ventas.setColumnIdentifiers(new Object[]{"ID", "CODIGO", "DESCRIPCIÓN", "CANTIDAD", "R", "BODEGA", "IDBOD"});
 
+        // Al EDITAR la cantidad (columna 3) de una fila, re-particionar esa fila
+        // entre bodegas según las unidades de entrega del producto. Así el reparto
+        // funciona aunque la cantidad se cambie a mano en la tabla (no solo al agregar).
+        modelo_ventas.addTableModelListener(new javax.swing.event.TableModelListener() {
+            @Override
+            public void tableChanged(javax.swing.event.TableModelEvent e) {
+                if (recalculandoBodegas) {
+                    return;
+                }
+                if (e.getType() != javax.swing.event.TableModelEvent.UPDATE || e.getColumn() != 3) {
+                    return;
+                }
+                int fila = e.getFirstRow();
+                if (fila < 0 || fila >= modelo_ventas.getRowCount()) {
+                    return;
+                }
+                recalcularBodegasFila(fila);
+            }
+        });
+    }
+
+    private static boolean recalculandoBodegas = false;
+
+    /**
+     * Re-particiona una fila entre bodegas tras editar su cantidad: reemplaza la
+     * fila por las asignaciones (bodega, cantidad) de asignarBodegasEntrega.
+     * (En el flujo normal, el producto se agrega con cantidad 1 en una sola fila
+     * y luego el usuario edita la cantidad; aquí se vuelve a partir.)
+     */
+    private static void recalcularBodegasFila(final int fila) {
+        final String idProd;
+        final String codigo;
+        final String descripcion;
+        final String ref;
+        final double nuevaCant;
+        try {
+            idProd = "" + modelo_ventas.getValueAt(fila, 0);
+            codigo = "" + modelo_ventas.getValueAt(fila, 1);
+            descripcion = "" + modelo_ventas.getValueAt(fila, 2);
+            ref = "" + modelo_ventas.getValueAt(fila, 4);
+            nuevaCant = Double.parseDouble(("" + modelo_ventas.getValueAt(fila, 3)).replace(",", "").trim());
+        } catch (Exception ex) {
+            return;
+        }
+        final int idProducto;
+        try {
+            idProducto = Integer.parseInt(idProd);
+        } catch (Exception ex) {
+            return;
+        }
+        if (nuevaCant <= 0) {
+            return;
+        }
+
+        // Diferido para no chocar con el editor de celda que acaba de confirmar.
+        javax.swing.SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                if (recalculandoBodegas || fila < 0 || fila >= modelo_ventas.getRowCount()) {
+                    return;
+                }
+                if (!idProd.equals("" + modelo_ventas.getValueAt(fila, 0))) {
+                    return; // la fila ya no es el mismo producto
+                }
+                java.util.List<DBstock_productos.AsignacionBodega> asignaciones =
+                        DBstock_productos.asignarBodegasEntrega(idProducto, nuevaCant);
+                if (asignaciones == null || asignaciones.isEmpty()) {
+                    return;
+                }
+                // Si queda en una sola bodega y es la misma que ya estaba, no tocar
+                // (evita parpadeo cuando no hay partición real).
+                if (asignaciones.size() == 1) {
+                    int bodActual;
+                    try {
+                        bodActual = Integer.parseInt("" + modelo_ventas.getValueAt(fila, 6));
+                    } catch (Exception ex) {
+                        bodActual = -1;
+                    }
+                    if (asignaciones.get(0).idBodega == bodActual) {
+                        return;
+                    }
+                }
+                recalculandoBodegas = true;
+                try {
+                    modelo_ventas.removeRow(fila);
+                    int insertAt = fila;
+                    for (DBstock_productos.AsignacionBodega asig : asignaciones) {
+                        modelo_ventas.insertRow(insertAt++, new Object[]{idProd, codigo, descripcion,
+                            asig.cantidad, ref, DBstock_productos.nombreBodega(asig.idBodega), asig.idBodega});
+                    }
+                } finally {
+                    recalculandoBodegas = false;
+                }
+            }
+        });
     }
 
     public void consulta() {
@@ -975,66 +1070,14 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
             double stock = DB_consultas_R_D.consultar_stock(codigo_barras);
 
             if (stock > 0) { // valida existencia de stock
-                if (existe_en_tabla(codigo_barras) && productos_repetidos == 0) {
-                    double actuvalor = Double.parseDouble(extraer_cantidad_actual_by_codigo(codigo_barras));
-                    actuvalor += cantidad;
-                    modelo_ventas.setValueAt("" + actuvalor, posicion_en_jtable(codigo_barras), 3);
-                    txt_codigo_barras.setText("");
-
-                } else {
-
-                    ResultSet rs = DB_consultas_R_D.getTabla("select id,codigo_barras,descripcion, precio_costo, precio_venta from productos where codigo_barras ='" + codigo_barras + "' AND COALESCE(estado, true) = true");
-
-                    try {
-                        while (rs.next()) {
-
-                            int idBodAuto = DBstock_productos.seleccionarBodegaDescarga(Integer.parseInt(rs.getString("id")), cantidad);
-                            modelo_ventas.addRow(new Object[]{rs.getString("id"), rs.getString("codigo_barras"), rs.getString("descripcion"), cantidad, "0", DBstock_productos.nombreBodega(idBodAuto), idBodAuto});
-
-                        }
-                        rs.close();
-                        jtabla_Ventas.setModel(modelo_ventas);
-                    } catch (SQLException ex) {
-                        Logger.getLogger(frm_contactos.class.getName()).log(Level.SEVERE, null, ex);
-                    }
-
-                    TamanosTabla();
-
-                    txt_codigo_barras.setText("");
-                }
+                agregarProductoOrden(codigo_barras, cantidad);
             } else {
                 int dialogButton = JOptionPane.YES_NO_OPTION;
                 int dialogResult = JOptionPane.showConfirmDialog(null, "El producto selecionado no posee inventario\nCantidad: " + stock
                         + "\n¿Desea vender este producto sin inventario?\n"
                         + "el balance le dara negativo", "Alerta", dialogButton);
                 if (dialogResult == JOptionPane.YES_OPTION) {
-                    if (existe_en_tabla(codigo_barras) && productos_repetidos == 0) {
-                        double actuvalor = Double.parseDouble(extraer_cantidad_actual_by_codigo(codigo_barras));
-                        actuvalor += cantidad;
-                        modelo_ventas.setValueAt("" + actuvalor, posicion_en_jtable(codigo_barras), 3);
-                        txt_codigo_barras.setText("");
-
-                    } else {
-
-                        ResultSet rs = DB_consultas_R_D.getTabla("select id,codigo_barras,descripcion, precio_venta from productos where codigo_barras ='" + codigo_barras + "' AND COALESCE(estado, true) = true");
-
-                        try {
-                            while (rs.next()) {
-                                int idBodAuto = DBstock_productos.seleccionarBodegaDescarga(Integer.parseInt(rs.getString("id")), cantidad);
-                                modelo_ventas.addRow(new Object[]{rs.getString("id"), rs.getString("codigo_barras"), rs.getString("descripcion"), cantidad, "0", DBstock_productos.nombreBodega(idBodAuto), idBodAuto});
-
-                            }
-                            rs.close();
-                            jtabla_Ventas.setModel(modelo_ventas);
-                        } catch (SQLException ex) {
-                            System.out.println(ex);
-                            Logger.getLogger(frm_contactos.class.getName()).log(Level.SEVERE, null, ex);
-                        }
-
-                        TamanosTabla();
-
-                        txt_codigo_barras.setText("");
-                    }
+                    agregarProductoOrden(codigo_barras, cantidad);
                 }
             }
 
@@ -1043,6 +1086,60 @@ public class frm_Crear_Orden extends javax.swing.JInternalFrame {
             txt_codigo_barras.setText("");
         }
 
+    }
+
+    /**
+     * Agrega un producto a la orden partiendo la cantidad entre bodegas según
+     * sus unidades de entrega (una fila por bodega). Si el producto no tiene
+     * unidades configuradas, queda en una sola fila (bodega por las 4 reglas).
+     *
+     * Si no se permiten productos repetidos (productos_repetidos == 0), suma al
+     * total ya presente del producto (filas sin referencia WO, R = "0") y vuelve
+     * a particionar.
+     */
+    private void agregarProductoOrden(String codigo_barras, double cantidad) {
+        String idProd = null, codigo = null, descripcion = null;
+        ResultSet rs = DB_consultas_R_D.getTabla("select id,codigo_barras,descripcion from productos "
+                + "where codigo_barras ='" + codigo_barras + "' AND COALESCE(estado, true) = true");
+        try {
+            if (rs.next()) {
+                idProd = rs.getString("id");
+                codigo = rs.getString("codigo_barras");
+                descripcion = rs.getString("descripcion");
+            }
+            rs.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(frm_contactos.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        if (idProd == null) {
+            return;
+        }
+
+        int idProducto = Integer.parseInt(idProd);
+        double cantTotal = cantidad;
+
+        // Consolidar: si no se permiten repetidos, sumar el total ya presente del
+        // producto (solo filas sin referencia WO) y re-particionar.
+        if (productos_repetidos == 0) {
+            for (int i = modelo_ventas.getRowCount() - 1; i >= 0; i--) {
+                if (idProd.equals("" + modelo_ventas.getValueAt(i, 0))
+                        && "0".equals("" + modelo_ventas.getValueAt(i, 4))) {
+                    try {
+                        cantTotal += Double.parseDouble("" + modelo_ventas.getValueAt(i, 3));
+                    } catch (Exception e) {
+                    }
+                    modelo_ventas.removeRow(i);
+                }
+            }
+        }
+
+        for (DBstock_productos.AsignacionBodega asig : DBstock_productos.asignarBodegasEntrega(idProducto, cantTotal)) {
+            modelo_ventas.addRow(new Object[]{idProd, codigo, descripcion, asig.cantidad, "0",
+                DBstock_productos.nombreBodega(asig.idBodega), asig.idBodega});
+        }
+        jtabla_Ventas.setModel(modelo_ventas);
+        TamanosTabla();
+        txt_codigo_barras.setText("");
     }
 
     public boolean existe_en_tabla(String codigo) {

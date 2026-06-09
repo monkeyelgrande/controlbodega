@@ -34,11 +34,12 @@ public class jif_crear_producto extends javax.swing.JDialog {
     private javax.swing.JTable tablaKardex;
     private javax.swing.table.DefaultTableModel modeloKardex;
     private javax.swing.JPanel panelKardex;
-    // Tab "Bodegas por cantidad" (rangos de cantidad -> bodega, por producto)
-    private javax.swing.JTable tablaRangos;
-    private javax.swing.table.DefaultTableModel modeloRangos;
-    private javax.swing.JPanel panelRangos;
-    private java.util.List<modelos.Bodegas> listaBodegasRangos = new java.util.ArrayList<>();
+    // Tab "Unidades de entrega" (paquetes -> bodega + bodega por unidad, por producto)
+    private javax.swing.JTable tablaPaquetes;
+    private javax.swing.table.DefaultTableModel modeloPaquetes;
+    private javax.swing.JPanel panelUnidades;
+    private javax.swing.JComboBox<modelos.Bodegas> comboBodegaUnidad;
+    private java.util.List<modelos.Bodegas> listaBodegasUnidades = new java.util.ArrayList<>();
 
     public jif_crear_producto() {
         initComponents();
@@ -71,22 +72,22 @@ public class jif_crear_producto extends javax.swing.JDialog {
         // Tab 2: Kardex
         panelKardex = construirPanelKardex();
 
-        // Tab 3: Bodegas por cantidad
-        panelRangos = construirPanelBodegaRangos();
+        // Tab 3: Unidades de entrega
+        panelUnidades = construirPanelUnidadesEntrega();
 
         // Crear TabbedPane
         tabbedPane = new javax.swing.JTabbedPane();
         tabbedPane.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 13));
         tabbedPane.addTab("Producto", tabProducto);
         tabbedPane.addTab("Kardex", panelKardex);
-        tabbedPane.addTab("Bodegas por cantidad", panelRangos);
+        tabbedPane.addTab("Unidades de entrega", panelUnidades);
 
-        // Al seleccionar la pestaña de rangos, cargar la configuración del producto actual
+        // Al seleccionar la pestaña de unidades, cargar la configuración del producto actual
         tabbedPane.addChangeListener(new javax.swing.event.ChangeListener() {
             @Override
             public void stateChanged(javax.swing.event.ChangeEvent e) {
-                if (tabbedPane.getSelectedComponent() == panelRangos) {
-                    cargarRangos(txt_id.getText());
+                if (tabbedPane.getSelectedComponent() == panelUnidades) {
+                    cargarUnidades(txt_id.getText());
                 }
             }
         });
@@ -260,39 +261,66 @@ public class jif_crear_producto extends javax.swing.JDialog {
     }
 
     /**
-     * Construye la pestaña "Bodegas por cantidad": permite definir, por
-     * producto, de qué bodega se descarga según la cantidad solicitada.
-     * Si el producto no tiene rangos, se usa la selección automática normal.
+     * Construye la pestaña "Unidades de entrega": por producto se define una
+     * bodega para entregas por unidad y, opcionalmente, paquetes
+     * (cantidad por paquete -> bodega). Al vender/ordenar una cantidad se
+     * parte en cajas completas por bodega + el sobrante en la bodega por unidad.
+     * Si el producto no tiene unidades, se usa la selección automática normal.
      */
-    private javax.swing.JPanel construirPanelBodegaRangos() {
+    private javax.swing.JPanel construirPanelUnidadesEntrega() {
         javax.swing.JPanel panel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
         panel.setBackground(java.awt.Color.WHITE);
         panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Info superior
-        javax.swing.JPanel norte = new javax.swing.JPanel(new java.awt.BorderLayout());
+        // Cargar bodegas una sola vez
+        listaBodegasUnidades.clear();
+        try {
+            java.sql.ResultSet rs = conexiondb.DB_consultas_R_D.getTabla("select id,nombre from bodegas order by nombre");
+            while (rs.next()) {
+                listaBodegasUnidades.add(new modelos.Bodegas(rs.getInt("id"), rs.getString("nombre")));
+            }
+            rs.close();
+        } catch (Exception e) {
+            System.err.println("Error cargando bodegas para unidades de entrega: " + e.getMessage());
+        }
+
+        // Info superior + selector de bodega por unidad
+        javax.swing.JPanel norte = new javax.swing.JPanel(new java.awt.GridLayout(0, 1, 0, 4));
         norte.setOpaque(false);
-        javax.swing.JLabel lblInfo = new javax.swing.JLabel("Entrega de este producto por bodega según la cantidad solicitada");
+        javax.swing.JLabel lblInfo = new javax.swing.JLabel("Unidades de entrega del producto (parte la cantidad entre bodegas)");
         lblInfo.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 14));
         lblInfo.setForeground(new java.awt.Color(40, 53, 147));
-        javax.swing.JLabel lblNota = new javax.swing.JLabel("<html>Deje \"Cantidad máx.\" en blanco para \"en adelante\". "
-                + "Si no define rangos, el producto usa la selección automática de bodega. "
-                + "Si la cantidad no cae en ningún rango, se usa la bodega del rango mayor.</html>");
+        javax.swing.JLabel lblNota = new javax.swing.JLabel("<html>Los paquetes salen en cajas completas de su bodega (mayor a menor) y "
+                + "el sobrante de la <b>bodega por unidad</b>. Si no define unidades, el producto usa la selección automática.</html>");
         lblNota.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, 11));
         lblNota.setForeground(new java.awt.Color(97, 97, 97));
-        norte.add(lblInfo, java.awt.BorderLayout.NORTH);
-        norte.add(lblNota, java.awt.BorderLayout.SOUTH);
+
+        comboBodegaUnidad = new javax.swing.JComboBox<>();
+        comboBodegaUnidad.addItem(new modelos.Bodegas(0, "(sin asignar)"));
+        for (modelos.Bodegas b : listaBodegasUnidades) {
+            comboBodegaUnidad.addItem(b);
+        }
+        javax.swing.JPanel filaUnidad = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 8, 0));
+        filaUnidad.setOpaque(false);
+        javax.swing.JLabel lblUnidad = new javax.swing.JLabel("Bodega para entregas por unidad:");
+        lblUnidad.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 12));
+        filaUnidad.add(lblUnidad);
+        filaUnidad.add(comboBodegaUnidad);
+
+        norte.add(lblInfo);
+        norte.add(lblNota);
+        norte.add(filaUnidad);
         panel.add(norte, java.awt.BorderLayout.NORTH);
 
-        // Tabla de rangos
-        modeloRangos = new javax.swing.table.DefaultTableModel(
-                new Object[]{"Cantidad mín.", "Cantidad máx.", "Bodega"}, 0);
-        tablaRangos = new javax.swing.JTable(modeloRangos);
-        tablaRangos.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, 13));
-        tablaRangos.setRowHeight(30);
-        tablaRangos.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-        tablaRangos.getTableHeader().setReorderingAllowed(false);
-        tablaRangos.getTableHeader().setDefaultRenderer(new javax.swing.table.DefaultTableCellRenderer() {
+        // Tabla de paquetes (cantidad > 1)
+        modeloPaquetes = new javax.swing.table.DefaultTableModel(
+                new Object[]{"Etiqueta (opcional)", "Cantidad por paquete", "Bodega"}, 0);
+        tablaPaquetes = new javax.swing.JTable(modeloPaquetes);
+        tablaPaquetes.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, 13));
+        tablaPaquetes.setRowHeight(30);
+        tablaPaquetes.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        tablaPaquetes.getTableHeader().setReorderingAllowed(false);
+        tablaPaquetes.getTableHeader().setDefaultRenderer(new javax.swing.table.DefaultTableCellRenderer() {
             @Override
             public java.awt.Component getTableCellRendererComponent(javax.swing.JTable t, Object value,
                     boolean sel, boolean focus, int row, int col) {
@@ -305,57 +333,48 @@ public class jif_crear_producto extends javax.swing.JDialog {
                 return l;
             }
         });
-        tablaRangos.getTableHeader().setPreferredSize(new java.awt.Dimension(0, 36));
+        tablaPaquetes.getTableHeader().setPreferredSize(new java.awt.Dimension(0, 36));
 
-        // Combo de bodegas para la columna "Bodega"
-        javax.swing.JComboBox<modelos.Bodegas> comboBodega = new javax.swing.JComboBox<>();
-        listaBodegasRangos.clear();
-        try {
-            java.sql.ResultSet rs = conexiondb.DB_consultas_R_D.getTabla("select id,nombre from bodegas order by nombre");
-            while (rs.next()) {
-                modelos.Bodegas b = new modelos.Bodegas(rs.getInt("id"), rs.getString("nombre"));
-                listaBodegasRangos.add(b);
-                comboBodega.addItem(b);
-            }
-            rs.close();
-        } catch (Exception e) {
-            System.err.println("Error cargando bodegas para rangos: " + e.getMessage());
+        // Combo de bodegas para la columna "Bodega" de la tabla de paquetes
+        javax.swing.JComboBox<modelos.Bodegas> comboPaqueteBodega = new javax.swing.JComboBox<>();
+        for (modelos.Bodegas b : listaBodegasUnidades) {
+            comboPaqueteBodega.addItem(b);
         }
-        tablaRangos.getColumnModel().getColumn(2).setCellEditor(new javax.swing.DefaultCellEditor(comboBodega));
+        tablaPaquetes.getColumnModel().getColumn(2).setCellEditor(new javax.swing.DefaultCellEditor(comboPaqueteBodega));
 
-        panel.add(new javax.swing.JScrollPane(tablaRangos), java.awt.BorderLayout.CENTER);
+        panel.add(new javax.swing.JScrollPane(tablaPaquetes), java.awt.BorderLayout.CENTER);
 
         // Botonera
         javax.swing.JPanel sur = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 8, 0));
         sur.setOpaque(false);
-        javax.swing.JButton btnAgregar = new javax.swing.JButton("Agregar rango");
-        javax.swing.JButton btnEliminar = new javax.swing.JButton("Eliminar rango");
+        javax.swing.JButton btnAgregar = new javax.swing.JButton("Agregar paquete");
+        javax.swing.JButton btnEliminar = new javax.swing.JButton("Eliminar paquete");
         javax.swing.JButton btnGuardar = new javax.swing.JButton("Guardar configuración");
         btnGuardar.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 13));
 
         btnAgregar.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
-                modelos.Bodegas bodPorDefecto = listaBodegasRangos.isEmpty() ? null : listaBodegasRangos.get(0);
-                modeloRangos.addRow(new Object[]{"", "", bodPorDefecto});
+                modelos.Bodegas bodPorDefecto = listaBodegasUnidades.isEmpty() ? null : listaBodegasUnidades.get(0);
+                modeloPaquetes.addRow(new Object[]{"", "", bodPorDefecto});
             }
         });
         btnEliminar.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
-                if (tablaRangos.isEditing()) {
-                    tablaRangos.getCellEditor().stopCellEditing();
+                if (tablaPaquetes.isEditing()) {
+                    tablaPaquetes.getCellEditor().stopCellEditing();
                 }
-                int fila = tablaRangos.getSelectedRow();
+                int fila = tablaPaquetes.getSelectedRow();
                 if (fila >= 0) {
-                    modeloRangos.removeRow(fila);
+                    modeloPaquetes.removeRow(fila);
                 }
             }
         });
         btnGuardar.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
-                guardarRangosUI();
+                guardarUnidadesUI();
             }
         });
         sur.add(btnAgregar);
@@ -367,102 +386,124 @@ public class jif_crear_producto extends javax.swing.JDialog {
     }
 
     /**
-     * Carga en la tabla los rangos del producto indicado.
+     * Carga las unidades de entrega del producto indicado: la bodega por unidad
+     * (renglón de paquete = 1) en el combo, y los paquetes (> 1) en la tabla.
      *
      * @param idProductoTxt ID del producto (texto del campo txt_id)
      */
-    public void cargarRangos(String idProductoTxt) {
-        if (modeloRangos == null) {
+    public void cargarUnidades(String idProductoTxt) {
+        if (modeloPaquetes == null) {
             return;
         }
-        modeloRangos.setRowCount(0);
+        modeloPaquetes.setRowCount(0);
+        if (comboBodegaUnidad.getItemCount() > 0) {
+            comboBodegaUnidad.setSelectedIndex(0); // (sin asignar)
+        }
         int idProducto;
         try {
             idProducto = Integer.parseInt(idProductoTxt.trim());
         } catch (Exception e) {
-            tabbedPane.setTitleAt(2, "Bodegas por cantidad");
+            tabbedPane.setTitleAt(2, "Unidades de entrega");
             return;
         }
 
-        java.util.List<modelos.ProductoBodegaRango> rangos =
-                conexiondb.DBproductoBodegaRango.listarPorProducto(idProducto);
-        for (modelos.ProductoBodegaRango r : rangos) {
-            modeloRangos.addRow(new Object[]{
-                fmtCantidad(r.getCantidad_min()),
-                r.getCantidad_max() == null ? "" : fmtCantidad(r.getCantidad_max()),
-                buscarBodega(r.getId_bodega())
-            });
+        java.util.List<modelos.ProductoUnidadEntrega> unidades =
+                conexiondb.DBproductoUnidadEntrega.listarPorProducto(idProducto);
+        for (modelos.ProductoUnidadEntrega u : unidades) {
+            if (u.getCantidad_paquete() == 1) {
+                seleccionarBodegaCombo(comboBodegaUnidad, u.getId_bodega());
+            } else {
+                modeloPaquetes.addRow(new Object[]{
+                    u.getNombre() == null ? "" : u.getNombre(),
+                    fmtCantidad(u.getCantidad_paquete()),
+                    buscarBodega(u.getId_bodega())
+                });
+            }
         }
-        tabbedPane.setTitleAt(2, "Bodegas por cantidad (" + modeloRangos.getRowCount() + ")");
+        tabbedPane.setTitleAt(2, "Unidades de entrega (" + unidades.size() + ")");
     }
 
     /**
-     * Valida y persiste los rangos de la tabla para el producto actual.
+     * Valida y persiste las unidades de entrega (bodega por unidad + paquetes)
+     * del producto actual.
      */
-    private void guardarRangosUI() {
+    private void guardarUnidadesUI() {
         // El producto debe existir (FK por id_producto)
         if (conexiondb.DB_consultas_R_D.consultarId(txt_id.getText(), "productos") != 1) {
-            JOptionPane.showMessageDialog(this, "Guarde el producto primero para poder configurar sus bodegas por cantidad.",
+            JOptionPane.showMessageDialog(this, "Guarde el producto primero para poder configurar sus unidades de entrega.",
                     "Producto no guardado", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        if (tablaRangos.isEditing()) {
-            tablaRangos.getCellEditor().stopCellEditing();
+        if (tablaPaquetes.isEditing()) {
+            tablaPaquetes.getCellEditor().stopCellEditing();
         }
         int idProducto = Integer.parseInt(txt_id.getText().trim());
 
-        java.util.List<modelos.ProductoBodegaRango> rangos = new java.util.ArrayList<>();
-        for (int i = 0; i < modeloRangos.getRowCount(); i++) {
-            // Cantidad minima (obligatoria, >= 0)
-            double min;
+        // Bodega por unidad (0 = sin asignar)
+        modelos.Bodegas bodUnidad = (modelos.Bodegas) comboBodegaUnidad.getSelectedItem();
+        int idBodegaUnidad = (bodUnidad == null) ? 0 : bodUnidad.getId();
+
+        // Paquetes de la tabla
+        java.util.List<modelos.ProductoUnidadEntrega> unidades = new java.util.ArrayList<>();
+        for (int i = 0; i < modeloPaquetes.getRowCount(); i++) {
+            String etiqueta = ("" + (modeloPaquetes.getValueAt(i, 0) == null ? "" : modeloPaquetes.getValueAt(i, 0))).trim();
+
+            double paquete;
             try {
-                min = Double.parseDouble(("" + modeloRangos.getValueAt(i, 0)).replace(",", "").trim());
+                paquete = Double.parseDouble(("" + modeloPaquetes.getValueAt(i, 1)).replace(",", "").trim());
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Fila " + (i + 1) + ": la cantidad mínima no es válida.",
+                JOptionPane.showMessageDialog(this, "Paquete " + (i + 1) + ": la cantidad por paquete no es válida.",
                         "Datos inválidos", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            if (min < 0) {
-                JOptionPane.showMessageDialog(this, "Fila " + (i + 1) + ": la cantidad mínima no puede ser negativa.",
+            if (paquete <= 1) {
+                JOptionPane.showMessageDialog(this, "Paquete " + (i + 1) + ": la cantidad por paquete debe ser mayor que 1 "
+                        + "(la unidad la cubre la bodega por unidad).",
                         "Datos inválidos", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
-            // Cantidad maxima (opcional; vacio = sin tope)
-            Double max = null;
-            String maxTxt = ("" + (modeloRangos.getValueAt(i, 1) == null ? "" : modeloRangos.getValueAt(i, 1))).trim();
-            if (!maxTxt.isEmpty()) {
-                try {
-                    max = Double.parseDouble(maxTxt.replace(",", ""));
-                } catch (Exception e) {
-                    JOptionPane.showMessageDialog(this, "Fila " + (i + 1) + ": la cantidad máxima no es válida.",
-                            "Datos inválidos", JOptionPane.WARNING_MESSAGE);
-                    return;
-                }
-                if (max < min) {
-                    JOptionPane.showMessageDialog(this, "Fila " + (i + 1) + ": la cantidad máxima no puede ser menor que la mínima.",
-                            "Datos inválidos", JOptionPane.WARNING_MESSAGE);
-                    return;
-                }
-            }
-
-            // Bodega (obligatoria)
-            Object bodObj = modeloRangos.getValueAt(i, 2);
+            Object bodObj = modeloPaquetes.getValueAt(i, 2);
             if (!(bodObj instanceof modelos.Bodegas)) {
-                JOptionPane.showMessageDialog(this, "Fila " + (i + 1) + ": seleccione una bodega.",
+                JOptionPane.showMessageDialog(this, "Paquete " + (i + 1) + ": seleccione una bodega.",
                         "Datos inválidos", JOptionPane.WARNING_MESSAGE);
                 return;
             }
             int idBodega = ((modelos.Bodegas) bodObj).getId();
 
-            rangos.add(new modelos.ProductoBodegaRango(idProducto, min, max, idBodega));
+            unidades.add(new modelos.ProductoUnidadEntrega(idProducto, etiqueta.isEmpty() ? null : etiqueta, paquete, idBodega));
         }
 
-        boolean ok = conexiondb.DBproductoBodegaRango.guardarRangos(idProducto, rangos);
+        // Si hay paquetes, la bodega por unidad es obligatoria
+        if (!unidades.isEmpty() && idBodegaUnidad == 0) {
+            JOptionPane.showMessageDialog(this, "Defina la bodega para entregas por unidad: es obligatoria cuando hay paquetes "
+                    + "(de ahí salen las unidades sobrantes).",
+                    "Falta bodega por unidad", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Agregar el renglón de bodega por unidad (paquete = 1) si está asignada
+        if (idBodegaUnidad != 0) {
+            unidades.add(new modelos.ProductoUnidadEntrega(idProducto, "Unidad", 1, idBodegaUnidad));
+        }
+
+        boolean ok = conexiondb.DBproductoUnidadEntrega.guardarUnidades(idProducto, unidades);
         if (ok) {
-            JOptionPane.showMessageDialog(this, "Configuración de bodegas por cantidad guardada.",
+            JOptionPane.showMessageDialog(this, "Unidades de entrega guardadas.",
                     "Listo", JOptionPane.INFORMATION_MESSAGE);
-            cargarRangos(txt_id.getText());
+            cargarUnidades(txt_id.getText());
+        }
+    }
+
+    /**
+     * Selecciona en el combo el item Bodegas cuyo id coincide.
+     */
+    private void seleccionarBodegaCombo(javax.swing.JComboBox<modelos.Bodegas> combo, int idBodega) {
+        for (int i = 0; i < combo.getItemCount(); i++) {
+            if (combo.getItemAt(i).getId() == idBodega) {
+                combo.setSelectedIndex(i);
+                return;
+            }
         }
     }
 
@@ -470,7 +511,7 @@ public class jif_crear_producto extends javax.swing.JDialog {
      * Busca un objeto Bodegas (ya cargado) por su id. Null si no existe.
      */
     private modelos.Bodegas buscarBodega(int idBodega) {
-        for (modelos.Bodegas b : listaBodegasRangos) {
+        for (modelos.Bodegas b : listaBodegasUnidades) {
             if (b.getId() == idBodega) {
                 return b;
             }

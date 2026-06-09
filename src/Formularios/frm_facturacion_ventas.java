@@ -1014,32 +1014,37 @@ public class frm_facturacion_ventas extends javax.swing.JInternalFrame {
 
                         int idProducto = Integer.parseInt(modelo_ventas.getValueAt(i, 0).toString());
 
-                        // Seleccion inteligente de bodega de descarga por producto.
-                        // Si el producto tiene rangos de cantidad configurados, se
-                        // resuelve por la cantidad (can); si no, por las 4 reglas.
-                        int idBodega = DBstock_productos.seleccionarBodegaDescarga(idProducto, can);
+                        // Partición de la cantidad entre bodegas según las unidades
+                        // de entrega del producto (o una sola bodega por las 4 reglas
+                        // si no tiene unidades configuradas).
+                        java.util.List<DBstock_productos.AsignacionBodega> asignaciones =
+                                DBstock_productos.asignarBodegasEntrega(idProducto, can);
 
                         double subtotal = Double.parseDouble(
                                 metodos.EliminaCaracteres(modelo_ventas.getValueAt(i, 4).toString(), "."));
 
+                        // La factura al cliente mantiene UNA línea por producto (cantidad total).
                         SSQL += "INSERT INTO facturas_detalles (id,id_cabecera,id_producto,cantidad, subtotal, id_factura) "
                                 + "VALUES ((select COALESCE(max(id),0)+1 from facturas_detalles),"
                                 + lbl_numerofactura.getText() + ",'" + modelo_ventas.getValueAt(i, 0).toString() + "',"
                                 + can + ", " + subtotal + ",0);\n";
 
                         // ════════════════════════════════════════════════════════
-                        // INTEGRACIÓN STOCK: Registrar venta (descuenta cantidad)
+                        // INTEGRACIÓN STOCK: registrar venta por cada bodega asignada
+                        // (descuenta cantidad). El subtotal se reparte proporcional.
                         // ════════════════════════════════════════════════════════
-                        dbStock.venta(
-                                idProducto,
-                                idBodega,
-                                frm_main.id_user,
-                                can,
-                                idFactura,
-                                "Venta directa - Factura: " + lbl_numerofactura.getText()
-                        );
-
-                        itemsParaOrdenAuto.add(new ItemFacturado(idProducto, idBodega, can, subtotal));
+                        for (DBstock_productos.AsignacionBodega asig : asignaciones) {
+                            double subAsig = (can != 0) ? subtotal * (asig.cantidad / can) : subtotal;
+                            dbStock.venta(
+                                    idProducto,
+                                    asig.idBodega,
+                                    frm_main.id_user,
+                                    asig.cantidad,
+                                    idFactura,
+                                    "Venta directa - Factura: " + lbl_numerofactura.getText()
+                            );
+                            itemsParaOrdenAuto.add(new ItemFacturado(idProducto, asig.idBodega, asig.cantidad, subAsig));
+                        }
 
                         if (imprimirSiNo == 1) {
                             ProductoImprimir prod = new ProductoImprimir();
