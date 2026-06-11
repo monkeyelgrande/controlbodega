@@ -383,12 +383,18 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
             JOptionPane.showMessageDialog(this, "Seleccione un registro");
         } else {
             String id = (String) jtabla.getValueAt(fila, 0);
+            int estadoIngreso = 0; // 0=pendiente, 1=recibido; define cómo mostrar la columna ACTUAL
             ResultSet rs = DB_consultas_R_D.getTabla("select i.id, i.descripcion, i.no_factura, i.id_transportador, i.id_bodega, b.nombre as bodega, tra.nombre as transportador, "
                     + "p.nombre as proveedor,p.id as id_proveedor, t.nombre as tipo,t.id as id_tipo, i.fecha, i.estado "
                     + "from ingresos_mercancias_cabecera i, contactos p, tipo_ingreso t, contactos tra, bodegas b "
                     + "where i.id_bodega=b.id and i.id_proveedor=p.id and i.id_tipo=t.id and i.id_transportador=tra.id and i.id=" + id);
 
             jif_crear_ingreso_mercancia frm = new jif_crear_ingreso_mercancia();
+            // Fijar el id real de la fila seleccionada de inmediato. El constructor
+            // pone un id nuevo (cargarId = max+1) y la consulta de abajo usa joins que
+            // pueden no devolver filas (p. ej. transportador/bodega sin coincidencia),
+            // dejando el id nuevo y provocando que al guardar se cree otro registro.
+            jif_crear_ingreso_mercancia.lbl_id.setText(id);
 
             try {
                 while (rs.next()) {
@@ -405,7 +411,8 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
                     jif_crear_ingreso_mercancia.id_bodega = (rs.getInt("id_bodega"));
                     jif_crear_ingreso_mercancia.txt_descripcion.setText(rs.getString("descripcion"));
 
-                    if (rs.getInt("estado") == 0) {
+                    estadoIngreso = rs.getInt("estado");
+                    if (estadoIngreso == 0) {
                         jif_crear_ingreso_mercancia.rbtn_pendiente.setSelected(true);
                     } else {
                         jif_crear_ingreso_mercancia.rbtn_recibido.setSelected(true);
@@ -425,9 +432,16 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
             try {
                 while (rs.next()) {
                     double stock = DB_consultas_R_D.consultar_stock(rs.getString("codigo_barras"));
+                    double cantidad = rs.getDouble("cantidad");
+
+                    // Si el ingreso está RECIBIDO, su cantidad ya está sumada en el stock
+                    // actual, así que la columna ACTUAL = stock - cantidad. Si está
+                    // PENDIENTE, el stock todavía no lo incluye, así que ACTUAL = stock.
+                    // La columna NUEVO TOTAL (col 5) se calcula sola como (agregar + actual).
+                    double actual = (estadoIngreso == 1) ? stock - cantidad : stock;
 
                     jif_crear_ingreso_mercancia.modelo_productos.addRow(new Object[]{rs.getString("id"), rs.getString("codigo_barras"), rs.getString("descripcion"),
-                        formateador.format(rs.getDouble("cantidad")), stock - rs.getDouble("cantidad"), stock,
+                        formateador.format(cantidad), actual, stock,
                         metodos.formateador_dinero().format(rs.getDouble("precio_costo")), metodos.formateador_dinero().format(rs.getDouble("precio_venta"))});
 
                 }

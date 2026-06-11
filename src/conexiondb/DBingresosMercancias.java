@@ -197,14 +197,16 @@ public class DBingresosMercancias {
         try {
             con = DB_consultas_R_D.getConexion();
 
-            // 1. Bodega del ingreso (y verificar que exista)
+            // 1. Bodega y estado del ingreso (y verificar que exista)
             int idBodega = -1;
+            int estado = 0;
             try (PreparedStatement ps = con.prepareStatement(
-                    "SELECT id_bodega FROM ingresos_mercancias_cabecera WHERE id = ?")) {
+                    "SELECT id_bodega, estado FROM ingresos_mercancias_cabecera WHERE id = ?")) {
                 ps.setInt(1, idIngreso);
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
                         idBodega = rs.getInt("id_bodega");
+                        estado = rs.getInt("estado");
                     } else {
                         JOptionPane.showMessageDialog(null, "El ingreso no existe.");
                         return false;
@@ -228,21 +230,25 @@ public class DBingresosMercancias {
             }
 
             // 3. Revertir stock + registrar movimiento por cada producto.
+            //    SOLO si el ingreso estaba RECIBIDO (estado=1): un ingreso
+            //    pendiente nunca sumó al stock, así que no hay nada que revertir.
             //    Si una reversión falla, se aborta SIN borrar la cabecera para
             //    no perder el rastro de lo que aún falta revertir.
-            DBstock_productos dbStock = new DBstock_productos();
-            for (int i = 0; i < productos.size(); i++) {
-                int idProducto = productos.get(i);
-                double cantidad = cantidades.get(i);
-                int idMov = dbStock.eliminarIngreso(
-                        idProducto, idBodega, idUser, cantidad, idIngreso,
-                        "Reversión por eliminación de ingreso #" + idIngreso);
-                if (idMov <= 0) {
-                    JOptionPane.showMessageDialog(null,
-                            "No se pudo revertir el stock del producto " + idProducto
-                            + ".\nEl ingreso NO fue eliminado para no dejar inventario inconsistente.",
-                            "Error", JOptionPane.ERROR_MESSAGE);
-                    return false;
+            if (estado == 1) {
+                DBstock_productos dbStock = new DBstock_productos();
+                for (int i = 0; i < productos.size(); i++) {
+                    int idProducto = productos.get(i);
+                    double cantidad = cantidades.get(i);
+                    int idMov = dbStock.eliminarIngreso(
+                            idProducto, idBodega, idUser, cantidad, idIngreso,
+                            "Reversión por eliminación de ingreso #" + idIngreso);
+                    if (idMov <= 0) {
+                        JOptionPane.showMessageDialog(null,
+                                "No se pudo revertir el stock del producto " + idProducto
+                                + ".\nEl ingreso NO fue eliminado para no dejar inventario inconsistente.",
+                                "Error", JOptionPane.ERROR_MESSAGE);
+                        return false;
+                    }
                 }
             }
 

@@ -12,7 +12,6 @@ import Metodos.TextPrompt;
 import Metodos.metodos;
 import conexiondb.DB_consultas_R_D;
 import java.awt.Point;
-import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.sql.ResultSet;
@@ -24,7 +23,6 @@ import javax.swing.JTable;
 import javax.swing.RowFilter;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
-import javax.swing.table.TableRowSorter;
 
 /**
  *
