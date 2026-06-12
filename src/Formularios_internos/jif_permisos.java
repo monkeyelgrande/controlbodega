@@ -34,8 +34,12 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.table.DefaultTableModel;
 
+import conexiondb.DBperfiles;
 import modelos.Opcion;
 import modelos.Perfiles;
 
@@ -63,6 +67,13 @@ public class jif_permisos extends JDialog {
     private final Map<Integer, JCheckBox> chkPerfil = new LinkedHashMap<>();
     private JButton btn_guardar_perfil;
     private JLabel lbl_hint_perfil;
+
+    // --- pestaña Crear perfiles ---
+    private JTable jtabla_perfiles;
+    private DefaultTableModel modelo_perfiles;
+    private JTextField txt_nombre_perfil;
+    private JCheckBox chk_copiar_permisos;
+    private JComboBox<Perfiles> jbox_copiar_de;
 
     // --- pestaña Usuarios ---
     private JComboBox<UsuarioItem> jbox_usuario;
@@ -116,6 +127,7 @@ public class jif_permisos extends JDialog {
         JTabbedPane tabs = new JTabbedPane();
         tabs.setFont(new Font("Segoe UI", Font.BOLD, 13));
         tabs.setBackground(EstiloCompras.BG_FORM);
+        tabs.addTab("Crear perfiles", buildTabGestionPerfiles());
         tabs.addTab("Por perfil", buildTabPerfiles());
         tabs.addTab("Por usuario", buildTabUsuarios());
         root.add(tabs, BorderLayout.CENTER);
@@ -126,6 +138,239 @@ public class jif_permisos extends JDialog {
 
         cargarPerfilSeleccionado();
         cargarUsuarioSeleccionado();
+    }
+
+    // ------------------------------------------------------------------
+    // Pestaña Crear perfiles
+    // ------------------------------------------------------------------
+    private JPanel buildTabGestionPerfiles() {
+        JPanel tab = new JPanel(new BorderLayout());
+        tab.setBackground(EstiloCompras.BG_FORM);
+        tab.setBorder(BorderFactory.createEmptyBorder(16, 20, 14, 20));
+
+        // --- formulario superior ---
+        JPanel form = new JPanel();
+        form.setOpaque(false);
+        form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
+
+        txt_nombre_perfil = EstiloCompras.field("Nombre del perfil", FontAwesome.PENCIL);
+        txt_nombre_perfil.setMaximumSize(new Dimension(380, 38));
+        txt_nombre_perfil.setPreferredSize(new Dimension(380, 38));
+
+        chk_copiar_permisos = new JCheckBox("Copiar permisos de:");
+        chk_copiar_permisos.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        chk_copiar_permisos.setBackground(EstiloCompras.BG_FORM);
+        chk_copiar_permisos.setFocusPainted(false);
+
+        jbox_copiar_de = new JComboBox<>();
+        EstiloCompras.styleCombo(jbox_copiar_de);
+        jbox_copiar_de.setMaximumSize(new Dimension(240, 38));
+        jbox_copiar_de.setPreferredSize(new Dimension(240, 38));
+        jbox_copiar_de.setEnabled(false);
+        new Perfiles().mostrar_perfiles(jbox_copiar_de);
+        chk_copiar_permisos.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                jbox_copiar_de.setEnabled(chk_copiar_permisos.isSelected());
+            }
+        });
+
+        JButton btnCrear = EstiloCompras.primaryBtn("Crear perfil", FontAwesome.PLUS);
+        btnCrear.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                crearPerfil();
+            }
+        });
+
+        JButton btnRenombrar = EstiloCompras.secondaryBtn("Renombrar seleccionado", FontAwesome.EDIT);
+        btnRenombrar.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                renombrarPerfil();
+            }
+        });
+
+        JPanel fila = new JPanel();
+        fila.setOpaque(false);
+        fila.setLayout(new BoxLayout(fila, BoxLayout.X_AXIS));
+        fila.setAlignmentX(Component.LEFT_ALIGNMENT);
+        fila.add(EstiloCompras.labeled("Nombre", txt_nombre_perfil, 380));
+        fila.add(Box.createHorizontalStrut(14));
+        JPanel botonesWrap = new JPanel();
+        botonesWrap.setOpaque(false);
+        botonesWrap.setLayout(new BoxLayout(botonesWrap, BoxLayout.Y_AXIS));
+        botonesWrap.add(Box.createVerticalStrut(20));
+        JPanel botones = new JPanel();
+        botones.setOpaque(false);
+        botones.setLayout(new BoxLayout(botones, BoxLayout.X_AXIS));
+        botones.add(btnCrear);
+        botones.add(Box.createHorizontalStrut(8));
+        botones.add(btnRenombrar);
+        botonesWrap.add(botones);
+        fila.add(botonesWrap);
+        fila.add(Box.createHorizontalGlue());
+        form.add(fila);
+
+        JPanel filaCopia = new JPanel();
+        filaCopia.setOpaque(false);
+        filaCopia.setLayout(new BoxLayout(filaCopia, BoxLayout.X_AXIS));
+        filaCopia.setAlignmentX(Component.LEFT_ALIGNMENT);
+        filaCopia.add(chk_copiar_permisos);
+        filaCopia.add(Box.createHorizontalStrut(8));
+        filaCopia.add(jbox_copiar_de);
+        filaCopia.add(Box.createHorizontalGlue());
+        form.add(filaCopia);
+
+        JLabel hint = hintLabel(
+                "El perfil nuevo inicia sin permisos (o con los copiados); asígnelos en la pestaña \"Por perfil\".");
+        hint.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(Box.createVerticalStrut(6));
+        form.add(hint);
+        form.add(Box.createVerticalStrut(10));
+
+        tab.add(form, BorderLayout.NORTH);
+
+        // --- tabla de perfiles existentes ---
+        modelo_perfiles = new DefaultTableModel() {
+            @Override
+            public boolean isCellEditable(int fila, int columna) {
+                return false;
+            }
+        };
+        modelo_perfiles.setColumnIdentifiers(new Object[]{"ID", "Perfil", "Usuarios"});
+        jtabla_perfiles = new JTable(modelo_perfiles);
+        EstiloCompras.styleTable(jtabla_perfiles);
+        cargarTablaPerfiles();
+        EstiloCompras.anchoColumnas(jtabla_perfiles, 60, 420, 100);
+        // Al seleccionar, lleva el nombre al campo para renombrar
+        jtabla_perfiles.getSelectionModel().addListSelectionListener(
+                new javax.swing.event.ListSelectionListener() {
+            @Override
+            public void valueChanged(javax.swing.event.ListSelectionEvent e) {
+                int fila = jtabla_perfiles.getSelectedRow();
+                if (!e.getValueIsAdjusting() && fila >= 0) {
+                    txt_nombre_perfil.setText(jtabla_perfiles.getValueAt(fila, 1).toString());
+                }
+            }
+        });
+        tab.add(EstiloCompras.scroll(jtabla_perfiles), BorderLayout.CENTER);
+
+        JButton btnCerrar = EstiloCompras.secondaryBtn("Cerrar", FontAwesome.CLOSE);
+        btnCerrar.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                dispose();
+            }
+        });
+        JPanel pie = new JPanel(new BorderLayout());
+        pie.setOpaque(false);
+        pie.setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 0));
+        JPanel der = new JPanel();
+        der.setOpaque(false);
+        der.setLayout(new BoxLayout(der, BoxLayout.X_AXIS));
+        der.add(btnCerrar);
+        pie.add(der, BorderLayout.EAST);
+        tab.add(pie, BorderLayout.SOUTH);
+
+        return tab;
+    }
+
+    private void cargarTablaPerfiles() {
+        modelo_perfiles.setRowCount(0);
+        ResultSet rs = DB_consultas_R_D.getTabla(
+                "select p.id, p.perfil, count(u.id) as usuarios "
+                + "from perfiles p left join users u on u.id_perfil = p.id "
+                + "group by p.id, p.perfil order by p.id");
+        try {
+            while (rs.next()) {
+                modelo_perfiles.addRow(new Object[]{rs.getString("id"),
+                    rs.getString("perfil"), rs.getString("usuarios")});
+            }
+            rs.close();
+        } catch (SQLException e) {
+            System.out.println(e);
+        }
+    }
+
+    private void crearPerfil() {
+        String nombre = txt_nombre_perfil.getText().trim();
+        if (nombre.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Escriba el nombre del perfil.",
+                    "Permisos", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        for (int i = 0; i < modelo_perfiles.getRowCount(); i++) {
+            if (nombre.equalsIgnoreCase(modelo_perfiles.getValueAt(i, 1).toString())) {
+                JOptionPane.showMessageDialog(this, "Ya existe un perfil con ese nombre.",
+                        "Permisos", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        }
+
+        Perfiles nuevo = new Perfiles();
+        nuevo.setId(Integer.parseInt(DB_consultas_R_D.cargarId("perfiles")));
+        nuevo.setPerfil(nombre);
+        if (new DBperfiles().Guardar(nuevo) <= 0) {
+            return;
+        }
+
+        if (chk_copiar_permisos.isSelected() && jbox_copiar_de.getSelectedItem() != null) {
+            Perfiles origen = (Perfiles) jbox_copiar_de.getSelectedItem();
+            // El Admin no tiene filas en perfil_opciones (todo va en código):
+            // copiar de él significa conceder todas las opciones.
+            Set<Integer> ids = origen.getId() == 1
+                    ? new HashSet<Integer>() : DBpermisos.opcionesPerfil(origen.getId());
+            if (origen.getId() == 1) {
+                for (Opcion o : opciones) {
+                    ids.add(o.getId());
+                }
+            }
+            DBpermisos.guardarOpcionesPerfil(nuevo.getId(), ids);
+        }
+
+        txt_nombre_perfil.setText("");
+        chk_copiar_permisos.setSelected(false);
+        jbox_copiar_de.setEnabled(false);
+        refrescarPerfiles();
+        JOptionPane.showMessageDialog(this,
+                "Perfil \"" + nombre + "\" creado.\nAsigne sus permisos en la pestaña \"Por perfil\".",
+                "Permisos", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void renombrarPerfil() {
+        int fila = jtabla_perfiles.getSelectedRow();
+        if (fila < 0) {
+            JOptionPane.showMessageDialog(this, "Seleccione un perfil en la tabla.",
+                    "Permisos", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        String nombre = txt_nombre_perfil.getText().trim();
+        if (nombre.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Escriba el nuevo nombre del perfil.",
+                    "Permisos", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int id = Integer.parseInt(jtabla_perfiles.getValueAt(fila, 0).toString());
+        if (id == 1) {
+            JOptionPane.showMessageDialog(this, "El perfil Admin no se renombra.",
+                    "Permisos", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        Perfiles p = new Perfiles(id, nombre);
+        if (new DBperfiles().Actualizar(p) > 0) {
+            txt_nombre_perfil.setText("");
+            refrescarPerfiles();
+        }
+    }
+
+    /** Recarga la tabla y los combos que muestran perfiles en las tres pestañas. */
+    private void refrescarPerfiles() {
+        cargarTablaPerfiles();
+        new Perfiles().mostrar_perfiles(jbox_perfil);
+        new Perfiles().mostrar_perfiles(jbox_copiar_de);
+        jbox_usuario.removeAllItems();
+        cargarUsuarios();
     }
 
     // ------------------------------------------------------------------
