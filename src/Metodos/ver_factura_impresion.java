@@ -253,9 +253,16 @@ public class ver_factura_impresion extends javax.swing.JDialog {
             }
         }
 
-        // 2. Productos de las SALIDAS de esta venta, agrupados por bodega + precios
+        // 2. Productos de las SALIDAS de esta venta, agrupados por bodega + precios.
+        //    Se agrupan por la venta origen (id_factura), robusto aunque el código
+        //    de la venta esté vacío.
+        Integer idVentaOrigen = null;
+        try {
+            idVentaOrigen = Integer.valueOf(idCabeceraVenta);
+        } catch (NumberFormatException ignored) {
+        }
         ArrayList<ProductoImprimirOrden> agrupados =
-                cargarProductosAgrupados(idCabeceraVenta, codigo, fecha, hora, null);
+                cargarProductosAgrupados(idCabeceraVenta, codigo, fecha, hora, null, idVentaOrigen);
         if (agrupados.isEmpty()) {
             System.out.println("[ver_factura_impresion] Copia de venta sin productos: " + codigo);
             return;
@@ -347,7 +354,7 @@ public class ver_factura_impresion extends javax.swing.JDialog {
         String concepto = datosImpresa != null ? datosImpresa[1] : null;
 
         // 3. Productos agrupados por bodega + novedades sin bodega
-        ArrayList<ProductoImprimirOrden> productos = cargarProductosAgrupados(id_factura, codigo, fecha, hora, idBodegaFiltro);
+        ArrayList<ProductoImprimirOrden> productos = cargarProductosAgrupados(id_factura, codigo, fecha, hora, idBodegaFiltro, null);
 
         // Total artículos
         double totalArticulos = 0.0;
@@ -375,6 +382,24 @@ public class ver_factura_impresion extends javax.swing.JDialog {
     }
 
     /**
+     * Dada una cabecera de SALIDA, devuelve el id de la Venta origen leyendo
+     * facturas_detalles.id_factura (que GeneradorOrdenAuto graba con el id de la
+     * venta). Devuelve 0 si no aplica (p.ej. órdenes wo-printer con id_factura=0).
+     */
+    private int derivarVentaOrigen(String idCabecera) {
+        try (ResultSet rs = DB_consultas_R_D.getTabla(
+                "SELECT MAX(id_factura) AS vo FROM facturas_detalles "
+                + "WHERE id_cabecera = " + idCabecera + " AND id_factura > 0")) {
+            if (rs != null && rs.next()) {
+                return rs.getInt("vo");
+            }
+        } catch (Exception ex) {
+            System.out.println("[ver_factura_impresion] derivarVentaOrigen: " + ex.getMessage());
+        }
+        return 0;
+    }
+
+    /**
      * Trae los productos de la factura.
      * La sección 3a (productos asignados) filtra por {@code idFactura} directamente
      * (la llave primaria de facturas_cabeceras), lo que funciona tanto para órdenes
@@ -386,7 +411,8 @@ public class ver_factura_impresion extends javax.swing.JDialog {
      * a esa bodega y omite la sección de novedades.
      */
     private ArrayList<ProductoImprimirOrden> cargarProductosAgrupados(String idFactura,
-            String numeroFactura, String fecha, String hora, Integer idBodegaFiltro) {
+            String numeroFactura, String fecha, String hora, Integer idBodegaFiltro,
+            Integer idVentaOrigen) {
         ArrayList<ProductoImprimirOrden> lista = new ArrayList<>();
         if (idFactura == null || idFactura.isEmpty()) {
             return lista;
@@ -395,26 +421,35 @@ public class ver_factura_impresion extends javax.swing.JDialog {
         // 3a. Productos asignados a alguna bodega (uno por línea de facturas_detalles).
         //
         // Una orden con varias bodegas se guarda como VARIAS cabeceras (una por
-        // bodega), todas con el mismo codigo/fecha/hora. Por eso:
+        // bodega). Por eso:
         //   - Copia filtrada (idBodegaFiltro != null): solo ESTA cabecera (la de
         //     la bodega del bodeguero).
         //   - Recibo completo (idBodegaFiltro == null): TODAS las cabeceras
-        //     hermanas de la orden, para incluir los productos de las demás
-        //     bodegas. Se agrupa por codigo+fecha+hora (las hermanas comparten
-        //     las tres) — inmune al reúso del mismo codigo en otra fecha/hora.
-        //     Si no hay codigo (orden interna sin número), se cae a esta cabecera.
+        //     hermanas de la orden/venta. Llave preferida: la VENTA origen
+        //     (facturas_detalles.id_factura), que agrupa todas las salidas aunque
+        //     el codigo esté vacío. Si no hay venta origen (órdenes wo-printer con
+        //     id_factura=0), se agrupa por codigo+fecha+hora. Último recurso: esta
+        //     misma cabecera.
         String filtroCabeceras;
         if (idBodegaFiltro != null) {
             filtroCabeceras = "  fc.id = " + idFactura + " "
                     + "  AND fc.id_bodega = " + idBodegaFiltro + " ";
-        } else if (numeroFactura != null && !numeroFactura.isEmpty()
-                && fecha != null && !fecha.isEmpty() && hora != null && !hora.isEmpty()) {
-            String codEsc = numeroFactura.replace("'", "''");
-            filtroCabeceras = "  fc.codigo = '" + codEsc + "' "
-                    + "  AND fc.fecha = '" + fecha.replace("'", "''") + "' "
-                    + "  AND fc.hora = '" + hora.replace("'", "''") + "' ";
         } else {
-            filtroCabeceras = "  fc.id = " + idFactura + " ";
+            int ventaOrigen = (idVentaOrigen != null && idVentaOrigen > 0)
+                    ? idVentaOrigen
+                    : derivarVentaOrigen(idFactura);
+            if (ventaOrigen > 0) {
+                filtroCabeceras = "  fc.id IN (SELECT DISTINCT id_cabecera "
+                        + "FROM facturas_detalles WHERE id_factura = " + ventaOrigen + ") ";
+            } else if (numeroFactura != null && !numeroFactura.isEmpty()
+                    && fecha != null && !fecha.isEmpty() && hora != null && !hora.isEmpty()) {
+                String codEsc = numeroFactura.replace("'", "''");
+                filtroCabeceras = "  fc.codigo = '" + codEsc + "' "
+                        + "  AND fc.fecha = '" + fecha.replace("'", "''") + "' "
+                        + "  AND fc.hora = '" + hora.replace("'", "''") + "' ";
+            } else {
+                filtroCabeceras = "  fc.id = " + idFactura + " ";
+            }
         }
         String sqlAsignados = "SELECT bod.nombre AS bodega, "
                 + "       p.codigo_barras AS codigo, "

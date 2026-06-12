@@ -22,7 +22,7 @@ import org.postgresql.PGNotification;
  *   1. imprime_ordenes=false                                  -> nada
  *   2. usuario logueado creó la orden                          -> nada
  *   3. B=false, orden de OTRA bodega                           -> nada
- *   4. B=false, orden de SU bodega                             -> ticket completo
+ *   4. B=false, orden de SU bodega                             -> ticket filtrado (solo su bodega)
  *   5. B=true,  orden de OTRA bodega                           -> ticket completo
  *   6. B=true,  orden de SU bodega                             -> completo + filtrado
  *
@@ -401,7 +401,9 @@ public class AutoImpresionOrdenesService {
                 if (cabeceraEstaImpresa(idFactura)) {
                     return; // ya impresa
                 }
-                imprimirFull(idFactura);
+                // Caso 4 (copia OFF): imprime SOLO los productos de su bodega
+                // (ticket filtrado), no el completo de todas las bodegas.
+                imprimirFiltrado(idFactura, frm_main.id_bodega);
                 marcarImpreso(idFactura);
             }
         } finally {
