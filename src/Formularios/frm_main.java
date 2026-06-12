@@ -74,12 +74,18 @@ public class frm_main extends javax.swing.JFrame {
     public static boolean aprueba_compras = false;
     // Rol del módulo Precios (fusión productos-agroinsumos):
     // 0=sin acceso, 2=captura cantidades, 3=costos, 4=precios.
+    // Es el rol ACTIVO: cuando el usuario tiene varios (roles_precios), el
+    // selector de rol lo asigna por operación.
     public static int rol_precios = 0;
+    // Roles del módulo Precios del usuario (usuario_roles_precios): un usuario
+    // puede tener varios (almacenista/contable/precios).
+    public static java.util.List<Integer> roles_precios = new java.util.ArrayList<>();
     frm_ordenes_compra frm_orden_compra = null;
     Precios.frm_ingresos_precios frm_ingresos_precios = null;
     Precios.frm_precios_productos frm_precios_productos = null;
     Precios.frm_descuentos_precios frm_descuentos_precios = null;
     private javax.swing.JMenu menuPrecios = null;
+    private javax.swing.JMenuItem itemPermisos = null;
 
     jif_users jif_user = null;
     jif_PrincipalReportes jif_reportes = null;
@@ -107,6 +113,7 @@ public class frm_main extends javax.swing.JFrame {
 
         montarMenuOrdenesCompra();
         montarMenuPrecios();
+        montarMenuPermisos();
 
         // Detener el listener de auto-impresión al cerrar la app
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -308,6 +315,24 @@ public class frm_main extends javax.swing.JFrame {
         }
     }
 
+    /**
+     * Agrega al menú de administración la entrada de la pantalla de permisos.
+     * Se construye oculta; la visibilidad la decide permisos() con la opción
+     * "jmenu_permisos" (por defecto solo Admin).
+     */
+    private void montarMenuPermisos() {
+        itemPermisos = new javax.swing.JMenuItem("Permisos de la aplicación");
+        itemPermisos.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                Formularios_internos.jif_permisos dlg = new Formularios_internos.jif_permisos();
+                dlg.setVisible(true);
+            }
+        });
+        itemPermisos.setVisible(false);
+        jmenu_admin.add(itemPermisos);
+    }
+
     private void abrirIngresosPrecios() {
         if (metodos.estacerrado(frm_ingresos_precios)) {
             frm_ingresos_precios = new Precios.frm_ingresos_precios();
@@ -389,7 +414,62 @@ public class frm_main extends javax.swing.JFrame {
         b.close();
     }
 
+    /**
+     * Aplica la visibilidad de menús y botones según los permisos efectivos
+     * del usuario (tablas opciones/perfil_opciones/usuario_opciones, cargadas
+     * en el login con Permisos.cargar). Si la carga falló — BD sin la
+     * migración de permisos o sin conexión — cae al switch por perfil
+     * anterior para no dejar a nadie sin sus accesos.
+     */
     public void permisos() {
+        if (!Metodos.Permisos.estaCargado()) {
+            permisosLegacy();
+            return;
+        }
+        for (java.util.Map.Entry<String, javax.swing.JComponent> e : registroComponentes().entrySet()) {
+            e.getValue().setVisible(Metodos.Permisos.puede(e.getKey()));
+        }
+        if (itemPermisos != null) {
+            itemPermisos.setVisible(Metodos.Permisos.puede("jmenu_permisos"));
+        }
+    }
+
+    /**
+     * Registro clave de opción → componente gobernado. Las claves coinciden
+     * con opciones.clave (sembradas en sql/migracion_permisos.sql).
+     */
+    private java.util.Map<String, javax.swing.JComponent> registroComponentes() {
+        java.util.LinkedHashMap<String, javax.swing.JComponent> m = new java.util.LinkedHashMap<>();
+        m.put("jmenu_configuraciones", jmenu_configuraciones);
+        m.put("jmenu_user", jmenu_user);
+        m.put("jmenu_backup", jmenu_backup);
+        m.put("jMenu_tipo_ingreso", jMenu_tipo_ingreso);
+        m.put("jmenu_bodegas", jmenu_bodegas);
+        m.put("jMenu_unidades", jMenu_unidades);
+        m.put("jmenu_con", jmenu_con);
+        m.put("jmenu_contactos", jmenu_contactos);
+        m.put("btn_contactos", btn_contactos);
+        m.put("jMenu_productos_principal", jMenu_productos_principal);
+        m.put("btn_productos", btn_productos);
+        m.put("btn_ingreso_productos", btn_ingreso_productos);
+        m.put("jMenu_ordenes", jMenu_ordenes);
+        m.put("jmenu_facturacion", jmenu_facturacion);
+        m.put("btn_generar_orden", btn_generar_orden);
+        m.put("btn_ver_ordenes", btn_ver_ordenes);
+        m.put("btn_facturar", btn_facturar);
+        m.put("btn_ver_facturas", btn_ver_facturas);
+        m.put("btn_decolucion", btn_decolucion);
+        m.put("jMenu_recortes", jMenu_recortes);
+        m.put("btn_generar_recorte", btn_generar_recorte);
+        m.put("btn_ver_recortes", btn_ver_recortes);
+        return m;
+    }
+
+    /** Switch por perfil anterior. Solo se usa si la BD no tiene la migración de permisos. */
+    private void permisosLegacy() {
+        if (itemPermisos != null) {
+            itemPermisos.setVisible(perfil == 1);
+        }
         switch (perfil) {
             case 1:
 

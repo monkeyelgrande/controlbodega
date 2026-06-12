@@ -88,6 +88,10 @@ public class jif_crear_user extends JDialog {
     public static JCheckBox chk_barra_notificaciones;
     public static JCheckBox chk_panel_notificaciones;
     public static JCheckBox chk_aprueba_compras;
+    // Roles del módulo Precios (usuario_roles_precios): pueden marcarse varios
+    public static JCheckBox chk_rol_almacenista;
+    public static JCheckBox chk_rol_contable;
+    public static JCheckBox chk_rol_precios;
     public static JButton btn_guardar;
     public static JButton btn_limpiar;
     public static JButton btn_editar;
@@ -377,6 +381,41 @@ public class jif_crear_user extends JDialog {
         chkRow5.add(chk_aprueba_compras);
         chkRow5.add(Box.createHorizontalGlue());
         body.add(chkRow5);
+        body.add(Box.createVerticalStrut(20));
+
+        // ---------- MODULO PRECIOS ----------
+        body.add(sectionTitle("Modulo de precios"));
+        body.add(Box.createVerticalStrut(10));
+
+        JLabel hintPrecios = new JLabel(
+                "Roles dentro del módulo Precios. Con varios marcados, al editar un ingreso se le preguntará con cuál trabajar.");
+        hintPrecios.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        hintPrecios.setForeground(TEXT_SECONDARY);
+        hintPrecios.setAlignmentX(Component.LEFT_ALIGNMENT);
+        body.add(hintPrecios);
+        body.add(Box.createVerticalStrut(8));
+
+        chk_rol_almacenista = new JCheckBox("Almacenista (captura cantidades)");
+        chk_rol_contable = new JCheckBox("Contable (costos e IVA)");
+        chk_rol_precios = new JCheckBox("Precios (precios de venta)");
+        for (JCheckBox cb : new JCheckBox[]{chk_rol_almacenista, chk_rol_contable, chk_rol_precios}) {
+            cb.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            cb.setBackground(BG_FORM);
+            cb.setFocusPainted(false);
+            cb.setSelected(false);
+        }
+
+        JPanel chkRowPrecios = new JPanel();
+        chkRowPrecios.setLayout(new BoxLayout(chkRowPrecios, BoxLayout.X_AXIS));
+        chkRowPrecios.setBackground(BG_FORM);
+        chkRowPrecios.setAlignmentX(Component.LEFT_ALIGNMENT);
+        chkRowPrecios.add(chk_rol_almacenista);
+        chkRowPrecios.add(Box.createHorizontalStrut(16));
+        chkRowPrecios.add(chk_rol_contable);
+        chkRowPrecios.add(Box.createHorizontalStrut(16));
+        chkRowPrecios.add(chk_rol_precios);
+        chkRowPrecios.add(Box.createHorizontalGlue());
+        body.add(chkRowPrecios);
         body.add(Box.createVerticalStrut(8));
 
         return body;
@@ -614,6 +653,21 @@ public class jif_crear_user extends JDialog {
         } else {
             dbusers.Guardar(user);
         }
+
+        // Roles del módulo Precios (reemplaza los del usuario y sincroniza
+        // users.rol_precios)
+        java.util.List<Integer> rolesPrecios = new java.util.ArrayList<>();
+        if (chk_rol_almacenista != null && chk_rol_almacenista.isSelected()) {
+            rolesPrecios.add(2);
+        }
+        if (chk_rol_contable != null && chk_rol_contable.isSelected()) {
+            rolesPrecios.add(3);
+        }
+        if (chk_rol_precios != null && chk_rol_precios.isSelected()) {
+            rolesPrecios.add(4);
+        }
+        conexiondb.DBpermisos.guardarRolesPrecios(user.getId(), rolesPrecios);
+
         limpiar();
         txt_id.setText(DB_consultas_R_D.cargarId("users"));
         if (chk_cerrar.isSelected()) {
@@ -648,6 +702,11 @@ public class jif_crear_user extends JDialog {
         }
         if (chk_aprueba_compras != null) {
             chk_aprueba_compras.setSelected(false);
+        }
+        if (chk_rol_almacenista != null) {
+            chk_rol_almacenista.setSelected(false);
+            chk_rol_contable.setSelected(false);
+            chk_rol_precios.setSelected(false);
         }
         txt_nombre.requestFocus();
         txt_id.setText(DB_consultas_R_D.cargarId("users"));

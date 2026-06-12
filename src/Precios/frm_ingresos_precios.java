@@ -41,16 +41,14 @@ public class frm_ingresos_precios extends javax.swing.JInternalFrame {
             }
         });
 
-        switch (frm_main.rol_precios) {
-            case 2:
-                btn_eliminar.setEnabled(false);
-                break;
-            case 3:
-                btn_crear.setEnabled(false);
-                break;
-            default:
-                break;
-        }
+        // Unión de capacidades de los roles del usuario: crear lo permiten
+        // Almacenista (2) y Precios (4); eliminar, Contable (3) y Precios (4).
+        // Con un solo rol equivale al switch anterior.
+        java.util.List<Integer> roles = rolesUsuario();
+        btn_crear.setEnabled(roles.contains(SelectorRolPrecios.ALMACENISTA)
+                || roles.contains(SelectorRolPrecios.PRECIOS));
+        btn_eliminar.setEnabled(roles.contains(SelectorRolPrecios.CONTABLE)
+                || roles.contains(SelectorRolPrecios.PRECIOS));
         metodos.BuscarEnTabla(txt_Filtro, jtabla);
         txt_Filtro.requestFocus();
     }
@@ -314,7 +312,49 @@ public class frm_ingresos_precios extends javax.swing.JInternalFrame {
         pack();
     }
 
+    /** Roles de Precios del usuario; si no hay lista (transición), el rol único actual. */
+    private static java.util.List<Integer> rolesUsuario() {
+        java.util.List<Integer> roles = new java.util.ArrayList<>(frm_main.roles_precios);
+        if (roles.isEmpty() && frm_main.rol_precios > 0) {
+            roles.add(frm_main.rol_precios);
+        }
+        return roles;
+    }
+
+    /**
+     * Estados que cada rol puede editar (mismas reglas que las negaciones
+     * anteriores): Almacenista solo Recibido; Contable Recibido/Ingresado;
+     * Precios Ingresado/Precios.
+     */
+    private static boolean rolPuedeEditar(int rol, String estado) {
+        switch (rol) {
+            case SelectorRolPrecios.ALMACENISTA:
+                return estado.equals("Recibido");
+            case SelectorRolPrecios.CONTABLE:
+                return estado.equals("Recibido") || estado.equals("Ingresado");
+            case SelectorRolPrecios.PRECIOS:
+                return estado.equals("Ingresado") || estado.equals("Precios");
+            default:
+                return false;
+        }
+    }
+
     private void btn_crearActionPerformed(java.awt.event.ActionEvent evt) {
+        // Crear lo permiten Almacenista (2) y Precios (4). Si el usuario tiene
+        // ambos, se le pregunta con cuál rol quiere trabajar.
+        java.util.List<Integer> candidatos = new java.util.ArrayList<>();
+        for (int rol : rolesUsuario()) {
+            if (rol == SelectorRolPrecios.ALMACENISTA || rol == SelectorRolPrecios.PRECIOS) {
+                candidatos.add(rol);
+            }
+        }
+        int rolElegido = SelectorRolPrecios.elegir(candidatos,
+                "¿Con cuál rol desea crear el ingreso?");
+        if (rolElegido == -1) {
+            return;
+        }
+        frm_main.rol_precios = rolElegido;
+
         jif_crear_ingreso_precios jif_crear_ingreso = new jif_crear_ingreso_precios();
         jif_crear_ingreso_precios.es_nuevo = true;
         jif_crear_ingreso_precios.btn_guardar.setText("Guardar");
@@ -362,6 +402,18 @@ public class frm_ingresos_precios extends javax.swing.JInternalFrame {
     }
 
     private void btn_verActionPerformed(java.awt.event.ActionEvent evt) {
+        // Para ver no se pregunta: se usa el rol que corresponde al estado del
+        // registro (su vista es la más completa) y, si no se tiene, el mayor.
+        int fila = jtabla.getSelectedRow();
+        java.util.List<Integer> roles = rolesUsuario();
+        if (fila >= 0 && roles.size() > 1) {
+            String estado = jtabla.getValueAt(fila, 4).toString();
+            int preferido = estado.equals("Recibido") ? SelectorRolPrecios.ALMACENISTA
+                    : estado.equals("Ingresado") ? SelectorRolPrecios.CONTABLE
+                    : SelectorRolPrecios.PRECIOS;
+            frm_main.rol_precios = roles.contains(preferido)
+                    ? preferido : java.util.Collections.max(roles);
+        }
         ver_ingreso("ver");
     }
 
@@ -589,24 +641,24 @@ public class frm_ingresos_precios extends javax.swing.JInternalFrame {
 
         String estado = jtabla.getValueAt(fila, 4).toString();
 
-        if ((estado.equals("Precios")) && frm_main.rol_precios == 2) {
+        // Roles del usuario que pueden editar un registro en este estado. Si
+        // tiene más de uno se le pregunta con cuál quiere editarlo.
+        java.util.List<Integer> candidatos = new java.util.ArrayList<>();
+        for (int rol : rolesUsuario()) {
+            if (rolPuedeEditar(rol, estado)) {
+                candidatos.add(rol);
+            }
+        }
+        if (candidatos.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Este registro no esta autorizado en su rol");
             return;
         }
-        if ((estado.equals("Ingresado")) && frm_main.rol_precios == 2) {
-            JOptionPane.showMessageDialog(this, "Este registro no esta autorizado en su rol");
+        int rolElegido = SelectorRolPrecios.elegir(candidatos,
+                "Registro en estado \"" + estado + "\". ¿Con cuál rol desea editarlo?");
+        if (rolElegido == -1) {
             return;
         }
-
-        if (estado.equals("Precios") && frm_main.rol_precios == 3) {
-            JOptionPane.showMessageDialog(this, "Este registro no esta autorizado en su rol");
-            return;
-        }
-
-        if (estado.equals("Recibido") && frm_main.rol_precios == 4) {
-            JOptionPane.showMessageDialog(this, "Este registro no esta autorizado en su rol");
-            return;
-        }
+        frm_main.rol_precios = rolElegido;
 
         ver_ingreso("editar");
     }

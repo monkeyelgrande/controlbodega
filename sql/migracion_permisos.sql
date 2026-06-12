@@ -72,6 +72,7 @@ FROM (
     ('jMenu_tipo_ingreso',         'Tipo de ingreso',          'Configuracion', 'jMenu_tipo_ingreso',         40),
     ('jmenu_bodegas',              'Bodegas',                  'Configuracion', 'jmenu_bodegas',              50),
     ('jMenu_unidades',             'Unidades de medida',       'Configuracion', 'jMenu_unidades',             60),
+    ('jmenu_permisos',             'Permisos de la aplicacion','Configuracion', NULL,                         70),
     -- Contactos
     ('jmenu_con',                  'Contactos (menu)',         'Contactos',     'jmenu_con',                  10),
     ('jmenu_contactos',            'Contactos (item de menu)', 'Contactos',     'jmenu_contactos',            20),
@@ -111,6 +112,7 @@ BEGIN
         SELECT p.id, o.id FROM perfiles p, opciones o
         WHERE p.id = 2
           AND o.clave NOT IN (
+              'jmenu_permisos',
               'jmenu_configuraciones', 'jmenu_user', 'jmenu_contactos', 'jmenu_con',
               'jMenu_productos_principal', 'jmenu_backup', 'jmenu_facturacion',
               'jMenu_tipo_ingreso', 'jmenu_bodegas', 'jMenu_unidades',
@@ -122,6 +124,7 @@ BEGIN
         SELECT p.id, o.id FROM perfiles p, opciones o
         WHERE p.id = 3
           AND o.clave NOT IN (
+              'jmenu_permisos',
               'jmenu_configuraciones', 'jmenu_user', 'jmenu_contactos', 'jmenu_con',
               'jMenu_productos_principal', 'jmenu_backup',
               'jMenu_tipo_ingreso', 'jmenu_bodegas', 'jMenu_unidades',
@@ -133,6 +136,7 @@ BEGIN
         SELECT p.id, o.id FROM perfiles p, opciones o
         WHERE p.id = 4
           AND o.clave NOT IN (
+              'jmenu_permisos',
               'jmenu_configuraciones', 'jmenu_user', 'jmenu_contactos', 'jmenu_con',
               'jMenu_productos_principal', 'jmenu_backup', 'jmenu_facturacion',
               'jMenu_tipo_ingreso', 'jmenu_bodegas', 'jMenu_unidades',
@@ -146,6 +150,7 @@ BEGIN
         SELECT p.id, o.id FROM perfiles p, opciones o
         WHERE p.id = 5
           AND o.clave NOT IN (
+              'jmenu_permisos',
               'jmenu_configuraciones', 'jmenu_user', 'jmenu_contactos', 'jmenu_con',
               'jmenu_backup', 'jMenu_tipo_ingreso', 'jmenu_bodegas', 'jMenu_unidades',
               'btn_contactos', 'btn_ingreso_productos',

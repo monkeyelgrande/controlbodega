@@ -426,6 +426,15 @@ public class jif_users extends javax.swing.JInternalFrame {
                             jif_crear_user.chk_aprueba_compras.setSelected(apruebaCompras);
                         }
 
+                        // Roles del módulo Precios (pueden ser varios)
+                        if (jif_crear_user.chk_rol_almacenista != null) {
+                            java.util.List<Integer> rolesPre
+                                    = conexiondb.DBpermisos.rolesPrecios(Integer.parseInt(id));
+                            jif_crear_user.chk_rol_almacenista.setSelected(rolesPre.contains(2));
+                            jif_crear_user.chk_rol_contable.setSelected(rolesPre.contains(3));
+                            jif_crear_user.chk_rol_precios.setSelected(rolesPre.contains(4));
+                        }
+
                     }
                     rs.close();
                     if (flag) {

@@ -488,10 +488,24 @@ public class login extends JFrame {
                 main.lbl_perfil.setText(DB_consultas_R_D.TraerNombrePerfil(per));
 
                 main.perfil = per;
-                // Admin sin rol asignado: acceso total al módulo Precios.
-                if (per == 1 && frm_main.rol_precios == 0) {
-                    frm_main.rol_precios = 4;
+
+                // Permisos administrables en BD; si la carga falla, permisos()
+                // cae al switch por perfil anterior.
+                Metodos.Permisos.cargar(id_u, per);
+
+                // Roles del módulo Precios: un usuario puede tener varios.
+                frm_main.roles_precios = conexiondb.DBpermisos.rolesPrecios(id_u);
+                if (frm_main.roles_precios.isEmpty() && frm_main.rol_precios > 0) {
+                    // Transición: BD sin la migración de permisos -> users.rol_precios.
+                    frm_main.roles_precios.add(frm_main.rol_precios);
                 }
+                if (per == 1 && frm_main.roles_precios.isEmpty()) {
+                    // Admin sin rol asignado: acceso total al módulo Precios.
+                    frm_main.roles_precios.add(4);
+                }
+                frm_main.rol_precios = frm_main.roles_precios.isEmpty()
+                        ? 0 : java.util.Collections.max(frm_main.roles_precios);
+
                 main.permisos();
                 main.actualizarMenuPrecios();
                 main.montarBarraNotificaciones();
