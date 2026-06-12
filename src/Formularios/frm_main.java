@@ -86,6 +86,13 @@ public class frm_main extends javax.swing.JFrame {
     Precios.frm_descuentos_precios frm_descuentos_precios = null;
     private javax.swing.JMenu menuPrecios = null;
     private javax.swing.JMenuItem itemPermisos = null;
+    // Entradas del menú Precios, gobernables por el sistema de permisos
+    private javax.swing.JMenuItem itemIngresosPrecios = null;
+    private javax.swing.JMenuItem itemPreciosProductos = null;
+    private javax.swing.JMenuItem itemDescuentosPrecios = null;
+    private javax.swing.JMenuItem itemEtiquetasPrecios = null;
+    private javax.swing.JMenu menuReportesPrecios = null;
+    private javax.swing.JMenuItem itemConfigPrecios = null;
 
     jif_users jif_user = null;
     jif_PrincipalReportes jif_reportes = null;
@@ -219,44 +226,45 @@ public class frm_main extends javax.swing.JFrame {
     private void montarMenuPrecios() {
         menuPrecios = new javax.swing.JMenu("Precios");
 
-        javax.swing.JMenuItem itemIngresos = new javax.swing.JMenuItem("Ingresos de productos");
-        itemIngresos.addActionListener(new java.awt.event.ActionListener() {
+        itemIngresosPrecios = new javax.swing.JMenuItem("Ingresos de productos");
+        itemIngresosPrecios.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 abrirIngresosPrecios();
             }
         });
-        menuPrecios.add(itemIngresos);
+        menuPrecios.add(itemIngresosPrecios);
 
-        javax.swing.JMenuItem itemPrecios = new javax.swing.JMenuItem("Precios de productos");
-        itemPrecios.addActionListener(new java.awt.event.ActionListener() {
+        itemPreciosProductos = new javax.swing.JMenuItem("Precios de productos");
+        itemPreciosProductos.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 abrirPreciosProductos();
             }
         });
-        menuPrecios.add(itemPrecios);
+        menuPrecios.add(itemPreciosProductos);
 
-        javax.swing.JMenuItem itemDescuentos = new javax.swing.JMenuItem("Descuentos escalonados");
-        itemDescuentos.addActionListener(new java.awt.event.ActionListener() {
+        itemDescuentosPrecios = new javax.swing.JMenuItem("Descuentos escalonados");
+        itemDescuentosPrecios.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 abrirDescuentosPrecios();
             }
         });
-        menuPrecios.add(itemDescuentos);
+        menuPrecios.add(itemDescuentosPrecios);
 
-        javax.swing.JMenuItem itemEtiquetas = new javax.swing.JMenuItem("Imprimir etiquetas");
-        itemEtiquetas.addActionListener(new java.awt.event.ActionListener() {
+        itemEtiquetasPrecios = new javax.swing.JMenuItem("Imprimir etiquetas");
+        itemEtiquetasPrecios.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 Precios.jd_productos_a_imprimir etiquetas = new Precios.jd_productos_a_imprimir(null, false);
                 etiquetas.setVisible(true);
             }
         });
-        menuPrecios.add(itemEtiquetas);
+        menuPrecios.add(itemEtiquetasPrecios);
 
         javax.swing.JMenu menuReportes = new javax.swing.JMenu("Reportes");
+        menuReportesPrecios = menuReportes;
 
         javax.swing.JMenuItem itemRepDiario = new javax.swing.JMenuItem("Ingresos del día");
         itemRepDiario.addActionListener(new java.awt.event.ActionListener() {
@@ -290,15 +298,15 @@ public class frm_main extends javax.swing.JFrame {
 
         menuPrecios.add(menuReportes);
 
-        javax.swing.JMenuItem itemConfig = new javax.swing.JMenuItem("Configuración de precios");
-        itemConfig.addActionListener(new java.awt.event.ActionListener() {
+        itemConfigPrecios = new javax.swing.JMenuItem("Configuración de precios");
+        itemConfigPrecios.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 Precios.jd_config_precios config = new Precios.jd_config_precios(null, true);
                 config.setVisible(true);
             }
         });
-        menuPrecios.add(itemConfig);
+        menuPrecios.add(itemConfigPrecios);
 
         menuPrecios.setVisible(false);
         jMenuBar1.add(menuPrecios);
@@ -462,6 +470,15 @@ public class frm_main extends javax.swing.JFrame {
         m.put("jMenu_recortes", jMenu_recortes);
         m.put("btn_generar_recorte", btn_generar_recorte);
         m.put("btn_ver_recortes", btn_ver_recortes);
+        // Entradas del menú Precios: la visibilidad del menú completo la dan
+        // los roles (actualizarMenuPrecios); estas opciones afinan qué
+        // entradas ve cada perfil/usuario dentro del menú.
+        m.put("menu_precios_ingresos", itemIngresosPrecios);
+        m.put("menu_precios_productos", itemPreciosProductos);
+        m.put("menu_precios_descuentos", itemDescuentosPrecios);
+        m.put("menu_precios_etiquetas", itemEtiquetasPrecios);
+        m.put("menu_precios_reportes", menuReportesPrecios);
+        m.put("menu_precios_config", itemConfigPrecios);
         return m;
     }
 

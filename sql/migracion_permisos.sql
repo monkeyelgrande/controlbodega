@@ -159,7 +159,32 @@ BEGIN
     END IF;
 END $$;
 
--- 4. Roles de Precios por usuario, sembrados desde users.rol_precios actual.
+-- 4. Opciones del menu Precios (entradas del menu, gobernables por perfil y
+--    usuario; el acceso al modulo lo siguen dando los roles de Precios).
+--    Se crean y conceden a TODOS los perfiles UNA SOLA VEZ (asi se conserva
+--    el comportamiento actual: quien tiene rol ve todas las entradas) y
+--    re-ejecutar el script nunca pisa cambios hechos desde la administracion.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM opciones WHERE clave = 'menu_precios_ingresos') THEN
+        INSERT INTO opciones (clave, nombre, modulo, componente, orden) VALUES
+        ('menu_precios_ingresos',   'Ingresos de productos',    'Precios', 'itemIngresosPrecios',   10),
+        ('menu_precios_productos',  'Precios de productos',     'Precios', 'itemPreciosProductos',  20),
+        ('menu_precios_descuentos', 'Descuentos escalonados',   'Precios', 'itemDescuentosPrecios', 30),
+        ('menu_precios_etiquetas',  'Imprimir etiquetas',       'Precios', 'itemEtiquetasPrecios',  40),
+        ('menu_precios_reportes',   'Reportes',                 'Precios', 'menuReportesPrecios',   50),
+        ('menu_precios_config',     'Configuracion de precios', 'Precios', 'itemConfigPrecios',     60);
+
+        INSERT INTO perfil_opciones (id_perfil, id_opcion)
+        SELECT p.id, o.id
+        FROM perfiles p, opciones o
+        WHERE o.clave IN ('menu_precios_ingresos', 'menu_precios_productos',
+                          'menu_precios_descuentos', 'menu_precios_etiquetas',
+                          'menu_precios_reportes', 'menu_precios_config');
+    END IF;
+END $$;
+
+-- 5. Roles de Precios por usuario, sembrados desde users.rol_precios actual.
 --    La columna users.rol_precios se CONSERVA durante la transicion.
 --    Solo corre con la tabla vacia.
 DO $$

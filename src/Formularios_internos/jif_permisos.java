@@ -80,6 +80,10 @@ public class jif_permisos extends JDialog {
     private final Map<Integer, JCheckBox> chkUsuario = new LinkedHashMap<>();
     private JButton btn_guardar_usuario;
     private JLabel lbl_hint_usuario;
+    // Roles del módulo Precios del usuario seleccionado (usuario_roles_precios)
+    private JCheckBox chk_u_almacenista;
+    private JCheckBox chk_u_contable;
+    private JCheckBox chk_u_precios;
     // opciones que concede el perfil del usuario seleccionado (para marcar diferencias)
     private Set<Integer> baseUsuario = new HashSet<>();
 
@@ -469,12 +473,17 @@ public class jif_permisos extends JDialog {
 
         tab.add(buildBarraSuperior("Usuario", jbox_usuario, lbl_hint_usuario, chkUsuario),
                 BorderLayout.NORTH);
-        tab.add(buildPanelOpciones(chkUsuario, new Runnable() {
+
+        JPanel centro = new JPanel(new BorderLayout());
+        centro.setOpaque(false);
+        centro.add(buildPanelOpciones(chkUsuario, new Runnable() {
             @Override
             public void run() {
                 pintarDiferenciasUsuario();
             }
         }), BorderLayout.CENTER);
+        centro.add(buildPanelRolesPrecios(), BorderLayout.SOUTH);
+        tab.add(centro, BorderLayout.CENTER);
 
         btn_guardar_usuario = EstiloCompras.primaryBtn("Guardar usuario", FontAwesome.SAVE);
         btn_guardar_usuario.addActionListener(new java.awt.event.ActionListener() {
@@ -520,11 +529,61 @@ public class jif_permisos extends JDialog {
             cb.setSelected(esAdmin || (exc != null ? exc : base));
             cb.setEnabled(!esAdmin);
         }
-        btn_guardar_usuario.setEnabled(!esAdmin);
+
+        // Roles del módulo Precios: editables para cualquier usuario (también
+        // Admin, que sin roles asignados trabaja como Precios).
+        java.util.List<Integer> rolesPre = DBpermisos.rolesPrecios(u.id);
+        chk_u_almacenista.setSelected(rolesPre.contains(2));
+        chk_u_contable.setSelected(rolesPre.contains(3));
+        chk_u_precios.setSelected(rolesPre.contains(4));
+
+        btn_guardar_usuario.setEnabled(true);
         lbl_hint_usuario.setText(esAdmin
-                ? "Los usuarios con perfil Admin siempre tienen acceso total; no se editan."
+                ? "Los usuarios con perfil Admin siempre tienen acceso total; solo se editan sus roles de Precios."
                 : "Las casillas en azul difieren de lo que su perfil concede.");
         pintarDiferenciasUsuario();
+    }
+
+    /**
+     * Panel "Módulo de precios" de la pestaña Por usuario: el acceso al módulo
+     * y el comportamiento dentro de él lo dan estos roles (no las opciones).
+     */
+    private JPanel buildPanelRolesPrecios() {
+        JPanel panel = new JPanel();
+        panel.setOpaque(false);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 0));
+
+        JLabel titulo = EstiloCompras.sectionTitle("Módulo de precios (roles)");
+        titulo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
+        titulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(titulo);
+        panel.add(Box.createVerticalStrut(6));
+
+        JLabel hint = hintLabel(
+                "Dan acceso al menú Precios y definen qué edita el usuario. Con varios marcados, al editar un ingreso se le pregunta con cuál trabajar.");
+        hint.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(hint);
+        panel.add(Box.createVerticalStrut(6));
+
+        chk_u_almacenista = new JCheckBox("Almacenista (captura cantidades)");
+        chk_u_contable = new JCheckBox("Contable (costos e IVA)");
+        chk_u_precios = new JCheckBox("Precios (precios de venta)");
+        JPanel fila = new JPanel();
+        fila.setOpaque(false);
+        fila.setLayout(new BoxLayout(fila, BoxLayout.X_AXIS));
+        fila.setAlignmentX(Component.LEFT_ALIGNMENT);
+        for (JCheckBox cb : new JCheckBox[]{chk_u_almacenista, chk_u_contable, chk_u_precios}) {
+            cb.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            cb.setBackground(EstiloCompras.BG_FORM);
+            cb.setOpaque(false);
+            cb.setFocusPainted(false);
+            fila.add(cb);
+            fila.add(Box.createHorizontalStrut(16));
+        }
+        fila.add(Box.createHorizontalGlue());
+        panel.add(fila);
+        return panel;
     }
 
     /** Marca en azul las casillas cuyo estado difiere del perfil del usuario. */
@@ -541,19 +600,38 @@ public class jif_permisos extends JDialog {
 
     private void guardarUsuario() {
         UsuarioItem u = (UsuarioItem) jbox_usuario.getSelectedItem();
-        if (u == null || u.idPerfil == 1) {
+        if (u == null) {
             return;
         }
-        // Solo se guardan las diferencias contra el perfil: así, si después se
-        // cambia el perfil, el usuario hereda lo nuevo salvo sus excepciones.
-        Map<Integer, Boolean> excepciones = new HashMap<>();
-        for (Map.Entry<Integer, JCheckBox> e : chkUsuario.entrySet()) {
-            boolean marcado = e.getValue().isSelected();
-            if (marcado != baseUsuario.contains(e.getKey())) {
-                excepciones.put(e.getKey(), marcado);
-            }
+
+        // Roles del módulo Precios (se guardan para cualquier usuario)
+        java.util.List<Integer> rolesPre = new java.util.ArrayList<>();
+        if (chk_u_almacenista.isSelected()) {
+            rolesPre.add(2);
         }
-        if (DBpermisos.guardarExcepcionesUsuario(u.id, excepciones)) {
+        if (chk_u_contable.isSelected()) {
+            rolesPre.add(3);
+        }
+        if (chk_u_precios.isSelected()) {
+            rolesPre.add(4);
+        }
+        boolean ok = DBpermisos.guardarRolesPrecios(u.id, rolesPre);
+
+        // Excepciones de opciones: solo para usuarios sin perfil Admin. Solo
+        // se guardan las diferencias contra el perfil: así, si después se
+        // cambia el perfil, el usuario hereda lo nuevo salvo sus excepciones.
+        if (ok && u.idPerfil != 1) {
+            Map<Integer, Boolean> excepciones = new HashMap<>();
+            for (Map.Entry<Integer, JCheckBox> e : chkUsuario.entrySet()) {
+                boolean marcado = e.getValue().isSelected();
+                if (marcado != baseUsuario.contains(e.getKey())) {
+                    excepciones.put(e.getKey(), marcado);
+                }
+            }
+            ok = DBpermisos.guardarExcepcionesUsuario(u.id, excepciones);
+        }
+
+        if (ok) {
             JOptionPane.showMessageDialog(this,
                     "Permisos del usuario guardados.\nAplican en su próximo inicio de sesión.",
                     "Permisos", JOptionPane.INFORMATION_MESSAGE);
