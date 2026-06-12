@@ -85,6 +85,7 @@ public class frm_main extends javax.swing.JFrame {
     Precios.frm_precios_productos frm_precios_productos = null;
     Precios.frm_descuentos_precios frm_descuentos_precios = null;
     private javax.swing.JMenu menuPrecios = null;
+    private javax.swing.JMenu menuCompras = null;
     private javax.swing.JMenuItem itemPermisos = null;
     // Entradas del menú Precios, gobernables por el sistema de permisos
     private javax.swing.JMenuItem itemIngresosPrecios = null;
@@ -203,7 +204,7 @@ public class frm_main extends javax.swing.JFrame {
      * perfiles; el permiso de análisis/aprobación se controla dentro del módulo.
      */
     private void montarMenuOrdenesCompra() {
-        javax.swing.JMenu menu = new javax.swing.JMenu("Compras");
+        menuCompras = new javax.swing.JMenu("Compras");
         javax.swing.JMenuItem item = new javax.swing.JMenuItem("Órdenes de compra");
         item.addActionListener(new java.awt.event.ActionListener() {
             @Override
@@ -211,8 +212,8 @@ public class frm_main extends javax.swing.JFrame {
                 abrirOrdenesCompra();
             }
         });
-        menu.add(item);
-        jMenuBar1.add(menu);
+        menuCompras.add(item);
+        jMenuBar1.add(menuCompras);
         jMenuBar1.revalidate();
         jMenuBar1.repaint();
     }
@@ -473,6 +474,7 @@ public class frm_main extends javax.swing.JFrame {
         // Entradas del menú Precios: la visibilidad del menú completo la dan
         // los roles (actualizarMenuPrecios); estas opciones afinan qué
         // entradas ve cada perfil/usuario dentro del menú.
+        m.put("menu_compras", menuCompras);
         m.put("menu_precios_ingresos", itemIngresosPrecios);
         m.put("menu_precios_productos", itemPreciosProductos);
         m.put("menu_precios_descuentos", itemDescuentosPrecios);

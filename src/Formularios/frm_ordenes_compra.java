@@ -69,6 +69,13 @@ public class frm_ordenes_compra extends javax.swing.JInternalFrame {
         });
         boolean puedeAprobar = frm_main.aprueba_compras || frm_main.perfil == 1;
         btn_analizar.setEnabled(puedeAprobar);
+
+        // Crear/editar gobernados por el sistema de permisos (con la BD sin
+        // migrar se conserva el comportamiento anterior: ambos disponibles).
+        if (Metodos.Permisos.estaCargado()) {
+            btn_nueva.setVisible(Metodos.Permisos.puede("compras_crear"));
+            btn_editar.setVisible(Metodos.Permisos.puede("compras_editar"));
+        }
     }
 
     private void initUI() {
