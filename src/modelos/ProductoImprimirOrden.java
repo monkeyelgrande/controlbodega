@@ -11,6 +11,13 @@ public class ProductoImprimirOrden {
      * null = producto sin bodega (novedad / no asignado).
      */
     private String bodega;
+    /**
+     * Precio unitario y total de la línea, ya formateados como dinero.
+     * Solo se usan en recibos con precios (p.ej. la copia de venta); en el
+     * recibo de orden quedan null y no se imprimen.
+     */
+    private String precioUnitario;
+    private String precioTotal;
 
     public ProductoImprimirOrden(String codigo, String descripcion, String cantidad, String unidad) {
         this(codigo, descripcion, cantidad, unidad, null);
@@ -62,5 +69,21 @@ public class ProductoImprimirOrden {
 
     public void setUnidad(String unidad) {
         this.unidad = unidad;
+    }
+
+    public String getPrecioUnitario() {
+        return precioUnitario;
+    }
+
+    public void setPrecioUnitario(String precioUnitario) {
+        this.precioUnitario = precioUnitario;
+    }
+
+    public String getPrecioTotal() {
+        return precioTotal;
+    }
+
+    public void setPrecioTotal(String precioTotal) {
+        this.precioTotal = precioTotal;
     }
 }

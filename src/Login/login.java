@@ -453,7 +453,7 @@ public class login extends JFrame {
                 }
 
                 ResultSet rsU = getTabla(
-                        "SELECT imprime_ordenes, nombre_impresora, imp_ticket_bodega_asignada, barra_notificaciones, panel_notificaciones, aprueba_compras FROM users WHERE id = " + id_u);
+                        "SELECT imprime_ordenes, nombre_impresora, imp_ticket_bodega_asignada, barra_notificaciones, panel_notificaciones, aprueba_compras, coalesce(rol_precios,0) as rol_precios FROM users WHERE id = " + id_u);
                 try {
                     if (rsU.next()) {
                         frm_main.imprime_ordenes = rsU.getBoolean("imprime_ordenes");
@@ -462,6 +462,7 @@ public class login extends JFrame {
                         frm_main.barra_notificaciones = rsU.getBoolean("barra_notificaciones");
                         frm_main.panel_notificaciones = rsU.getBoolean("panel_notificaciones");
                         frm_main.aprueba_compras = rsU.getBoolean("aprueba_compras");
+                        frm_main.rol_precios = rsU.getInt("rol_precios");
                     }
                     rsU.close();
                 } catch (SQLException ex) {
@@ -487,7 +488,12 @@ public class login extends JFrame {
                 main.lbl_perfil.setText(DB_consultas_R_D.TraerNombrePerfil(per));
 
                 main.perfil = per;
+                // Admin sin rol asignado: acceso total al módulo Precios.
+                if (per == 1 && frm_main.rol_precios == 0) {
+                    frm_main.rol_precios = 4;
+                }
                 main.permisos();
+                main.actualizarMenuPrecios();
                 main.montarBarraNotificaciones();
                 main.montarPanelNotificaciones();
 

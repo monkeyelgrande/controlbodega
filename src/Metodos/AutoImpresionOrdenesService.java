@@ -181,6 +181,12 @@ public class AutoImpresionOrdenesService {
             return;
         }
 
+        // Copia completa del recibo de venta (agrupada por bodega + precios).
+        if (payload.startsWith("VENTACOPIA|")) {
+            procesarCopiaVenta(payload);
+            return;
+        }
+
         String[] partes = payload.split("\\|", -1);
         if (partes.length < 4) {
             return;
@@ -235,6 +241,55 @@ public class AutoImpresionOrdenesService {
         } catch (Exception ex) {
             System.out.println("[AutoImpresion] Error imprimiendo solo-novedad "
                     + numeroFactura + ": " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Imprime la copia COMPLETA del recibo de la venta (agrupada por bodega y
+     * con precios) para el usuario con la opción de copia. Lo dispara el NOTIFY
+     * 'VENTACOPIA|idVenta|idUser|codigo' que GeneradorOrdenAuto emite cuando ya
+     * existen todas las salidas.
+     *
+     *   - Solo aplica a usuarios B=true (imp_ticket_bodega_asignada).
+     *   - Se omite si el usuario logueado fue quien hizo la venta (idUser).
+     *   - Dedupe por (id_user, 'VENTA:'+codigo), separado del full de orden.
+     */
+    private void procesarCopiaVenta(String payload) {
+        if (!frm_main.imp_ticket_bodega_asignada) {
+            return; // solo usuarios con la opción de copia
+        }
+        String[] partes = payload.split("\\|", -1);
+        if (partes.length < 4) {
+            return;
+        }
+        int idVenta, idUserCreador;
+        try {
+            idVenta = Integer.parseInt(partes[1]);
+            idUserCreador = partes[2].isEmpty() ? -1 : Integer.parseInt(partes[2]);
+        } catch (NumberFormatException nfe) {
+            return;
+        }
+        String codigo = partes[3];
+
+        if (idUserCreador == frm_main.id_user) {
+            return; // no imprimir la copia a quien hizo la venta
+        }
+
+        // Dedupe con clave prefijada para no chocar con el full de orden (que usa
+        // el codigo "pelado"). Si no hay codigo, se usa el id de la venta.
+        String claveDedupe = "VENTA:" + ((codigo == null || codigo.isEmpty())
+                ? "ID:" + idVenta : codigo);
+        if (!tryInsertLogCompleto(claveDedupe)) {
+            return; // ya impresa
+        }
+
+        try {
+            new ver_factura_impresion().imprimir_termica_80mm_venta_copia_silencioso(
+                    String.valueOf(idVenta), frm_main.print_service_user);
+            System.out.println("[AutoImpresion] Copia de venta impresa: " + codigo);
+        } catch (Exception ex) {
+            System.out.println("[AutoImpresion] Error imprimiendo copia de venta "
+                    + codigo + ": " + ex.getMessage());
         }
     }
 

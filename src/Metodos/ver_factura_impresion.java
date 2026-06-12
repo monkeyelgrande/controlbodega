@@ -16,6 +16,7 @@ import javax.print.PrintService;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import modelos.Contactos;
+import modelos.ProductoImprimir;
 import modelos.ProductoImprimirOrden;
 import net.sf.jasperreports.engine.JasperCompileManager;
 import net.sf.jasperreports.engine.JasperFillManager;
@@ -216,6 +217,92 @@ public class ver_factura_impresion extends javax.swing.JDialog {
     }
 
     /**
+     * Copia automática del recibo de VENTA para el usuario con la opción de
+     * copia (imp_ticket_bodega_asignada). Se arma desde las SALIDAS de la venta
+     * (que sí llevan la bodega por producto) agrupadas por bodega y CON precios,
+     * usando el formato de tirilla de venta ya existente. Se imprime en silencio
+     * al PrintService indicado (la impresora propia del usuario).
+     *
+     * Debe llamarse cuando las salidas YA existen (NOTIFY 'VENTACOPIA' que
+     * GeneradorOrdenAuto emite al terminar de crearlas), no en el NOTIFY de la
+     * venta (que llega antes de que haya salidas).
+     *
+     * @param idCabeceraVenta id de la cabecera tipo 'Venta'
+     * @param service         impresora destino (print_service_user)
+     */
+    public void imprimir_termica_80mm_venta_copia_silencioso(String idCabeceraVenta,
+            PrintService service) throws Exception {
+        // 1. Cabecera de la venta
+        String codigo = "", fecha = "", hora = "", tipoPago = "";
+        String nombreCliente = "", cedula = "", nombreVendedor = "";
+        try (ResultSet rs = DB_consultas_R_D.getTabla(
+                "SELECT fc.codigo, fc.fecha, fc.hora, fc.tipo_pago, "
+                + "c.nombre AS nombre_cliente, c.cedula, u.nombre AS nombre_vendedor "
+                + "FROM facturas_cabeceras fc "
+                + "LEFT JOIN contactos c ON fc.id_contacto = c.id "
+                + "LEFT JOIN users u ON fc.id_user = u.id "
+                + "WHERE fc.id = " + idCabeceraVenta)) {
+            if (rs != null && rs.next()) {
+                codigo = nz(rs.getString("codigo"));
+                fecha = nz(rs.getString("fecha"));
+                hora = nz(rs.getString("hora"));
+                tipoPago = nz(rs.getString("tipo_pago"));
+                nombreCliente = nz(rs.getString("nombre_cliente"));
+                cedula = nz(rs.getString("cedula"));
+                nombreVendedor = nz(rs.getString("nombre_vendedor"));
+            }
+        }
+
+        // 2. Productos de las SALIDAS de esta venta, agrupados por bodega + precios
+        ArrayList<ProductoImprimirOrden> agrupados =
+                cargarProductosAgrupados(idCabeceraVenta, codigo, fecha, hora, null);
+        if (agrupados.isEmpty()) {
+            System.out.println("[ver_factura_impresion] Copia de venta sin productos: " + codigo);
+            return;
+        }
+
+        // 3. Convertir a líneas de tirilla, insertando un encabezado por bodega
+        ArrayList<ProductoImprimir> productos = new ArrayList<>();
+        double total = 0.0;
+        String bodegaActual = null;
+        for (ProductoImprimirOrden po : agrupados) {
+            String bod = po.getBodega();
+            String etiquetaBodega = (bod == null || bod.trim().isEmpty())
+                    ? "SIN BODEGA / NOVEDAD" : bod;
+            if (!etiquetaBodega.equals(bodegaActual)) {
+                bodegaActual = etiquetaBodega;
+                ProductoImprimir header = new ProductoImprimir();
+                header.setNombre(">> " + etiquetaBodega.toUpperCase());
+                header.setPunitario("");
+                header.setCantidad("");
+                header.setPtotal("");
+                productos.add(header);
+            }
+            ProductoImprimir pi = new ProductoImprimir();
+            pi.setNombre(nz(po.getDescripcion()));
+            pi.setPunitario(nz(po.getPrecioUnitario()));
+            pi.setCantidad(nz(po.getCantidad()));
+            pi.setPtotal(nz(po.getPrecioTotal()));
+            productos.add(pi);
+            try {
+                total += metodos.formateador_dinero().parse(nz(po.getPrecioTotal())).doubleValue();
+            } catch (Exception ignored) {
+            }
+        }
+
+        String credi_contado = "0".equals(tipoPago) ? "CONTADO" : "CREDITO";
+        Contactos cliente = new Contactos();
+        cliente.setNombre(nombreCliente);
+        cliente.setCedula(cedula);
+
+        ImprimirTermica80MM tirilla = new ImprimirTermica80MM(
+                fecha, codigo, metodos.formateador_dinero().format(total),
+                cliente, productos, nombreVendedor, hora, credi_contado);
+        tirilla.imprime(service);
+        System.out.println("[ver_factura_impresion] Copia de venta impresa: " + codigo);
+    }
+
+    /**
      * Arma el objeto de impresión a partir del id de facturas_cabeceras.
      * Trae cabecera + cliente + vendedor (de facturas_impresas si existe) +
      * productos agrupados por bodega (incluida la sección "sin bodega" para
@@ -260,7 +347,7 @@ public class ver_factura_impresion extends javax.swing.JDialog {
         String concepto = datosImpresa != null ? datosImpresa[1] : null;
 
         // 3. Productos agrupados por bodega + novedades sin bodega
-        ArrayList<ProductoImprimirOrden> productos = cargarProductosAgrupados(id_factura, codigo, idBodegaFiltro);
+        ArrayList<ProductoImprimirOrden> productos = cargarProductosAgrupados(id_factura, codigo, fecha, hora, idBodegaFiltro);
 
         // Total artículos
         double totalArticulos = 0.0;
@@ -299,29 +386,49 @@ public class ver_factura_impresion extends javax.swing.JDialog {
      * a esa bodega y omite la sección de novedades.
      */
     private ArrayList<ProductoImprimirOrden> cargarProductosAgrupados(String idFactura,
-            String numeroFactura, Integer idBodegaFiltro) {
+            String numeroFactura, String fecha, String hora, Integer idBodegaFiltro) {
         ArrayList<ProductoImprimirOrden> lista = new ArrayList<>();
         if (idFactura == null || idFactura.isEmpty()) {
             return lista;
         }
 
-        // 3a. Productos asignados a alguna bodega (uno por línea de facturas_detalles)
-        String filtroBodega = (idBodegaFiltro != null)
-                ? "  AND fc.id_bodega = " + idBodegaFiltro + " "
-                : "";
+        // 3a. Productos asignados a alguna bodega (uno por línea de facturas_detalles).
+        //
+        // Una orden con varias bodegas se guarda como VARIAS cabeceras (una por
+        // bodega), todas con el mismo codigo/fecha/hora. Por eso:
+        //   - Copia filtrada (idBodegaFiltro != null): solo ESTA cabecera (la de
+        //     la bodega del bodeguero).
+        //   - Recibo completo (idBodegaFiltro == null): TODAS las cabeceras
+        //     hermanas de la orden, para incluir los productos de las demás
+        //     bodegas. Se agrupa por codigo+fecha+hora (las hermanas comparten
+        //     las tres) — inmune al reúso del mismo codigo en otra fecha/hora.
+        //     Si no hay codigo (orden interna sin número), se cae a esta cabecera.
+        String filtroCabeceras;
+        if (idBodegaFiltro != null) {
+            filtroCabeceras = "  fc.id = " + idFactura + " "
+                    + "  AND fc.id_bodega = " + idBodegaFiltro + " ";
+        } else if (numeroFactura != null && !numeroFactura.isEmpty()
+                && fecha != null && !fecha.isEmpty() && hora != null && !hora.isEmpty()) {
+            String codEsc = numeroFactura.replace("'", "''");
+            filtroCabeceras = "  fc.codigo = '" + codEsc + "' "
+                    + "  AND fc.fecha = '" + fecha.replace("'", "''") + "' "
+                    + "  AND fc.hora = '" + hora.replace("'", "''") + "' ";
+        } else {
+            filtroCabeceras = "  fc.id = " + idFactura + " ";
+        }
         String sqlAsignados = "SELECT bod.nombre AS bodega, "
                 + "       p.codigo_barras AS codigo, "
                 + "       p.descripcion, "
                 + "       fd.cantidad, "
+                + "       fd.subtotal, "
                 + "       COALESCE(um.nombre, 'UNIDAD') AS unidad "
                 + "FROM facturas_cabeceras fc "
                 + "JOIN facturas_detalles fd ON fd.id_cabecera = fc.id "
                 + "JOIN productos p ON p.id = fd.id_producto "
                 + "LEFT JOIN unidades_medidas um ON um.id = p.id_unidad "
                 + "LEFT JOIN bodegas bod ON bod.id = fc.id_bodega "
-                + "WHERE fc.id = " + idFactura + " "
+                + "WHERE " + filtroCabeceras
                 + "  AND fc.tipo_factura <> 'Venta' "
-                + filtroBodega
                 + "ORDER BY bod.nombre NULLS LAST, p.descripcion";
 
         try (ResultSet rs = DB_consultas_R_D.getTabla(sqlAsignados)) {
@@ -334,7 +441,19 @@ public class ver_factura_impresion extends javax.swing.JDialog {
                 if (unidad.isEmpty()) {
                     unidad = "UNIDAD";
                 }
-                lista.add(new ProductoImprimirOrden(cod, desc, cant, unidad, bodega));
+                ProductoImprimirOrden po = new ProductoImprimirOrden(cod, desc, cant, unidad, bodega);
+                // Precios (usados solo por la copia de venta; el recibo de orden los ignora)
+                double subtotal = rs.getDouble("subtotal");
+                double cantNum;
+                try {
+                    cantNum = Double.parseDouble(cant);
+                } catch (NumberFormatException nfe) {
+                    cantNum = 0.0;
+                }
+                double unitario = (cantNum != 0.0) ? subtotal / cantNum : subtotal;
+                po.setPrecioUnitario(metodos.formateador_dinero().format(unitario));
+                po.setPrecioTotal(metodos.formateador_dinero().format(subtotal));
+                lista.add(po);
             }
         } catch (Exception ex) {
             System.out.println("[ver_factura_impresion] Error productos asignados: " + ex.getMessage());

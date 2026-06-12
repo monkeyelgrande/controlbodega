@@ -141,7 +141,41 @@ public class GeneradorOrdenAuto {
                     + idBodega + " con " + grupo.size() + " producto(s) desde Venta " + idVenta);
         }
 
+        // Todas las salidas ya están creadas y commiteadas: recién ahora se puede
+        // armar la copia COMPLETA de la venta agrupada por bodega. Emitimos un
+        // NOTIFY dedicado para que AutoImpresionOrdenesService imprima esa copia
+        // en la impresora del usuario con la opción de copia (B=true).
+        if (!salidasCreadas.isEmpty()) {
+            emitirNotifyCopiaVenta(idVenta, idUser, codigo);
+        }
+
         return salidasCreadas;
+    }
+
+    /**
+     * Emite NOTIFY orden_nueva con payload 'VENTACOPIA|idVenta|idUser|codigo'.
+     * Se manda DESPUÉS de crear todas las salidas para que el receptor encuentre
+     * la orden completa (todas las bodegas) al armar la copia.
+     */
+    private static void emitirNotifyCopiaVenta(int idVenta, int idUser, String codigo) {
+        Connection con = null;
+        try {
+            con = DB_consultas_R_D.getConexion();
+            try (PreparedStatement ps = con.prepareStatement("SELECT pg_notify('orden_nueva', ?)")) {
+                ps.setString(1, "VENTACOPIA|" + idVenta + "|" + idUser + "|"
+                        + (codigo == null ? "" : codigo));
+                ps.executeQuery();
+            }
+        } catch (SQLException e) {
+            System.err.println("[GeneradorOrdenAuto] No se pudo emitir NOTIFY VENTACOPIA: " + e.getMessage());
+        } finally {
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException ignored) {
+                }
+            }
+        }
     }
 
     private static Map<Integer, Boolean> cargarFlags() {

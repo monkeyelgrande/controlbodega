@@ -72,7 +72,14 @@ public class frm_main extends javax.swing.JFrame {
     public static Metodos.PanelNotificacionesStock panelNotifStock = null;
     // Permiso para analizar el histórico y aprobar/rechazar órdenes de compra.
     public static boolean aprueba_compras = false;
+    // Rol del módulo Precios (fusión productos-agroinsumos):
+    // 0=sin acceso, 2=captura cantidades, 3=costos, 4=precios.
+    public static int rol_precios = 0;
     frm_ordenes_compra frm_orden_compra = null;
+    Precios.frm_ingresos_precios frm_ingresos_precios = null;
+    Precios.frm_precios_productos frm_precios_productos = null;
+    Precios.frm_descuentos_precios frm_descuentos_precios = null;
+    private javax.swing.JMenu menuPrecios = null;
 
     jif_users jif_user = null;
     jif_PrincipalReportes jif_reportes = null;
@@ -99,6 +106,7 @@ public class frm_main extends javax.swing.JFrame {
         this.setTitle("Bodega - " + titulo);
 
         montarMenuOrdenesCompra();
+        montarMenuPrecios();
 
         // Detener el listener de auto-impresión al cerrar la app
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -193,6 +201,151 @@ public class frm_main extends javax.swing.JFrame {
         jMenuBar1.add(menu);
         jMenuBar1.revalidate();
         jMenuBar1.repaint();
+    }
+
+    /**
+     * Agrega el menú "Precios" (módulo fusionado de productos-agroinsumos).
+     * Se construye oculto; la visibilidad se decide tras el login con
+     * {@link #actualizarMenuPrecios()} según users.rol_precios (admin = acceso
+     * total).
+     */
+    private void montarMenuPrecios() {
+        menuPrecios = new javax.swing.JMenu("Precios");
+
+        javax.swing.JMenuItem itemIngresos = new javax.swing.JMenuItem("Ingresos de productos");
+        itemIngresos.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirIngresosPrecios();
+            }
+        });
+        menuPrecios.add(itemIngresos);
+
+        javax.swing.JMenuItem itemPrecios = new javax.swing.JMenuItem("Precios de productos");
+        itemPrecios.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirPreciosProductos();
+            }
+        });
+        menuPrecios.add(itemPrecios);
+
+        javax.swing.JMenuItem itemDescuentos = new javax.swing.JMenuItem("Descuentos escalonados");
+        itemDescuentos.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirDescuentosPrecios();
+            }
+        });
+        menuPrecios.add(itemDescuentos);
+
+        javax.swing.JMenuItem itemEtiquetas = new javax.swing.JMenuItem("Imprimir etiquetas");
+        itemEtiquetas.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                Precios.jd_productos_a_imprimir etiquetas = new Precios.jd_productos_a_imprimir(null, false);
+                etiquetas.setVisible(true);
+            }
+        });
+        menuPrecios.add(itemEtiquetas);
+
+        javax.swing.JMenu menuReportes = new javax.swing.JMenu("Reportes");
+
+        javax.swing.JMenuItem itemRepDiario = new javax.swing.JMenuItem("Ingresos del día");
+        itemRepDiario.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                Precios.jd_reporte_ingresos_diario rep = new Precios.jd_reporte_ingresos_diario(null, false);
+                rep.setVisible(true);
+            }
+        });
+        menuReportes.add(itemRepDiario);
+
+        javax.swing.JMenuItem itemRepXFactura = new javax.swing.JMenuItem("Entre fechas (por factura)");
+        itemRepXFactura.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                Precios.jd_reporte_ingresos_x_factura rep = new Precios.jd_reporte_ingresos_x_factura(null, false);
+                rep.setVisible(true);
+            }
+        });
+        menuReportes.add(itemRepXFactura);
+
+        javax.swing.JMenuItem itemRepXUsuario = new javax.swing.JMenuItem("Entre fechas (por usuario)");
+        itemRepXUsuario.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                Precios.jd_reporte_ingresos_x_producto rep = new Precios.jd_reporte_ingresos_x_producto(null, false);
+                rep.setVisible(true);
+            }
+        });
+        menuReportes.add(itemRepXUsuario);
+
+        menuPrecios.add(menuReportes);
+
+        javax.swing.JMenuItem itemConfig = new javax.swing.JMenuItem("Configuración de precios");
+        itemConfig.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                Precios.jd_config_precios config = new Precios.jd_config_precios(null, true);
+                config.setVisible(true);
+            }
+        });
+        menuPrecios.add(itemConfig);
+
+        menuPrecios.setVisible(false);
+        jMenuBar1.add(menuPrecios);
+        jMenuBar1.revalidate();
+        jMenuBar1.repaint();
+    }
+
+    /** Llamar tras el login, cuando ya se conocen perfil y rol_precios. */
+    public void actualizarMenuPrecios() {
+        if (menuPrecios != null) {
+            menuPrecios.setVisible(rol_precios > 0 || perfil == 1);
+            jMenuBar1.revalidate();
+            jMenuBar1.repaint();
+        }
+    }
+
+    private void abrirIngresosPrecios() {
+        if (metodos.estacerrado(frm_ingresos_precios)) {
+            frm_ingresos_precios = new Precios.frm_ingresos_precios();
+            escritorio.add(frm_ingresos_precios);
+            try {
+                frm_ingresos_precios.setMaximum(true);
+            } catch (java.beans.PropertyVetoException ex) {
+                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            frm_ingresos_precios.show();
+        } else {
+            frm_ingresos_precios.toFront();
+        }
+    }
+
+    private void abrirPreciosProductos() {
+        if (metodos.estacerrado(frm_precios_productos)) {
+            frm_precios_productos = new Precios.frm_precios_productos();
+            escritorio.add(frm_precios_productos);
+            try {
+                frm_precios_productos.setMaximum(true);
+            } catch (java.beans.PropertyVetoException ex) {
+                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            frm_precios_productos.show();
+        } else {
+            frm_precios_productos.toFront();
+        }
+    }
+
+    private void abrirDescuentosPrecios() {
+        if (metodos.estacerrado(frm_descuentos_precios)) {
+            frm_descuentos_precios = new Precios.frm_descuentos_precios();
+            escritorio.add(frm_descuentos_precios);
+            frm_descuentos_precios.show();
+        } else {
+            frm_descuentos_precios.toFront();
+        }
     }
 
     private void abrirOrdenesCompra() {

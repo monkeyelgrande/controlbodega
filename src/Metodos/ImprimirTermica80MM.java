@@ -98,8 +98,15 @@ public class ImprimirTermica80MM {
     }
 
     public void imprime() throws PrinterException {
+        imprime(buscarImpresoraPorNombre(frm_main.impresora_ticket));
+    }
 
-        PrintService service = buscarImpresoraPorNombre(frm_main.impresora_ticket);
+    /**
+     * Variante silenciosa: imprime directo al PrintService indicado (sin diálogo
+     * ni búsqueda por nombre). Usada por la copia automática de venta del
+     * Listener, que imprime en la impresora propia del usuario (print_service_user).
+     */
+    public void imprime(PrintService service) throws PrinterException {
         if (service != null) {
             PrinterJob pj = PrinterJob.getPrinterJob();
             pj.setPrintService(service);

@@ -20,3 +20,7 @@ nbdist/
 # OS
 Thumbs.db
 .DS_Store
+
+# Artefactos de migracion fusion agro (backups de BD y reportes de ejecucion)
+backups_fusion/
+reporte_migracion_agro_*.txt

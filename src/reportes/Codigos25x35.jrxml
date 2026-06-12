@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="PrestamosXContacto_oficio" language="groovy" columnCount="3" pageWidth="297" pageHeight="70" columnWidth="90" columnSpacing="9" leftMargin="4" rightMargin="3" topMargin="0" bottomMargin="0" uuid="5d1b9e38-61e2-4cf7-833d-8e970173a13b">
+	<property name="ireport.zoom" value="8.95430243255242"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="FONT_SIZE" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[]]>
+	</queryString>
+	<field name="COLUMN_0" class="java.lang.String"/>
+	<field name="COLUMN_1" class="java.lang.String"/>
+	<detail>
+		<band height="65">
+			<textField>
+				<reportElement x="5" y="-10" width="87" height="59" uuid="88447844-45c4-488e-896d-a22a0cb7eb09"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle" markup="html"/>
+				<textFieldExpression><![CDATA["<span style='font-size:" + $P{FONT_SIZE} + "pt; font-family: Arial Black; font-weight:bold;'>"
+        + ($F{COLUMN_1} == null ? "" : $F{COLUMN_1}) + "</span>"]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="0" y="48" width="91" height="17" uuid="76250d5b-efc7-4971-8540-bb156e87cc8a"/>
+				<textElement textAlignment="Center">
+					<font fontName="Arial Black" size="12" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{COLUMN_0}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+</jasperReport>

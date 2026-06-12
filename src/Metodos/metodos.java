@@ -42,6 +42,29 @@ import org.jdesktop.swingx.JXTable;
 public class metodos {
 
     /**
+     * Redondea al multiplo de 10^digitos mas cercano (modulo Precios).
+     */
+    public static double redondearNumero(double numero, int digitos) {
+        double factor = Math.pow(10, digitos);
+        return Math.round(numero / factor) * factor;
+    }
+
+    /** Copia un valor de dinero al portapapeles sin '$' ni separadores de miles. */
+    public static void dinero_a_porta_papeles(String texto) {
+        texto = EliminaCaracteres(texto, "$");
+        texto = EliminaCaracteres(texto, ".");
+        java.awt.datatransfer.StringSelection sel = new java.awt.datatransfer.StringSelection(texto);
+        java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
+    }
+
+    public static DecimalFormat formateador_dos_decimales() {
+        DecimalFormatSymbols simbolos = new DecimalFormatSymbols();
+        simbolos.setDecimalSeparator('.');
+        simbolos.setGroupingSeparator(',');
+        return new DecimalFormat("#,##0.00", simbolos);
+    }
+
+    /**
      * Eliminar caracteres
      *
      * Este metodo recibe un primer campo tipo String con la cadena que desea eliminar los caracteres y un segundo parametro con el caracter que desea eliminar de toda la cadena
