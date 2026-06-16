@@ -81,9 +81,14 @@ public class frm_main extends javax.swing.JFrame {
     // puede tener varios (almacenista/contable/precios).
     public static java.util.List<Integer> roles_precios = new java.util.ArrayList<>();
     frm_ordenes_compra frm_orden_compra = null;
+    frm_sugeridos frm_sugerido = null;
+    frm_cotizaciones_compra frm_cotiz_compra = null;
+    frm_comparativos frm_comparativo = null;
+    frm_amarre_proveedores frm_amarre = null;
     Precios.frm_ingresos_precios frm_ingresos_precios = null;
     Precios.frm_precios_productos frm_precios_productos = null;
     Precios.frm_descuentos_precios frm_descuentos_precios = null;
+    Precios.frm_analizar_comisiones frm_analizar_comisiones = null;
     private javax.swing.JMenu menuPrecios = null;
     private javax.swing.JMenu menuCompras = null;
     private javax.swing.JMenuItem itemPermisos = null;
@@ -92,6 +97,7 @@ public class frm_main extends javax.swing.JFrame {
     private javax.swing.JMenuItem itemPreciosProductos = null;
     private javax.swing.JMenuItem itemDescuentosPrecios = null;
     private javax.swing.JMenuItem itemEtiquetasPrecios = null;
+    private javax.swing.JMenuItem itemComisionesPrecios = null;
     private javax.swing.JMenu menuReportesPrecios = null;
     private javax.swing.JMenuItem itemConfigPrecios = null;
 
@@ -152,7 +158,7 @@ public class frm_main extends javax.swing.JFrame {
         cp.add(escritorio, java.awt.BorderLayout.CENTER);
 
         int anchoPantalla = java.awt.Toolkit.getDefaultToolkit().getScreenSize().width;
-        int anchoBarra = Math.max(280, Math.min(380, anchoPantalla / 5));
+        int anchoBarra = Math.max(250, Math.min(330, anchoPantalla / 6));
 
         barraNotif = new Metodos.BarraNotificacionesPanel(anchoBarra);
         cp.add(barraNotif, java.awt.BorderLayout.EAST);
@@ -205,17 +211,85 @@ public class frm_main extends javax.swing.JFrame {
      */
     private void montarMenuOrdenesCompra() {
         menuCompras = new javax.swing.JMenu("Compras");
-        javax.swing.JMenuItem item = new javax.swing.JMenuItem("Órdenes de compra");
-        item.addActionListener(new java.awt.event.ActionListener() {
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                abrirOrdenesCompra();
-            }
-        });
-        menuCompras.add(item);
+
+        menuCompras.add(itemMenu("Sugeridos de pedido", new Runnable() {
+            @Override public void run() { abrirSugeridos(); }
+        }));
+        menuCompras.add(itemMenu("Cotizaciones (RFQ)", new Runnable() {
+            @Override public void run() { abrirCotizacionesCompra(); }
+        }));
+        menuCompras.add(itemMenu("Comparativos de cotizaciones", new Runnable() {
+            @Override public void run() { abrirComparativos(); }
+        }));
+        menuCompras.add(itemMenu("Órdenes de compra", new Runnable() {
+            @Override public void run() { abrirOrdenesCompra(); }
+        }));
+        menuCompras.addSeparator();
+        menuCompras.add(itemMenu("Proveedores por producto", new Runnable() {
+            @Override public void run() { abrirAmarreProveedores(); }
+        }));
+
         jMenuBar1.add(menuCompras);
         jMenuBar1.revalidate();
         jMenuBar1.repaint();
+    }
+
+    /** Crea un JMenuItem que ejecuta la acción dada al hacer clic. */
+    private javax.swing.JMenuItem itemMenu(String texto, final Runnable accion) {
+        javax.swing.JMenuItem item = new javax.swing.JMenuItem(texto);
+        item.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                accion.run();
+            }
+        });
+        return item;
+    }
+
+    private void abrirInterno(javax.swing.JInternalFrame frm) {
+        escritorio.add(frm);
+        try {
+            frm.setMaximum(true);
+        } catch (java.beans.PropertyVetoException ex) {
+            Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        frm.show();
+    }
+
+    private void abrirSugeridos() {
+        if (metodos.estacerrado(frm_sugerido)) {
+            frm_sugerido = new frm_sugeridos();
+            abrirInterno(frm_sugerido);
+        } else {
+            frm_sugerido.toFront();
+        }
+    }
+
+    private void abrirCotizacionesCompra() {
+        if (metodos.estacerrado(frm_cotiz_compra)) {
+            frm_cotiz_compra = new frm_cotizaciones_compra();
+            abrirInterno(frm_cotiz_compra);
+        } else {
+            frm_cotiz_compra.toFront();
+        }
+    }
+
+    private void abrirComparativos() {
+        if (metodos.estacerrado(frm_comparativo)) {
+            frm_comparativo = new frm_comparativos();
+            abrirInterno(frm_comparativo);
+        } else {
+            frm_comparativo.toFront();
+        }
+    }
+
+    private void abrirAmarreProveedores() {
+        if (metodos.estacerrado(frm_amarre)) {
+            frm_amarre = new frm_amarre_proveedores();
+            abrirInterno(frm_amarre);
+        } else {
+            frm_amarre.toFront();
+        }
     }
 
     /**
@@ -263,6 +337,15 @@ public class frm_main extends javax.swing.JFrame {
             }
         });
         menuPrecios.add(itemEtiquetasPrecios);
+
+        itemComisionesPrecios = new javax.swing.JMenuItem("Analizar comisiones");
+        itemComisionesPrecios.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirAnalizarComisiones();
+            }
+        });
+        menuPrecios.add(itemComisionesPrecios);
 
         javax.swing.JMenu menuReportes = new javax.swing.JMenu("Reportes");
         menuReportesPrecios = menuReportes;
@@ -382,6 +465,21 @@ public class frm_main extends javax.swing.JFrame {
         }
     }
 
+    private void abrirAnalizarComisiones() {
+        if (metodos.estacerrado(frm_analizar_comisiones)) {
+            frm_analizar_comisiones = new Precios.frm_analizar_comisiones();
+            escritorio.add(frm_analizar_comisiones);
+            try {
+                frm_analizar_comisiones.setMaximum(true);
+            } catch (java.beans.PropertyVetoException ex) {
+                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            frm_analizar_comisiones.show();
+        } else {
+            frm_analizar_comisiones.toFront();
+        }
+    }
+
     private void abrirOrdenesCompra() {
         if (metodos.estacerrado(frm_orden_compra)) {
             frm_orden_compra = new frm_ordenes_compra();
@@ -479,6 +577,7 @@ public class frm_main extends javax.swing.JFrame {
         m.put("menu_precios_productos", itemPreciosProductos);
         m.put("menu_precios_descuentos", itemDescuentosPrecios);
         m.put("menu_precios_etiquetas", itemEtiquetasPrecios);
+        m.put("menu_precios_comisiones", itemComisionesPrecios);
         m.put("menu_precios_reportes", menuReportesPrecios);
         m.put("menu_precios_config", itemConfigPrecios);
         return m;

@@ -10,7 +10,10 @@ import Metodos.CellRendererIngresos;
 import Metodos.metodos;
 import conexiondb.DB_consultas_R_D;
 import conexiondb.DBingresosMercancias;
+import conexiondb.DBstock_productos;
 import java.awt.event.MouseEvent;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
@@ -43,7 +46,17 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
         jtabla.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mousePressed(MouseEvent me) {
                 if (me.getClickCount() == 2) {
-                    btn_verActionPerformed(null);
+                    int fila = jtabla.rowAtPoint(me.getPoint());
+                    int columna = jtabla.columnAtPoint(me.getPoint());
+                    // Doble clic sobre la columna Estado de un ingreso PENDIENTE:
+                    // ofrece pasarlo a RECIBIDO. En cualquier otro caso, abre el ver.
+                    if (fila >= 0 && columna >= 0
+                            && jtabla.convertColumnIndexToModel(columna) == 5
+                            && "Pendiente".equals("" + jtabla.getValueAt(fila, columna))) {
+                        pasar_a_recibido(fila);
+                    } else {
+                        btn_verActionPerformed(null);
+                    }
                 }
             }
         });
@@ -384,10 +397,17 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
         } else {
             String id = (String) jtabla.getValueAt(fila, 0);
             int estadoIngreso = 0; // 0=pendiente, 1=recibido; define cómo mostrar la columna ACTUAL
+            // LEFT JOIN para que la cabecera siempre devuelva su fila aunque el
+            // transportador, bodega, proveedor o tipo estén nulos o sin coincidencia;
+            // así se cargan todos los campos disponibles al ver/editar.
             ResultSet rs = DB_consultas_R_D.getTabla("select i.id, i.descripcion, i.no_factura, i.id_transportador, i.id_bodega, b.nombre as bodega, tra.nombre as transportador, "
-                    + "p.nombre as proveedor,p.id as id_proveedor, t.nombre as tipo,t.id as id_tipo, i.fecha, i.estado "
-                    + "from ingresos_mercancias_cabecera i, contactos p, tipo_ingreso t, contactos tra, bodegas b "
-                    + "where i.id_bodega=b.id and i.id_proveedor=p.id and i.id_tipo=t.id and i.id_transportador=tra.id and i.id=" + id);
+                    + "p.nombre as proveedor, p.id as id_proveedor, t.nombre as tipo, t.id as id_tipo, i.fecha, i.fecha_vencimiento, i.estado "
+                    + "from ingresos_mercancias_cabecera i "
+                    + "left join contactos p on i.id_proveedor = p.id "
+                    + "left join tipo_ingreso t on i.id_tipo = t.id "
+                    + "left join contactos tra on i.id_transportador = tra.id "
+                    + "left join bodegas b on i.id_bodega = b.id "
+                    + "where i.id=" + id);
 
             jif_crear_ingreso_mercancia frm = new jif_crear_ingreso_mercancia();
             // Fijar el id real de la fila seleccionada de inmediato. El constructor
@@ -400,10 +420,17 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
                 while (rs.next()) {
                     jif_crear_ingreso_mercancia.lbl_id.setText(rs.getString("id"));
                     jif_crear_ingreso_mercancia.jdate_fecha_entrada.setDate(rs.getDate("fecha"));
+                    java.util.Date fechaVencimiento = rs.getDate("fecha_vencimiento");
+                    if (fechaVencimiento != null) {
+                        jif_crear_ingreso_mercancia.jdate_fecha_vencimiento.setDate(fechaVencimiento);
+                    }
                     jif_crear_ingreso_mercancia.jbox_proveedor.setSelectedItem(rs.getString("proveedor"));
-                    jif_crear_ingreso_mercancia.jbox_transportador.setSelectedItem(rs.getString("transportador"));
                     jif_crear_ingreso_mercancia.id_proveedor = (rs.getInt("id_proveedor"));
                     jif_crear_ingreso_mercancia.id_transportador = (rs.getInt("id_transportador"));
+                    // El combo de transportador muestra "nombre - cedula" y no usa
+                    // autocompletar, por lo que seleccionar por nombre nunca coincide.
+                    // Se selecciona por id para que cargue al ver/editar.
+                    seleccionar_transportador(jif_crear_ingreso_mercancia.id_transportador);
                     jif_crear_ingreso_mercancia.jbox_tipo.setSelectedItem(rs.getString("tipo"));
                     jif_crear_ingreso_mercancia.jbox_bodega.setSelectedItem(rs.getString("bodega"));
                     jif_crear_ingreso_mercancia.id_tipo = (rs.getInt("id_tipo"));
@@ -493,6 +520,22 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
             frm.show();
         }
     }
+    /**
+     * Selecciona en el combo de transportador el contacto cuyo id coincide. El
+     * combo se llena con items "nombre - cedula" y sin autocompletar, así que
+     * seleccionar por texto no funciona; se busca por id como en el proveedor.
+     */
+    private void seleccionar_transportador(int idTransportador) {
+        javax.swing.JComboBox<modelos.Contactos> combo = jif_crear_ingreso_mercancia.jbox_transportador;
+        for (int i = 0; i < combo.getItemCount(); i++) {
+            modelos.Contactos c = combo.getItemAt(i);
+            if (c != null && c.getId() == idTransportador) {
+                combo.setSelectedIndex(i);
+                return;
+            }
+        }
+    }
+
     private void btn_cerrarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_cerrarActionPerformed
         this.dispose();
     }//GEN-LAST:event_btn_cerrarActionPerformed
@@ -502,6 +545,90 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
             ver_ingreso_mercancia("editar");
         }
     }//GEN-LAST:event_btn_editarActionPerformed
+
+    /**
+     * Pasa un ingreso PENDIENTE a RECIBIDO desde la tabla (doble clic en la
+     * columna Estado). Replica el mismo efecto que editar el ingreso, marcar
+     * "Recibido" y darle Actualizar: cambia el estado en la cabecera y registra
+     * el movimiento de inventario (suma stock) por cada producto del detalle.
+     */
+    private void pasar_a_recibido(int fila) {
+        String id = "" + jtabla.getValueAt(fila, 0);
+
+        int dialogResult = JOptionPane.showConfirmDialog(this,
+                "¿Desea pasar este ingreso a RECIBIDO?\n"
+                + "Se registrará el movimiento de inventario y se sumará el stock de los productos.",
+                "Cambiar estado", JOptionPane.YES_NO_OPTION);
+        if (dialogResult != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        if (!DB_consultas_R_D.validar_admin()) {
+            return;
+        }
+
+        int idIngreso = Integer.parseInt(id);
+        int estadoActual = 0;
+        int idBodega = 0;
+        String noFactura = "";
+        try {
+            ResultSet rs = DB_consultas_R_D.getTabla("select estado, id_bodega, no_factura "
+                    + "from ingresos_mercancias_cabecera where id=" + idIngreso);
+            if (rs.next()) {
+                estadoActual = rs.getInt("estado");
+                idBodega = rs.getInt("id_bodega");
+                noFactura = rs.getString("no_factura");
+            }
+            rs.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(frm_ingreso_mercancia.class.getName()).log(Level.SEVERE, null, ex);
+            return;
+        }
+
+        // Si otro usuario ya lo recibió, no volver a sumar stock
+        if (estadoActual == 1) {
+            JOptionPane.showMessageDialog(this, "Este ingreso ya se encuentra RECIBIDO");
+            actualizar();
+            return;
+        }
+
+        try {
+            Connection con = DB_consultas_R_D.getConexion();
+            PreparedStatement psql = con.prepareStatement(
+                    "update ingresos_mercancias_cabecera set estado=1, id_user=" + frm_main.id_user
+                    + " where id=" + idIngreso);
+            psql.executeUpdate();
+            psql.close();
+            con.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(frm_ingreso_mercancia.class.getName()).log(Level.SEVERE, null, ex);
+            JOptionPane.showMessageDialog(this, "No se pudo cambiar el estado del ingreso");
+            return;
+        }
+
+        DBstock_productos dbStock = new DBstock_productos();
+        try {
+            ResultSet rs = DB_consultas_R_D.getTabla("select id_producto, cantidad, precio_costo "
+                    + "from ingresos_mercancias_detalle where id_ingreso_cabecera=" + idIngreso);
+            while (rs.next()) {
+                dbStock.ingreso(
+                        rs.getInt("id_producto"),
+                        idBodega,
+                        frm_main.id_user,
+                        rs.getDouble("cantidad"),
+                        rs.getDouble("precio_costo"),
+                        idIngreso,
+                        "Ingreso de mercancía - Factura: " + noFactura
+                );
+            }
+            rs.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(frm_ingreso_mercancia.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        modelo.setValueAt("Recibido", jtabla.convertRowIndexToModel(fila), 5);
+        JOptionPane.showMessageDialog(this, "Ingreso marcado como RECIBIDO y stock actualizado");
+    }
 
     private void txt_FiltroKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_txt_FiltroKeyTyped
 

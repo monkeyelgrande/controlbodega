@@ -44,6 +44,7 @@ public class jif_PrincipalReportes extends javax.swing.JInternalFrame {
         btn_IngresosBetwin8 = new javax.swing.JButton();
         jPanel8 = new javax.swing.JPanel();
         btn_IngresosBetwin7 = new javax.swing.JButton();
+        btn_ConsultaWO = new javax.swing.JButton();
         jPanel7 = new javax.swing.JPanel();
         btn_Ingresosdiarios3 = new javax.swing.JButton();
         btn_ordenes_entre_fechas = new javax.swing.JButton();
@@ -214,13 +215,24 @@ public class jif_PrincipalReportes extends javax.swing.JInternalFrame {
             }
         });
 
+        btn_ConsultaWO.setBackground(new java.awt.Color(255, 255, 0));
+        btn_ConsultaWO.setFont(new java.awt.Font("Tahoma", 0, 18)); // NOI18N
+        btn_ConsultaWO.setText("Consulta Facturas WO");
+        btn_ConsultaWO.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_ConsultaWOActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel8Layout = new javax.swing.GroupLayout(jPanel8);
         jPanel8.setLayout(jPanel8Layout);
         jPanel8Layout.setHorizontalGroup(
             jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel8Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(btn_IngresosBetwin7)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(btn_IngresosBetwin7)
+                    .addComponent(btn_ConsultaWO))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel8Layout.setVerticalGroup(
@@ -228,7 +240,9 @@ public class jif_PrincipalReportes extends javax.swing.JInternalFrame {
             .addGroup(jPanel8Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(btn_IngresosBetwin7)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(btn_ConsultaWO)
+                .addContainerGap(49, Short.MAX_VALUE))
         );
 
         jPanel7.setBackground(new java.awt.Color(255, 255, 255));
@@ -282,7 +296,7 @@ public class jif_PrincipalReportes extends javax.swing.JInternalFrame {
                 .addComponent(btn_ordenes_entre_fechas)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(btn_ordenes_entre_fechas1)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(125, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
@@ -303,16 +317,15 @@ public class jif_PrincipalReportes extends javax.swing.JInternalFrame {
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addContainerGap()
                         .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jPanel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(0, 18, Short.MAX_VALUE)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                         .addComponent(jPanel8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addGap(56, 56, 56))
         );
@@ -391,8 +404,14 @@ public class jif_PrincipalReportes extends javax.swing.JInternalFrame {
         j.show();
     }//GEN-LAST:event_btn_ordenes_entre_fechas1ActionPerformed
 
+    private void btn_ConsultaWOActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_ConsultaWOActionPerformed
+        jd_Consulta_Facturas_WO j = new jd_Consulta_Facturas_WO(null, closable);
+        j.show();
+    }//GEN-LAST:event_btn_ConsultaWOActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btn_ConsultaWO;
     private javax.swing.JButton btn_IngresosBetwin2;
     private javax.swing.JButton btn_IngresosBetwin3;
     private javax.swing.JButton btn_IngresosBetwin5;

@@ -323,6 +323,52 @@ public class DBordenes_compra {
         return DB_consultas_R_D.getTabla(sql);
     }
 
+    /**
+     * Emite una orden de compra APROBADA a partir de la decisión de un
+     * comparativo: una cabecera (estado=2) con sus líneas, cada una con su
+     * proveedor y precio neto acordado.
+     *
+     * @return id de la orden de compra creada, o -1 si falla.
+     */
+    public int emitirDesdeComparativo(int idComparativo, int idUser, double ivaPct,
+            List<Ordenes_compra_detalle> lineas) {
+        Connection con = null;
+        try {
+            con = DB_consultas_R_D.getConexion();
+            con.setAutoCommit(false);
+            int id = siguienteId(con, "ordenes_compra_cabecera");
+            String sqlCab = "INSERT INTO ordenes_compra_cabecera "
+                    + "(id, numero, id_user_crea, fecha, hora, estado, observacion, id_bodega, "
+                    + "id_user_aprueba, fecha_aprobacion, id_comparativo, iva_pct) "
+                    + "VALUES (?,?,?,current_date,current_time,2,?,NULL,?,now(),?,?)";
+            try (PreparedStatement ps = con.prepareStatement(sqlCab)) {
+                ps.setInt(1, id);
+                ps.setString(2, "OC-" + id);
+                ps.setInt(3, idUser);
+                ps.setString(4, "Generada desde comparativo COMP-" + idComparativo);
+                ps.setInt(5, idUser);
+                ps.setInt(6, idComparativo);
+                ps.setDouble(7, ivaPct);
+                ps.executeUpdate();
+            }
+            int idDet = siguienteId(con, "ordenes_compra_detalle");
+            for (Ordenes_compra_detalle d : lineas) {
+                d.setId(idDet++);
+                d.setId_orden_cabecera(id);
+                insertarDetalle(con, d);
+            }
+            con.commit();
+            return id;
+        } catch (SQLException e) {
+            rollback(con);
+            JOptionPane.showMessageDialog(null, "Error al emitir la orden de compra:\n" + e,
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            return -1;
+        } finally {
+            cerrar(con);
+        }
+    }
+
     // ----------------------------------------------------------------
     private void rollback(Connection con) {
         if (con != null) {

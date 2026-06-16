@@ -583,7 +583,6 @@ public class frm_facturacion_ventas extends javax.swing.JInternalFrame {
         });
 
         chk_copia.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        chk_copia.setSelected(true);
         chk_copia.setText("Copia");
 
         javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);

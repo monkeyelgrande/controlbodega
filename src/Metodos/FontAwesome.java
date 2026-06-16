@@ -48,6 +48,14 @@ public final class FontAwesome {
     public static final String LIST         = "";
     public static final String FILE_INVOICE = "";
 
+    /** Campana de notificaciones (FA solid u+f0f3). */
+    public static final String BELL         = "";
+
+    /** Chevrons / hamburguesa para la barra colapsable. */
+    public static final String CHEVRON_LEFT  = "";
+    public static final String CHEVRON_RIGHT = "";
+    public static final String BARS          = "";
+
     private static Font solidBase;
     private static Font regularBase;
 

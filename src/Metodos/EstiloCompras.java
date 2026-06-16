@@ -277,16 +277,16 @@ public final class EstiloCompras {
             setText(v);
             setFont(new Font("Segoe UI", Font.BOLD, 13));
             Color bg, fg;
-            if ("Aprobada".equals(v)) {
+            if (esVerde(v)) { // estados "OK / cerrados positivos"
                 bg = new Color(0xE8F5E9);
                 fg = new Color(0x2E7D32);
-            } else if ("Pendiente".equals(v)) {
+            } else if (esAmbar(v)) { // estados "en proceso / atención"
                 bg = new Color(0xFFF8E1);
                 fg = new Color(0xF57F17);
-            } else if ("Rechazada".equals(v)) {
+            } else if (esRojo(v)) {
                 bg = new Color(0xFFEBEE);
                 fg = new Color(0xC62828);
-            } else { // Borrador u otros
+            } else { // Borrador / Abierto / otros
                 bg = new Color(0xECEFF1);
                 fg = new Color(0x546E7A);
             }
@@ -294,6 +294,19 @@ public final class EstiloCompras {
             setForeground(fg);
             setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
             return this;
+        }
+
+        private boolean esVerde(String v) {
+            return "Aprobada".equals(v) || "Procesado".equals(v) || "Autorizado".equals(v)
+                    || "Respondida".equals(v) || "Recibida".equals(v) || "Decidido".equals(v);
+        }
+
+        private boolean esAmbar(String v) {
+            return "Pendiente".equals(v) || "Bloqueado".equals(v) || "Enviada".equals(v);
+        }
+
+        private boolean esRojo(String v) {
+            return "Rechazada".equals(v) || "Sin respuesta".equals(v);
         }
     }
 

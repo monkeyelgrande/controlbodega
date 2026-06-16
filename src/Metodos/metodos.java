@@ -49,6 +49,69 @@ public class metodos {
         return Math.round(numero / factor) * factor;
     }
 
+    /**
+     * Instala en un JTextField el auto-formato de miles EN VIVO (a medida que
+     * se escribe): separador de miles con punto y SIN centavos. Solo admite
+     * digitos; cualquier otro caracter se ignora. El caret queda al final.
+     *
+     * Para leer el valor numerico usar:
+     *   Double.parseDouble(metodos.EliminaCaracteres(campo.getText(), "."))
+     * (igual que el resto de la app).
+     *
+     * @autor monkeyelgrande
+     */
+    public static void instalarFormatoMiles(final JTextField campo) {
+        final DecimalFormatSymbols sim = new DecimalFormatSymbols();
+        sim.setGroupingSeparator('.');
+        final DecimalFormat fmt = new DecimalFormat("#,###", sim);
+
+        ((javax.swing.text.AbstractDocument) campo.getDocument()).setDocumentFilter(
+                new javax.swing.text.DocumentFilter() {
+            @Override
+            public void insertString(FilterBypass fb, int off, String str,
+                    javax.swing.text.AttributeSet a) throws javax.swing.text.BadLocationException {
+                reformatear(fb, off, 0, str, a);
+            }
+
+            @Override
+            public void remove(FilterBypass fb, int off, int len)
+                    throws javax.swing.text.BadLocationException {
+                reformatear(fb, off, len, "", null);
+            }
+
+            @Override
+            public void replace(FilterBypass fb, int off, int len, String str,
+                    javax.swing.text.AttributeSet a) throws javax.swing.text.BadLocationException {
+                reformatear(fb, off, len, str, a);
+            }
+
+            private void reformatear(FilterBypass fb, int off, int len, String str,
+                    javax.swing.text.AttributeSet a) throws javax.swing.text.BadLocationException {
+                javax.swing.text.Document doc = fb.getDocument();
+                String actual = doc.getText(0, doc.getLength());
+                String nuevo = actual.substring(0, off)
+                        + (str == null ? "" : str)
+                        + actual.substring(off + len);
+                String digitos = nuevo.replaceAll("[^0-9]", "");
+                if (digitos.isEmpty()) {
+                    fb.replace(0, doc.getLength(), "", a);
+                    return;
+                }
+                if (digitos.length() > 15) {
+                    digitos = digitos.substring(0, 15);
+                }
+                final String formateado = fmt.format(Long.parseLong(digitos));
+                fb.replace(0, doc.getLength(), formateado, a);
+                javax.swing.SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        campo.setCaretPosition(campo.getDocument().getLength());
+                    }
+                });
+            }
+        });
+    }
+
     /** Copia un valor de dinero al portapapeles sin '$' ni separadores de miles. */
     public static void dinero_a_porta_papeles(String texto) {
         texto = EliminaCaracteres(texto, "$");
@@ -62,6 +125,24 @@ public class metodos {
         simbolos.setDecimalSeparator('.');
         simbolos.setGroupingSeparator(',');
         return new DecimalFormat("#,##0.00", simbolos);
+    }
+
+    /** Al ganar foco un campo de dinero, quita los puntos de miles y selecciona todo. */
+    public static void eliminar_puntos_focus_gained(JTextField jtext) {
+        if (!jtext.getText().equals("")) {
+            String texto = EliminaCaracteres(jtext.getText(), ".");
+            jtext.setText(texto);
+        }
+        jtext.selectAll();
+    }
+
+    /** Al perder foco un campo de dinero, lo reformatea con separador de miles. */
+    public static void formateo_dinero_en_jtextfield_fucus_lost(JTextField jtext) {
+        if (!jtext.getText().equals("")) {
+            double to = Double.parseDouble(jtext.getText());
+            String nuevo = formateador_dinero().format(to);
+            jtext.setText(nuevo);
+        }
     }
 
     /**

@@ -172,7 +172,14 @@ public class DB_consultas_R_D {
         try {
             database_name = consulta_archivo_texto(new File("").getAbsolutePath() + "/src/database_name.txt");
             ip = consulta_archivo_texto(new File("").getAbsolutePath() + "/src/ip.txt");
-            url = "jdbc:postgresql://" + ip + ":5432/" + database_name + "?tcpKeepAlive=true";
+            // Timeouts JDBC para evitar que la UI se congele en equipos remotos:
+            //   connectTimeout=10 : corta el intento de conexion TCP si la ruta al servidor esta
+            //                       fria tras inactividad (NAT/firewall remoto). Evita el congelamiento.
+            //   socketTimeout=30  : corta una consulta/lectura colgada.
+            //   loginTimeout=10   : cubre el handshake/autenticacion de Postgres.
+            //   tcpKeepAlive=true : mantiene viva una sesion existente.
+            url = "jdbc:postgresql://" + ip + ":5432/" + database_name
+                    + "?tcpKeepAlive=true&connectTimeout=10&socketTimeout=30&loginTimeout=10";
 
         } catch (Exception e) {
         }

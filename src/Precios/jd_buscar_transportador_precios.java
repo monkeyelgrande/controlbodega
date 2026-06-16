@@ -5,7 +5,6 @@ import Metodos.FontAwesome;
 import Metodos.metodos;
 import conexiondb.DB_consultas_R_D;
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
@@ -25,10 +24,11 @@ import javax.swing.table.TableColumnModel;
 import modelos.Contactos;
 
 /**
- * Busqueda de proveedores para el modulo Precios. Rediseño Material (FlatLaf +
- * iconos Font Awesome), consistente con jif_crear_user / EstiloCompras.
+ * Busqueda de transportadores para el modulo Precios. Mismo estilo Material que
+ * jd_buscar_proveedor_precios. El transportador puede ser cualquier contacto
+ * (igual que el combo, que se llena con MostrarNombreContactos).
  */
-public class jd_buscar_proveedor_precios extends javax.swing.JDialog {
+public class jd_buscar_transportador_precios extends javax.swing.JDialog {
 
     static TableColumnModel columnModel = null;
 
@@ -44,7 +44,7 @@ public class jd_buscar_proveedor_precios extends javax.swing.JDialog {
         }
     };
 
-    public jd_buscar_proveedor_precios(java.awt.Frame parent, boolean modal) {
+    public jd_buscar_transportador_precios(java.awt.Frame parent, boolean modal) {
         super(parent, modal);
         initComponents();
         columnModel = jtabla.getColumnModel();
@@ -58,7 +58,7 @@ public class jd_buscar_proveedor_precios extends javax.swing.JDialog {
             @Override
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    seleccionarProveedor();
+                    seleccionarTransportador();
                 }
             }
         });
@@ -67,7 +67,7 @@ public class jd_buscar_proveedor_precios extends javax.swing.JDialog {
             @Override
             public void mousePressed(MouseEvent me) {
                 if (me.getClickCount() == 2) {
-                    seleccionarProveedor();
+                    seleccionarTransportador();
                 }
             }
         });
@@ -84,7 +84,7 @@ public class jd_buscar_proveedor_precios extends javax.swing.JDialog {
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
                     if (jtabla.getRowCount() > 0) {
                         jtabla.getSelectionModel().setSelectionInterval(0, 0);
-                        seleccionarProveedor();
+                        seleccionarTransportador();
                     }
                 }
             }
@@ -93,7 +93,7 @@ public class jd_buscar_proveedor_precios extends javax.swing.JDialog {
 
     private void initComponents() {
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle("Buscar Proveedor");
+        setTitle("Buscar Transportador");
         setModal(true);
         setUndecorated(true);
         setSize(760, 580);
@@ -102,7 +102,7 @@ public class jd_buscar_proveedor_precios extends javax.swing.JDialog {
         root.setBackground(EstiloCompras.BG_FORM);
         root.setBorder(BorderFactory.createLineBorder(EstiloCompras.DIVIDER, 1));
 
-        root.add(EstiloCompras.header(FontAwesome.SEARCH, "Buscar proveedor", new Runnable() {
+        root.add(EstiloCompras.header(FontAwesome.SEARCH, "Buscar transportador", new Runnable() {
             @Override
             public void run() {
                 dispose();
@@ -114,7 +114,7 @@ public class jd_buscar_proveedor_precios extends javax.swing.JDialog {
         body.setBackground(EstiloCompras.BG_FORM);
         body.setBorder(BorderFactory.createEmptyBorder(18, 22, 8, 22));
 
-        txt_Filtro = EstiloCompras.field("Buscar proveedor por nombre...", FontAwesome.SEARCH);
+        txt_Filtro = EstiloCompras.field("Buscar transportador por nombre...", FontAwesome.SEARCH);
         body.add(txt_Filtro, BorderLayout.NORTH);
 
         jtabla = new JTable();
@@ -133,7 +133,7 @@ public class jd_buscar_proveedor_precios extends javax.swing.JDialog {
                 BorderFactory.createEmptyBorder(12, 22, 12, 22)));
 
         btn_seleccionar = EstiloCompras.primaryBtn("Seleccionar", FontAwesome.CHECK);
-        btn_seleccionar.addActionListener(e -> seleccionarProveedor());
+        btn_seleccionar.addActionListener(e -> seleccionarTransportador());
 
         JPanel right = new JPanel();
         right.setOpaque(false);
@@ -156,7 +156,7 @@ public class jd_buscar_proveedor_precios extends javax.swing.JDialog {
 
         modelo.setColumnIdentifiers(new Object[]{"ID", "Nombre", "Cedula/NIT", "Contacto", "Ciudad"});
         ResultSet rs = DB_consultas_R_D.getTabla(
-                "select id, nombre, cedula, contacto, ciudad from contactos where proveedor=1 order by nombre");
+                "select id, nombre, cedula, contacto, ciudad from contactos order by nombre");
         try {
             while (rs.next()) {
                 modelo.addRow(new Object[]{
@@ -171,7 +171,7 @@ public class jd_buscar_proveedor_precios extends javax.swing.JDialog {
             jtabla.setModel(modelo);
             ajustarColumnas();
         } catch (Exception e) {
-            System.out.println("Error cargando proveedores: " + e);
+            System.out.println("Error cargando transportadores: " + e);
         }
     }
 
@@ -184,17 +184,17 @@ public class jd_buscar_proveedor_precios extends javax.swing.JDialog {
         columnModel.getColumn(4).setPreferredWidth(120);
     }
 
-    private void seleccionarProveedor() {
+    private void seleccionarTransportador() {
         int fila = jtabla.getSelectedRow();
         if (fila < 0) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Seleccione un proveedor");
+            javax.swing.JOptionPane.showMessageDialog(this, "Seleccione un transportador");
             return;
         }
         // La tabla puede estar filtrada/ordenada: convertir a indice del modelo.
         int filaModelo = jtabla.convertRowIndexToModel(fila);
         int id = Integer.parseInt(jtabla.getModel().getValueAt(filaModelo, 0).toString());
 
-        javax.swing.JComboBox<Contactos> combo = jif_crear_ingreso_precios.jbox_proveedor;
+        javax.swing.JComboBox<Contactos> combo = jif_crear_ingreso_precios.jbox_transportador;
         for (int i = 0; i < combo.getItemCount(); i++) {
             Contactos c = combo.getItemAt(i);
             if (c.getId() == id) {

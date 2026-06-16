@@ -1,8 +1,25 @@
 package Precios;
 
 import Formularios.frm_main;
+import Formularios_internos.jif_crear_producto;
+import Metodos.EstiloCompras;
+import Metodos.FontAwesome;
 import Metodos.metodos;
+import com.formdev.flatlaf.FlatClientProperties;
 import conexiondb.DB_consultas_R_D;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import conexiondb.DBingresosPrecios;
 import conexiondb.DBpreciosProductos;
 import conexiondb.ReplicaIngresoOrden;
@@ -82,14 +99,16 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
     // true = ingreso nuevo; false = editando uno existente.
     public static boolean es_nuevo = true;
 
+    // Referencia al ingreso abierto: la usa jif_crear_producto para agregar a la
+    // tabla, de inmediato, el producto recien creado desde "Crear producto".
+    public static jif_crear_ingreso_precios instancia = null;
+
     public jif_crear_ingreso_precios() {
+        instancia = this;
         initComponents();
         inicializar_modelo();
         configurarColumnasYBodega();
         btn_calcular_utildiad_porcentaje.setVisible(false);
-        // La creacion de productos se hace en el modulo Productos de
-        // controlbodega (tabla unificada).
-        btn_crear_producto.setVisible(false);
 
         Contactos proveedor = new Contactos();
         proveedor.MostrarNombreProveedores(jbox_proveedor);
@@ -315,527 +334,371 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
 
     @SuppressWarnings("unchecked")
     private void initComponents() {
-
-        pnl_ingreso = new javax.swing.JPanel();
-        btn_limpiar = new javax.swing.JButton();
-        btn_guardar = new javax.swing.JButton();
-        chk_cerrar = new javax.swing.JCheckBox();
-        jLabel27 = new javax.swing.JLabel();
-        lbl_total_items = new javax.swing.JLabel();
-        btn_imprimir = new javax.swing.JButton();
-        jPanel1 = new javax.swing.JPanel();
-        jLabel1 = new javax.swing.JLabel();
-        txt_codigo_barras = new javax.swing.JTextField();
-        btn_buscar = new javax.swing.JButton();
-        btn_crear_producto = new javax.swing.JButton();
-        btn_calcular_costos = new javax.swing.JButton();
-        btn_precargar = new javax.swing.JButton();
-        btn_Exportar_Worold = new javax.swing.JButton();
-        btn_calcular_precios_venta = new javax.swing.JButton();
-        btn_calcular_utildiad_porcentaje = new javax.swing.JButton();
-        jPanel2 = new javax.swing.JPanel();
-        jbox_proveedor = new javax.swing.JComboBox<>();
-        jLabel20 = new javax.swing.JLabel();
-        jLabel23 = new javax.swing.JLabel();
-        jdate_fecha_entrada = new com.toedter.calendar.JDateChooser();
-        lbl_id = new javax.swing.JLabel();
-        jLabel26 = new javax.swing.JLabel();
-        txt_no_factura = new javax.swing.JTextField();
-        jbox_transportador = new javax.swing.JComboBox<>();
-        jLabel22 = new javax.swing.JLabel();
-        txt_redondear = new javax.swing.JTextField();
-        jLabel32 = new javax.swing.JLabel();
-        btn_buscar_proveedor = new javax.swing.JButton();
-        jPanel3 = new javax.swing.JPanel();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        jtabla = new javax.swing.JTable();
-        jpanel_dinero = new javax.swing.JPanel();
-        jScrollPane2 = new javax.swing.JScrollPane();
-        txt_observacion = new javax.swing.JTextArea();
-        jpanel_dinero1 = new javax.swing.JPanel();
-        jLabel28 = new javax.swing.JLabel();
-        lbl_sub_total = new javax.swing.JLabel();
-        jLabel29 = new javax.swing.JLabel();
-        lbl_iva = new javax.swing.JLabel();
-        jLabel30 = new javax.swing.JLabel();
-        lbl_total_factura = new javax.swing.JLabel();
-        jLabel31 = new javax.swing.JLabel();
-        lbl_descuento = new javax.swing.JLabel();
-
         setTitle("Ingreso de productos (Precios)");
         setModal(true);
 
-        pnl_ingreso.setBackground(new java.awt.Color(255, 255, 255));
-
-        btn_limpiar.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
-        btn_limpiar.setIcon(new javax.swing.ImageIcon(getClass().getResource("/imagenes/limpiar.png"))); // NOI18N
-        btn_limpiar.setMnemonic('l');
-        btn_limpiar.setText("Limpiar");
-        btn_limpiar.setBorder(null);
-        btn_limpiar.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn_limpiarActionPerformed(evt);
-            }
-        });
-
-        btn_guardar.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
-        btn_guardar.setIcon(new javax.swing.ImageIcon(getClass().getResource("/imagenes/guardar.png"))); // NOI18N
-        btn_guardar.setMnemonic('g');
-        btn_guardar.setText("Guardar");
-        btn_guardar.setBorder(null);
-        btn_guardar.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn_guardarActionPerformed(evt);
-            }
-        });
-
-        chk_cerrar.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
-        chk_cerrar.setForeground(new java.awt.Color(51, 51, 51));
-        chk_cerrar.setSelected(true);
-        chk_cerrar.setText("Cerrar formulario al guardar");
-
-        jLabel27.setFont(new java.awt.Font("Tahoma", 1, 20)); // NOI18N
-        jLabel27.setForeground(new java.awt.Color(51, 51, 51));
-        jLabel27.setText("Total Items:");
-
-        lbl_total_items.setFont(new java.awt.Font("Tahoma", 1, 20)); // NOI18N
-        lbl_total_items.setForeground(new java.awt.Color(0, 153, 0));
-        lbl_total_items.setText("0.0");
-
-        btn_imprimir.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
-        btn_imprimir.setIcon(new javax.swing.ImageIcon(getClass().getResource("/imagenes/print_24.png"))); // NOI18N
-        btn_imprimir.setText("Imprimir Tickets");
-        btn_imprimir.setBorder(null);
-        btn_imprimir.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn_imprimirActionPerformed(evt);
-            }
-        });
-
-        javax.swing.GroupLayout pnl_ingresoLayout = new javax.swing.GroupLayout(pnl_ingreso);
-        pnl_ingreso.setLayout(pnl_ingresoLayout);
-        pnl_ingresoLayout.setHorizontalGroup(
-            pnl_ingresoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(pnl_ingresoLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(pnl_ingresoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(pnl_ingresoLayout.createSequentialGroup()
-                        .addComponent(chk_cerrar)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 150, Short.MAX_VALUE)
-                        .addComponent(jLabel27)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(lbl_total_items))
-                    .addGroup(pnl_ingresoLayout.createSequentialGroup()
-                        .addComponent(btn_guardar, javax.swing.GroupLayout.PREFERRED_SIZE, 146, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(btn_limpiar, javax.swing.GroupLayout.PREFERRED_SIZE, 146, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(btn_imprimir)
-                        .addGap(0, 0, Short.MAX_VALUE)))
-                .addContainerGap())
-        );
-        pnl_ingresoLayout.setVerticalGroup(
-            pnl_ingresoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(pnl_ingresoLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(pnl_ingresoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(btn_guardar)
-                    .addComponent(btn_limpiar)
-                    .addComponent(btn_imprimir))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(pnl_ingresoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(pnl_ingresoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                        .addComponent(jLabel27)
-                        .addComponent(lbl_total_items))
-                    .addComponent(chk_cerrar))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        );
-
-        jPanel1.setBackground(new java.awt.Color(225, 233, 236));
-
-        jLabel1.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        jLabel1.setForeground(new java.awt.Color(57, 75, 85));
-        jLabel1.setText("Codigo de barras");
-
-        txt_codigo_barras.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        txt_codigo_barras.setForeground(new java.awt.Color(57, 75, 85));
-        txt_codigo_barras.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyPressed(java.awt.event.KeyEvent evt) {
-                txt_codigo_barrasKeyPressed(evt);
-            }
-        });
-
-        btn_buscar.setBackground(new java.awt.Color(250, 171, 26));
-        btn_buscar.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        btn_buscar.setForeground(new java.awt.Color(0, 51, 51));
-        btn_buscar.setText("Buscar producto");
-        btn_buscar.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn_buscarActionPerformed(evt);
-            }
-        });
-
-        btn_crear_producto.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        btn_crear_producto.setText("Crear Producto");
-
-        btn_calcular_costos.setBackground(new java.awt.Color(255, 51, 51));
-        btn_calcular_costos.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        btn_calcular_costos.setForeground(new java.awt.Color(255, 255, 255));
-        btn_calcular_costos.setText("Calcular Costos");
-        btn_calcular_costos.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn_calcular_costosActionPerformed(evt);
-            }
-        });
-
-        btn_precargar.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        btn_precargar.setText("Precargar Costos  e IVA");
-        btn_precargar.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn_precargarActionPerformed(evt);
-            }
-        });
-
-        btn_Exportar_Worold.setBackground(new java.awt.Color(78, 205, 196));
-        btn_Exportar_Worold.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        btn_Exportar_Worold.setText("Exportar A World Office");
-        btn_Exportar_Worold.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn_Exportar_WoroldActionPerformed(evt);
-            }
-        });
-
-        btn_calcular_precios_venta.setBackground(new java.awt.Color(153, 0, 153));
-        btn_calcular_precios_venta.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        btn_calcular_precios_venta.setForeground(new java.awt.Color(255, 255, 255));
-        btn_calcular_precios_venta.setText("Calcular P. Venta");
-        btn_calcular_precios_venta.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn_calcular_precios_ventaActionPerformed(evt);
-            }
-        });
-
-        btn_calcular_utildiad_porcentaje.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        btn_calcular_utildiad_porcentaje.setText("Calcular Utilidad");
-        btn_calcular_utildiad_porcentaje.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn_calcular_utildiad_porcentajeActionPerformed(evt);
-            }
-        });
-
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel1)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(txt_codigo_barras, javax.swing.GroupLayout.PREFERRED_SIZE, 304, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(btn_buscar)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(btn_crear_producto)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 372, Short.MAX_VALUE)
-                .addComponent(btn_calcular_utildiad_porcentaje)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(btn_Exportar_Worold)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(btn_precargar)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(btn_calcular_costos)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(btn_calcular_precios_venta)
-                .addContainerGap())
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel1)
-                    .addComponent(txt_codigo_barras, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btn_buscar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(btn_crear_producto)
-                    .addComponent(btn_calcular_precios_venta)
-                    .addComponent(btn_calcular_costos)
-                    .addComponent(btn_precargar, javax.swing.GroupLayout.PREFERRED_SIZE, 29, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btn_Exportar_Worold)
-                    .addComponent(btn_calcular_utildiad_porcentaje))
-                .addContainerGap())
-        );
-
-        jPanel2.setBackground(new java.awt.Color(84, 104, 120));
-
-        jbox_proveedor.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
+        // ---------------- Documento ----------------
+        jbox_proveedor = new JComboBox<>();
+        EstiloCompras.styleCombo(jbox_proveedor);
         jbox_proveedor.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyPressed(java.awt.event.KeyEvent evt) {
                 jbox_proveedorKeyPressed(evt);
             }
         });
 
-        jLabel20.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        jLabel20.setForeground(new java.awt.Color(246, 248, 243));
-        jLabel20.setText("Proveedor");
+        jbox_transportador = new JComboBox<>();
+        EstiloCompras.styleCombo(jbox_transportador);
 
-        jLabel23.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        jLabel23.setForeground(new java.awt.Color(246, 248, 243));
-        jLabel23.setText("Fecha entrada");
+        jdate_fecha_entrada = new com.toedter.calendar.JDateChooser();
+        jdate_fecha_entrada.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        jdate_fecha_entrada.setPreferredSize(new Dimension(0, 38));
 
-        jdate_fecha_entrada.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
+        txt_no_factura = new javax.swing.JTextField();
+        estiloCampo(txt_no_factura);
 
-        lbl_id.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        lbl_id.setForeground(new java.awt.Color(255, 153, 153));
-        lbl_id.setText("numero");
+        txt_redondear = new javax.swing.JTextField("2");
+        estiloCampo(txt_redondear);
 
-        jLabel26.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        jLabel26.setForeground(new java.awt.Color(246, 248, 243));
-        jLabel26.setText("Redondear");
+        lbl_id = new JLabel("0");
+        lbl_id.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        lbl_id.setForeground(EstiloCompras.PRIMARY);
 
-        txt_no_factura.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        txt_no_factura.setForeground(new java.awt.Color(57, 75, 85));
-
-        jbox_transportador.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-
-        jLabel22.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        jLabel22.setForeground(new java.awt.Color(246, 248, 243));
-        jLabel22.setText("Transportador");
-
-        txt_redondear.setText("2");
-
-        jLabel32.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        jLabel32.setForeground(new java.awt.Color(246, 248, 243));
-        jLabel32.setText("Número de factura");
-
-        btn_buscar_proveedor.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        btn_buscar_proveedor.setForeground(new java.awt.Color(0, 51, 51));
-        btn_buscar_proveedor.setIcon(new javax.swing.ImageIcon(getClass().getResource("/imagenes/bucar.png"))); // NOI18N
+        btn_buscar_proveedor = new JButton(FontAwesome.icon(FontAwesome.SEARCH, 14f, EstiloCompras.PRIMARY));
+        EstiloCompras.secondaryButton(btn_buscar_proveedor);
         btn_buscar_proveedor.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btn_buscar_proveedorActionPerformed(evt);
             }
         });
 
-        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
-        jPanel2.setLayout(jPanel2Layout);
-        jPanel2Layout.setHorizontalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel2Layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addComponent(jLabel20)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jbox_proveedor, javax.swing.GroupLayout.PREFERRED_SIZE, 199, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(btn_buscar_proveedor))
-                    .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addComponent(jLabel22)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jbox_transportador, javax.swing.GroupLayout.PREFERRED_SIZE, 231, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel32)
-                    .addComponent(jLabel23))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jdate_fecha_entrada, javax.swing.GroupLayout.DEFAULT_SIZE, 186, Short.MAX_VALUE)
-                    .addComponent(txt_no_factura))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 1157, Short.MAX_VALUE)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(lbl_id)
-                    .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addComponent(jLabel26)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(txt_redondear, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap())
-        );
-        jPanel2Layout.setVerticalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel2Layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addComponent(lbl_id)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(txt_redondear, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jLabel26)))
-                    .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(btn_buscar_proveedor, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                .addComponent(jLabel20)
-                                .addComponent(jbox_proveedor, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addComponent(jLabel32)
-                                .addComponent(txt_no_factura, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jdate_fecha_entrada, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                .addComponent(jLabel22)
-                                .addComponent(jbox_transportador, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addComponent(jLabel23)))))
-                .addContainerGap(10, Short.MAX_VALUE))
-        );
+        btn_buscar_transportador = new JButton(FontAwesome.icon(FontAwesome.SEARCH, 14f, EstiloCompras.PRIMARY));
+        EstiloCompras.secondaryButton(btn_buscar_transportador);
+        btn_buscar_transportador.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jd_buscar_transportador_precios d = new jd_buscar_transportador_precios(null, true);
+                d.setVisible(true);
+            }
+        });
 
-        jPanel3.setBackground(new java.awt.Color(255, 255, 255));
+        // ---------------- Barra de captura ----------------
+        txt_codigo_barras = new javax.swing.JTextField();
+        estiloCampo(txt_codigo_barras);
+        txt_codigo_barras.putClientProperty(FlatClientProperties.TEXT_FIELD_LEADING_ICON,
+                FontAwesome.icon(FontAwesome.BARCODE, 15f, EstiloCompras.TEXT_SECONDARY));
+        txt_codigo_barras.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                txt_codigo_barrasKeyPressed(evt);
+            }
+        });
 
-        jtabla.setFont(new java.awt.Font("Yu Gothic Medium", 0, 24)); // NOI18N
-        jtabla.setModel(new javax.swing.table.DefaultTableModel(
-            new Object[][]{},
-            new String[]{}
-        ));
-        jtabla.setRowHeight(50);
-        jtabla.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-        jScrollPane1.setViewportView(jtabla);
+        btn_buscar = new JButton("Buscar producto", FontAwesome.icon(FontAwesome.SEARCH, 14f, Color.WHITE));
+        EstiloCompras.primaryButton(btn_buscar);
+        btn_buscar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_buscarActionPerformed(evt);
+            }
+        });
 
-        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
-        jPanel3.setLayout(jPanel3Layout);
-        jPanel3Layout.setHorizontalGroup(
-            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane1)
-        );
-        jPanel3Layout.setVerticalGroup(
-            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 445, Short.MAX_VALUE)
-        );
+        btn_crear_producto = new JButton("Crear producto", FontAwesome.icon(FontAwesome.PLUS, 14f, Color.WHITE));
+        EstiloCompras.successButton(btn_crear_producto);
+        btn_crear_producto.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jif_crear_producto fp = new jif_crear_producto();
+                jif_crear_producto.formulario = "precios";
+                fp.setVisible(true);
+            }
+        });
 
-        jpanel_dinero.setBackground(new java.awt.Color(255, 255, 255));
+        btn_calcular_costos = new JButton("Calcular costos", FontAwesome.icon(FontAwesome.SYNC, 14f, Color.WHITE));
+        EstiloCompras.primaryButton(btn_calcular_costos);
+        btn_calcular_costos.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_calcular_costosActionPerformed(evt);
+            }
+        });
 
-        txt_observacion.setColumns(20);
-        txt_observacion.setFont(new java.awt.Font("Yu Gothic Medium", 0, 18)); // NOI18N
-        txt_observacion.setRows(5);
-        jScrollPane2.setViewportView(txt_observacion);
+        btn_precargar = new JButton("Precargar costos e IVA", FontAwesome.icon(FontAwesome.ARROW_DOWN, 14f, EstiloCompras.PRIMARY));
+        EstiloCompras.secondaryButton(btn_precargar);
+        btn_precargar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_precargarActionPerformed(evt);
+            }
+        });
 
-        javax.swing.GroupLayout jpanel_dineroLayout = new javax.swing.GroupLayout(jpanel_dinero);
-        jpanel_dinero.setLayout(jpanel_dineroLayout);
-        jpanel_dineroLayout.setHorizontalGroup(
-            jpanel_dineroLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jpanel_dineroLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 829, Short.MAX_VALUE)
-                .addContainerGap())
-        );
-        jpanel_dineroLayout.setVerticalGroup(
-            jpanel_dineroLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jpanel_dineroLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
-                .addContainerGap())
-        );
+        btn_Exportar_Worold = new JButton("Exportar a World Office", FontAwesome.icon(FontAwesome.FILE_INVOICE, 14f, EstiloCompras.PRIMARY));
+        EstiloCompras.secondaryButton(btn_Exportar_Worold);
+        btn_Exportar_Worold.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_Exportar_WoroldActionPerformed(evt);
+            }
+        });
 
-        jpanel_dinero1.setBackground(new java.awt.Color(255, 255, 255));
+        btn_calcular_precios_venta = new JButton("Calcular P. Venta", FontAwesome.icon(FontAwesome.SYNC, 14f, Color.WHITE));
+        EstiloCompras.primaryButton(btn_calcular_precios_venta);
+        btn_calcular_precios_venta.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_calcular_precios_ventaActionPerformed(evt);
+            }
+        });
 
-        jLabel28.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        jLabel28.setForeground(new java.awt.Color(51, 51, 51));
-        jLabel28.setText("Sub Total:");
+        btn_calcular_utildiad_porcentaje = new JButton("Calcular utilidad", FontAwesome.icon(FontAwesome.SYNC, 14f, EstiloCompras.PRIMARY));
+        EstiloCompras.secondaryButton(btn_calcular_utildiad_porcentaje);
+        btn_calcular_utildiad_porcentaje.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_calcular_utildiad_porcentajeActionPerformed(evt);
+            }
+        });
 
-        lbl_sub_total.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        lbl_sub_total.setForeground(new java.awt.Color(102, 0, 102));
-        lbl_sub_total.setText("0.0");
+        // ---------------- Tabla ----------------
+        jtabla = new javax.swing.JTable();
+        jtabla.setModel(new javax.swing.table.DefaultTableModel(new Object[][]{}, new String[]{}));
+        EstiloCompras.styleTable(jtabla);
+        jtabla.setRowHeight(40);
+        jtabla.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        jScrollPane1 = new JScrollPane(jtabla);
+        jScrollPane1.setBorder(BorderFactory.createLineBorder(EstiloCompras.DIVIDER, 1));
 
-        jLabel29.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        jLabel29.setForeground(new java.awt.Color(51, 51, 51));
-        jLabel29.setText("IVA:");
+        jPanel3 = new JPanel(new BorderLayout());
+        jPanel3.setBackground(EstiloCompras.BG_FORM);
+        jPanel3.add(jScrollPane1, BorderLayout.CENTER);
 
-        lbl_iva.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        lbl_iva.setForeground(new java.awt.Color(153, 0, 0));
-        lbl_iva.setText("0.0");
+        // ---------------- Observacion ----------------
+        txt_observacion = new javax.swing.JTextArea();
+        txt_observacion.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        txt_observacion.setLineWrap(true);
+        txt_observacion.setWrapStyleWord(true);
+        jScrollPane2 = new JScrollPane(txt_observacion);
+        jScrollPane2.setBorder(BorderFactory.createLineBorder(EstiloCompras.DIVIDER, 1));
 
-        jLabel30.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        jLabel30.setForeground(new java.awt.Color(51, 51, 51));
-        jLabel30.setText("Total :");
+        // ---------------- Totales ----------------
+        lbl_sub_total = valorTotal(EstiloCompras.PRIMARY);
+        lbl_descuento = valorTotal(new Color(0x9A7D0A));
+        lbl_iva = valorTotal(EstiloCompras.DANGER);
+        lbl_total_factura = valorTotal(EstiloCompras.SUCCESS);
+        lbl_total_items = new JLabel("0");
+        lbl_total_items.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lbl_total_items.setForeground(EstiloCompras.SUCCESS);
 
-        lbl_total_factura.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        lbl_total_factura.setForeground(new java.awt.Color(0, 153, 0));
-        lbl_total_factura.setText("0.0");
+        // ---------------- Acciones ----------------
+        btn_guardar = new JButton("Guardar", FontAwesome.icon(FontAwesome.SAVE, 15f, Color.WHITE));
+        EstiloCompras.successButton(btn_guardar);
+        btn_guardar.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        btn_guardar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_guardarActionPerformed(evt);
+            }
+        });
 
-        jLabel31.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        jLabel31.setForeground(new java.awt.Color(51, 51, 51));
-        jLabel31.setText("Descuento:");
+        btn_limpiar = new JButton("Limpiar", FontAwesome.icon(FontAwesome.SYNC, 15f, EstiloCompras.PRIMARY));
+        EstiloCompras.secondaryButton(btn_limpiar);
+        btn_limpiar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_limpiarActionPerformed(evt);
+            }
+        });
 
-        lbl_descuento.setFont(new java.awt.Font("Yu Gothic Medium", 1, 14)); // NOI18N
-        lbl_descuento.setForeground(new java.awt.Color(153, 153, 0));
-        lbl_descuento.setText("0.0");
+        btn_imprimir = new JButton("Imprimir tickets", FontAwesome.icon(FontAwesome.LIST, 15f, EstiloCompras.PRIMARY));
+        EstiloCompras.secondaryButton(btn_imprimir);
+        btn_imprimir.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_imprimirActionPerformed(evt);
+            }
+        });
 
-        javax.swing.GroupLayout jpanel_dinero1Layout = new javax.swing.GroupLayout(jpanel_dinero1);
-        jpanel_dinero1.setLayout(jpanel_dinero1Layout);
-        jpanel_dinero1Layout.setHorizontalGroup(
-            jpanel_dinero1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jpanel_dinero1Layout.createSequentialGroup()
-                .addContainerGap(458, Short.MAX_VALUE)
-                .addGroup(jpanel_dinero1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jpanel_dinero1Layout.createSequentialGroup()
-                        .addComponent(jLabel28)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(lbl_sub_total))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jpanel_dinero1Layout.createSequentialGroup()
-                        .addComponent(jLabel29)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(lbl_iva))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jpanel_dinero1Layout.createSequentialGroup()
-                        .addComponent(jLabel30)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(lbl_total_factura))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jpanel_dinero1Layout.createSequentialGroup()
-                        .addComponent(jLabel31)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(lbl_descuento)))
-                .addContainerGap())
-        );
-        jpanel_dinero1Layout.setVerticalGroup(
-            jpanel_dinero1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jpanel_dinero1Layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(jpanel_dinero1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel28)
-                    .addComponent(lbl_sub_total))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jpanel_dinero1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel31)
-                    .addComponent(lbl_descuento))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jpanel_dinero1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel29)
-                    .addComponent(lbl_iva))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jpanel_dinero1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel30)
-                    .addComponent(lbl_total_factura))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        );
+        chk_cerrar = new javax.swing.JCheckBox("Cerrar al guardar", true);
+        chk_cerrar.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        chk_cerrar.setOpaque(false);
+        chk_cerrar.setForeground(EstiloCompras.TEXT_SECONDARY);
+        chk_cerrar.setFocusPainted(false);
 
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-        getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addGroup(layout.createSequentialGroup()
-                .addComponent(pnl_ingreso, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jpanel_dinero, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jpanel_dinero1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-            .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                    .addComponent(pnl_ingreso, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jpanel_dinero, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jpanel_dinero1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-        );
+        // ---------------- Ensamblado ----------------
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(EstiloCompras.BG_FORM);
 
-        pack();
+        JPanel north = new JPanel(new BorderLayout());
+        north.setOpaque(false);
+        north.add(EstiloCompras.header(FontAwesome.FILE_INVOICE, "Ingreso de productos (Precios)", new Runnable() {
+            public void run() {
+                dispose();
+            }
+        }), BorderLayout.NORTH);
+
+        JPanel cards = new JPanel();
+        cards.setLayout(new BoxLayout(cards, BoxLayout.Y_AXIS));
+        cards.setBackground(EstiloCompras.BG_FORM);
+        cards.setBorder(BorderFactory.createEmptyBorder(16, 22, 8, 22));
+
+        JPanel fila1 = filaHorizontal();
+        fila1.add(EstiloCompras.labeled("Proveedor", comboConBoton(jbox_proveedor, btn_buscar_proveedor), 0));
+        fila1.add(Box.createHorizontalStrut(14));
+        fila1.add(EstiloCompras.labeled("Transportador", comboConBoton(jbox_transportador, btn_buscar_transportador), 0));
+        cards.add(fila1);
+        cards.add(Box.createVerticalStrut(10));
+
+        JPanel fila2 = filaHorizontal();
+        fila2.add(EstiloCompras.labeled("Fecha de entrada", jdate_fecha_entrada, 220));
+        fila2.add(Box.createHorizontalStrut(14));
+        fila2.add(EstiloCompras.labeled("Numero de factura", txt_no_factura, 0));
+        fila2.add(Box.createHorizontalStrut(14));
+        fila2.add(EstiloCompras.labeled("Redondear", txt_redondear, 110));
+        fila2.add(Box.createHorizontalStrut(14));
+        fila2.add(EstiloCompras.labeled("Consecutivo", lbl_id, 150));
+        cards.add(fila2);
+        cards.add(Box.createVerticalStrut(12));
+
+        JPanel toolbar = new JPanel(new BorderLayout(12, 0));
+        toolbar.setBackground(EstiloCompras.BG_SECTION);
+        toolbar.setAlignmentX(Component.LEFT_ALIGNMENT);
+        toolbar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 64));
+        toolbar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(EstiloCompras.DIVIDER, 1),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
+
+        JPanel toolLeft = new JPanel();
+        toolLeft.setOpaque(false);
+        toolLeft.setLayout(new BoxLayout(toolLeft, BoxLayout.X_AXIS));
+        txt_codigo_barras.setPreferredSize(new Dimension(320, 38));
+        txt_codigo_barras.setMaximumSize(new Dimension(320, 38));
+        toolLeft.add(txt_codigo_barras);
+        toolLeft.add(Box.createHorizontalStrut(8));
+        toolLeft.add(btn_buscar);
+        toolLeft.add(Box.createHorizontalStrut(8));
+        toolLeft.add(btn_crear_producto);
+
+        JPanel toolRight = new JPanel();
+        toolRight.setOpaque(false);
+        toolRight.setLayout(new BoxLayout(toolRight, BoxLayout.X_AXIS));
+        toolRight.add(btn_calcular_utildiad_porcentaje);
+        toolRight.add(Box.createHorizontalStrut(8));
+        toolRight.add(btn_Exportar_Worold);
+        toolRight.add(Box.createHorizontalStrut(8));
+        toolRight.add(btn_precargar);
+        toolRight.add(Box.createHorizontalStrut(8));
+        toolRight.add(btn_calcular_costos);
+        toolRight.add(Box.createHorizontalStrut(8));
+        toolRight.add(btn_calcular_precios_venta);
+
+        toolbar.add(toolLeft, BorderLayout.WEST);
+        toolbar.add(toolRight, BorderLayout.EAST);
+        cards.add(toolbar);
+
+        north.add(cards, BorderLayout.CENTER);
+        root.add(north, BorderLayout.NORTH);
+
+        JPanel center = new JPanel(new BorderLayout());
+        center.setBackground(EstiloCompras.BG_FORM);
+        center.setBorder(BorderFactory.createEmptyBorder(0, 22, 0, 22));
+        center.add(jPanel3, BorderLayout.CENTER);
+        root.add(center, BorderLayout.CENTER);
+
+        JPanel south = new JPanel(new BorderLayout(16, 0));
+        south.setBackground(EstiloCompras.BG_SECTION);
+        south.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, EstiloCompras.DIVIDER),
+                BorderFactory.createEmptyBorder(12, 22, 12, 22)));
+
+        JPanel obs = new JPanel(new BorderLayout(0, 4));
+        obs.setOpaque(false);
+        obs.setPreferredSize(new Dimension(420, 150));
+        JLabel lblObs = new JLabel("Observacion");
+        lblObs.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblObs.setForeground(EstiloCompras.TEXT_SECONDARY);
+        obs.add(lblObs, BorderLayout.NORTH);
+        obs.add(jScrollPane2, BorderLayout.CENTER);
+        jpanel_dinero = obs;
+
+        jpanel_dinero1 = new JPanel();
+        jpanel_dinero1.setOpaque(false);
+        jpanel_dinero1.setLayout(new java.awt.GridLayout(4, 2, 16, 6));
+        jpanel_dinero1.add(etiquetaTotal("Sub Total:"));
+        jpanel_dinero1.add(lbl_sub_total);
+        jpanel_dinero1.add(etiquetaTotal("Descuento:"));
+        jpanel_dinero1.add(lbl_descuento);
+        jpanel_dinero1.add(etiquetaTotal("IVA:"));
+        jpanel_dinero1.add(lbl_iva);
+        jpanel_dinero1.add(etiquetaTotal("Total:"));
+        jpanel_dinero1.add(lbl_total_factura);
+        JPanel totalesWrap = new JPanel(new java.awt.GridBagLayout());
+        totalesWrap.setOpaque(false);
+        totalesWrap.add(jpanel_dinero1);
+
+        pnl_ingreso = new JPanel();
+        pnl_ingreso.setOpaque(false);
+        pnl_ingreso.setLayout(new BoxLayout(pnl_ingreso, BoxLayout.Y_AXIS));
+
+        JPanel itemsRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 6, 0));
+        itemsRow.setOpaque(false);
+        JLabel lblItems = new JLabel("Total items:");
+        lblItems.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        lblItems.setForeground(EstiloCompras.TEXT_PRIMARY);
+        itemsRow.add(lblItems);
+        itemsRow.add(lbl_total_items);
+        itemsRow.setAlignmentX(Component.RIGHT_ALIGNMENT);
+
+        JPanel botonesRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 8, 0));
+        botonesRow.setOpaque(false);
+        botonesRow.add(btn_imprimir);
+        botonesRow.add(btn_limpiar);
+        botonesRow.add(btn_guardar);
+        botonesRow.setAlignmentX(Component.RIGHT_ALIGNMENT);
+
+        JPanel chkRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 0, 0));
+        chkRow.setOpaque(false);
+        chkRow.add(chk_cerrar);
+        chkRow.setAlignmentX(Component.RIGHT_ALIGNMENT);
+
+        pnl_ingreso.add(itemsRow);
+        pnl_ingreso.add(Box.createVerticalStrut(8));
+        pnl_ingreso.add(botonesRow);
+        pnl_ingreso.add(Box.createVerticalStrut(4));
+        pnl_ingreso.add(chkRow);
+
+        south.add(jpanel_dinero, BorderLayout.WEST);
+        south.add(totalesWrap, BorderLayout.CENTER);
+        south.add(pnl_ingreso, BorderLayout.EAST);
+        root.add(south, BorderLayout.SOUTH);
+
+        setContentPane(root);
+        setSize(1500, 860);
+        setMinimumSize(new Dimension(1100, 700));
+    }
+
+    // ---------------- Helpers de estilo ----------------
+    private void estiloCampo(javax.swing.JTextField f) {
+        f.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        f.setPreferredSize(new Dimension(0, 38));
+    }
+
+    private JPanel comboConBoton(JComboBox combo, JButton boton) {
+        JPanel p = new JPanel(new BorderLayout(6, 0));
+        p.setOpaque(false);
+        p.add(combo, BorderLayout.CENTER);
+        p.add(boton, BorderLayout.EAST);
+        p.setPreferredSize(new Dimension(0, 38));
+        return p;
+    }
+
+    private JPanel filaHorizontal() {
+        JPanel row = new JPanel();
+        row.setOpaque(false);
+        row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 72));
+        return row;
+    }
+
+    private JLabel valorTotal(Color c) {
+        JLabel l = new JLabel("0");
+        l.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        l.setForeground(c);
+        return l;
+    }
+
+    private JLabel etiquetaTotal(String txt) {
+        JLabel l = new JLabel(txt);
+        l.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        l.setForeground(EstiloCompras.TEXT_PRIMARY);
+        return l;
     }
 
     private void btn_limpiarActionPerformed(java.awt.event.ActionEvent evt) {
@@ -1961,6 +1824,7 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
     public static javax.swing.JButton btn_Exportar_Worold;
     public static javax.swing.JButton btn_buscar;
     public static javax.swing.JButton btn_buscar_proveedor;
+    public static javax.swing.JButton btn_buscar_transportador;
     public static javax.swing.JButton btn_calcular_costos;
     public static javax.swing.JButton btn_calcular_precios_venta;
     public static javax.swing.JButton btn_calcular_utildiad_porcentaje;

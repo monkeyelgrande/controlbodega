@@ -55,6 +55,9 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
 
     public frm_Ordenes() {
         initComponents();
+        // Selección múltiple para poder unir varias órdenes (Ctrl/Shift + clic).
+        // getSelectedRow() de ver/editar/anular sigue devolviendo la primera fila.
+        jtabla_facturas.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         actualizar("pendientes");
         columnModel = jtabla_facturas.getColumnModel();
         columncolumnModel_Editar = frm_editar_orden.jtabla_Ventas.getColumnModel();
@@ -93,6 +96,13 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
             btn_editar.setEnabled(false);
             btn_eliminar.setEnabled(false);
         }
+        // Unir órdenes es una propiedad por usuario (opcion 'ordenes_unir');
+        // con la BD sin migrar solo el admin ve el botón.
+        if (Metodos.Permisos.estaCargado()) {
+            btn_unir.setVisible(Metodos.Permisos.puede("ordenes_unir"));
+        } else {
+            btn_unir.setVisible(frm_main.perfil == 1);
+        }
     }
 
     public static void TamanosTablaAbonos() {
@@ -121,6 +131,7 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
         btn_ver = new javax.swing.JButton();
         btn_eliminar = new javax.swing.JButton();
         btn_editar = new javax.swing.JButton();
+        btn_unir = new javax.swing.JButton();
         jPanel4 = new javax.swing.JPanel();
         lbl_titulo = new javax.swing.JLabel();
         jButton2 = new javax.swing.JButton();
@@ -236,6 +247,16 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
             }
         });
 
+        btn_unir.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        btn_unir.setIcon(new javax.swing.ImageIcon(getClass().getResource("/imagenes/Chain.png"))); // NOI18N
+        btn_unir.setText("Unir órdenes");
+        btn_unir.setBorder(null);
+        btn_unir.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_unirActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(
@@ -246,7 +267,8 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
                     .addComponent(btn_eliminar, javax.swing.GroupLayout.PREFERRED_SIZE, 142, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btn_ver, javax.swing.GroupLayout.PREFERRED_SIZE, 142, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btn_actualizar, javax.swing.GroupLayout.PREFERRED_SIZE, 142, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btn_editar, javax.swing.GroupLayout.PREFERRED_SIZE, 142, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(btn_editar, javax.swing.GroupLayout.PREFERRED_SIZE, 142, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btn_unir, javax.swing.GroupLayout.PREFERRED_SIZE, 142, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel3Layout.setVerticalGroup(
@@ -260,6 +282,8 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
                 .addComponent(btn_actualizar)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(btn_editar)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(btn_unir)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
@@ -566,6 +590,76 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
         actualizar("");
     }//GEN-LAST:event_btn_ver_con_entregadasActionPerformed
 
+    private void btn_unirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_unirActionPerformed
+        int[] filas = jtabla_facturas.getSelectedRows();
+        if (filas.length < 2) {
+            JOptionPane.showMessageDialog(this,
+                    "Seleccione al menos 2 órdenes para unir.\n"
+                    + "Use Ctrl + clic (o Shift + clic) para seleccionar varias.");
+            return;
+        }
+
+        java.util.List<Integer> ids = new java.util.ArrayList<>();
+        try {
+            for (int fila : filas) {
+                // getValueAt sobre la JTable mapea vista -> modelo (compatible con el filtro)
+                ids.add(Integer.parseInt((String) jtabla_facturas.getValueAt(fila, 0)));
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Selección inválida. Actualice el listado e intente de nuevo.");
+            return;
+        }
+
+        java.util.List<conexiondb.DBfusion_ordenes.OrdenResumen> resumen = new java.util.ArrayList<>();
+        String error = conexiondb.DBfusion_ordenes.validarUnion(ids, resumen);
+        if (error != null) {
+            JOptionPane.showMessageDialog(this, error, "No se puede unir", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // El resumen viene ordenado por id: la primera (más antigua) sobrevive.
+        conexiondb.DBfusion_ordenes.OrdenResumen sobrev = resumen.get(0);
+        int totalLineas = 0;
+        StringBuilder msg = new StringBuilder();
+        msg.append("Se unirán ").append(resumen.size())
+                .append(" órdenes de la bodega ").append(sobrev.bodega).append(":\n\n");
+        msg.append("CONSERVA:  #").append(sobrev.id);
+        if (!sobrev.codigo.isEmpty()) {
+            msg.append(" (").append(sobrev.codigo).append(")");
+        }
+        msg.append(" - ").append(sobrev.cliente)
+                .append("  [").append(sobrev.lineas).append(" líneas]\n");
+        for (int i = 1; i < resumen.size(); i++) {
+            conexiondb.DBfusion_ordenes.OrdenResumen o = resumen.get(i);
+            totalLineas += o.lineas;
+            msg.append("Se anula:  #").append(o.id);
+            if (!o.codigo.isEmpty()) {
+                msg.append(" (").append(o.codigo).append(")");
+            }
+            msg.append(" - ").append(o.cliente)
+                    .append("  [").append(o.lineas).append(" líneas]\n");
+        }
+        msg.append("\nLas ").append(totalLineas)
+                .append(" líneas de las órdenes anuladas pasarán a la orden #").append(sobrev.id)
+                .append(".\nEl stock pendiente NO cambia.\n\n¿Desea continuar?");
+
+        int dialogResult = JOptionPane.showConfirmDialog(this, msg.toString(),
+                "Unir órdenes", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (dialogResult != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        try {
+            int idSobrev = conexiondb.DBfusion_ordenes.unirOrdenes(ids, frm_main.id_user);
+            JOptionPane.showMessageDialog(this, "Órdenes unidas en la orden #" + idSobrev);
+            actualizar("pendientes");
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "No se realizó la fusión (no se hizo ningún cambio):\n" + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }//GEN-LAST:event_btn_unirActionPerformed
+
     private void txt_FiltroKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_txt_FiltroKeyTyped
 
     }//GEN-LAST:event_txt_FiltroKeyTyped
@@ -749,6 +843,7 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
     public static javax.swing.JButton btn_actualizar;
     public static javax.swing.JButton btn_editar;
     private javax.swing.JButton btn_eliminar;
+    private javax.swing.JButton btn_unir;
     public static javax.swing.JButton btn_ver;
     private javax.swing.JButton btn_ver_con_entregadas;
     private javax.swing.JButton jButton2;

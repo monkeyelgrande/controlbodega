@@ -5,7 +5,6 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -24,6 +23,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -60,7 +60,18 @@ public class BarraNotificacionesPanel extends JPanel {
 
     private final JPanel listaPanel;
     private JLabel lblContador;
+    private JLabel lblContadorColapsado;
     private final SimpleDateFormat horaFmt = new SimpleDateFormat("HH:mm");
+
+    // Estado colapsable: cuando esta colapsada solo se muestra una franja
+    // delgada con un boton para volver a expandir.
+    private static final int ANCHO_COLAPSADO = 44;
+    private final int anchoExpandido;
+    private boolean colapsada = false;
+    private JPanel header;
+    private JScrollPane scroll;
+    private JPanel footer;
+    private JPanel stripColapsado;
 
     /** Dedupe por id de cabecera. Cada cabecera = una tarjeta — incluso cuando
      *  wo-printer parte una factura en varias cabeceras (una por bodega), cada
@@ -69,12 +80,13 @@ public class BarraNotificacionesPanel extends JPanel {
     private final LinkedHashSet<String> claves = new LinkedHashSet<>();
 
     public BarraNotificacionesPanel(int anchoPreferido) {
+        this.anchoExpandido = anchoPreferido;
         setLayout(new BorderLayout());
         setBackground(BG_SURFACE);
         setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, DIVIDER));
         setPreferredSize(new Dimension(anchoPreferido, 100));
 
-        add(buildHeader(), BorderLayout.NORTH);
+        header = buildHeader();
 
         listaPanel = new JPanel();
         listaPanel.setLayout(new BoxLayout(listaPanel, BoxLayout.Y_AXIS));
@@ -85,16 +97,17 @@ public class BarraNotificacionesPanel extends JPanel {
         wrap.setBackground(BG_SURFACE);
         wrap.add(listaPanel, BorderLayout.NORTH);
 
-        JScrollPane scroll = new JScrollPane(wrap,
+        scroll = new JScrollPane(wrap,
                 ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setBorder(null);
         scroll.getViewport().setBackground(BG_SURFACE);
         scroll.getVerticalScrollBar().setUnitIncrement(16);
-        add(scroll, BorderLayout.CENTER);
 
-        add(buildFooter(), BorderLayout.SOUTH);
+        footer = buildFooter();
+        stripColapsado = buildStripColapsado();
 
+        mostrarExpandida();
         actualizarContador();
     }
 
@@ -121,8 +134,42 @@ public class BarraNotificacionesPanel extends JPanel {
         left.add(Box.createVerticalStrut(2));
         left.add(subtitulo);
 
+        // Icono Font Awesome (campana) a la izquierda del titulo
+        JLabel icono = new JLabel(FontAwesome.icon(FontAwesome.BELL, 20f, PRIMARY));
+        icono.setBorder(new EmptyBorder(0, 0, 0, 12));
+
+        JPanel oeste = new JPanel();
+        oeste.setLayout(new BoxLayout(oeste, BoxLayout.X_AXIS));
+        oeste.setOpaque(false);
+        oeste.add(icono);
+        oeste.add(left);
+
         // Contador estilo "chip" Material
-        lblContador = new JLabel("0") {
+        lblContador = crearBadge();
+
+        // Boton para colapsar la barra (chevron hacia la derecha)
+        JButton btnColapsar = crearBotonIcono(FontAwesome.CHEVRON_RIGHT, "Ocultar notificaciones");
+        btnColapsar.addActionListener(new ActionListener() {
+            @Override public void actionPerformed(ActionEvent e) {
+                mostrarColapsada();
+            }
+        });
+
+        JPanel right = new JPanel();
+        right.setLayout(new BoxLayout(right, BoxLayout.X_AXIS));
+        right.setOpaque(false);
+        right.add(lblContador);
+        right.add(Box.createHorizontalStrut(6));
+        right.add(btnColapsar);
+
+        header.add(oeste, BorderLayout.WEST);
+        header.add(right, BorderLayout.EAST);
+        return header;
+    }
+
+    /** Crea un chip verde redondeado para mostrar el contador. */
+    private JLabel crearBadge() {
+        JLabel l = new JLabel("0") {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -132,20 +179,93 @@ public class BarraNotificacionesPanel extends JPanel {
                 super.paintComponent(g);
             }
         };
-        lblContador.setForeground(Color.WHITE);
-        lblContador.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        lblContador.setOpaque(false);
-        lblContador.setHorizontalAlignment(JLabel.CENTER);
-        lblContador.setBorder(new EmptyBorder(4, 12, 4, 12));
-        lblContador.setPreferredSize(new Dimension(36, 24));
+        l.setForeground(Color.WHITE);
+        l.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        l.setOpaque(false);
+        l.setHorizontalAlignment(JLabel.CENTER);
+        l.setBorder(new EmptyBorder(4, 12, 4, 12));
+        l.setPreferredSize(new Dimension(36, 24));
+        l.setMaximumSize(new Dimension(36, 24));
+        return l;
+    }
 
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        right.setOpaque(false);
-        right.add(lblContador);
+    /** Boton plano tipo "icono" con un glifo Font Awesome; hover verde. */
+    private JButton crearBotonIcono(String glyph, String tooltip) {
+        final JButton b = new JButton(FontAwesome.icon(glyph, 15f, TEXT_SECONDARY));
+        b.setRolloverIcon(FontAwesome.icon(glyph, 15f, PRIMARY));
+        b.setBackground(BG_CARD);
+        b.setFocusPainted(false);
+        b.setContentAreaFilled(false);
+        b.setBorderPainted(false);
+        b.setBorder(new EmptyBorder(2, 8, 2, 6));
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.setToolTipText(tooltip);
+        return b;
+    }
 
-        header.add(left, BorderLayout.WEST);
-        header.add(right, BorderLayout.EAST);
-        return header;
+    /** Franja delgada visible cuando la barra esta colapsada. */
+    private JPanel buildStripColapsado() {
+        JPanel strip = new JPanel(new BorderLayout());
+        strip.setBackground(BG_CARD);
+        strip.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 1, 0, 0, DIVIDER),
+                new EmptyBorder(14, 4, 14, 4)));
+
+        JButton btnExpandir = crearBotonIcono(FontAwesome.CHEVRON_LEFT, "Mostrar notificaciones");
+        btnExpandir.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnExpandir.addActionListener(new ActionListener() {
+            @Override public void actionPerformed(ActionEvent e) {
+                mostrarExpandida();
+            }
+        });
+
+        lblContadorColapsado = crearBadge();
+        lblContadorColapsado.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel iconoStrip = new JLabel(FontAwesome.icon(FontAwesome.BELL, 18f, PRIMARY));
+        iconoStrip.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JPanel top = new JPanel();
+        top.setOpaque(false);
+        top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
+        top.add(iconoStrip);
+        top.add(Box.createVerticalStrut(12));
+        top.add(btnExpandir);
+        top.add(Box.createVerticalStrut(12));
+        top.add(lblContadorColapsado);
+
+        strip.add(top, BorderLayout.NORTH);
+        strip.add(new VerticalLabel("NOTIFICACIONES"), BorderLayout.CENTER);
+        return strip;
+    }
+
+    private void mostrarExpandida() {
+        removeAll();
+        add(header, BorderLayout.NORTH);
+        add(scroll, BorderLayout.CENTER);
+        add(footer, BorderLayout.SOUTH);
+        setPreferredSize(new Dimension(anchoExpandido, 100));
+        colapsada = false;
+        refrescarTrasToggle();
+    }
+
+    private void mostrarColapsada() {
+        removeAll();
+        add(stripColapsado, BorderLayout.CENTER);
+        setPreferredSize(new Dimension(ANCHO_COLAPSADO, 100));
+        colapsada = true;
+        refrescarTrasToggle();
+    }
+
+    /** Relayout local + del contenedor padre para que cambie el ancho. */
+    private void refrescarTrasToggle() {
+        revalidate();
+        repaint();
+        java.awt.Container p = getParent();
+        if (p != null) {
+            p.revalidate();
+            p.repaint();
+        }
     }
 
     private JPanel buildFooter() {
@@ -234,8 +354,12 @@ public class BarraNotificacionesPanel extends JPanel {
     }
 
     private void actualizarContador() {
+        int n = contarTarjetas();
         if (lblContador != null) {
-            lblContador.setText(String.valueOf(contarTarjetas()));
+            lblContador.setText(String.valueOf(n));
+        }
+        if (lblContadorColapsado != null) {
+            lblContadorColapsado.setText(String.valueOf(n));
         }
     }
 
@@ -288,6 +412,37 @@ public class BarraNotificacionesPanel extends JPanel {
                 agregarNotificacion(n, "FE-" + n, "Cliente Demo " + n, "Principal");
             }
         });
+    }
+
+    // ------------------------------------------------------------------------
+    // Etiqueta con texto rotado 90° para la franja colapsada.
+    // ------------------------------------------------------------------------
+    private class VerticalLabel extends JComponent {
+        private final String texto;
+
+        VerticalLabel(String t) {
+            this.texto = t;
+            setForeground(TEXT_HINT);
+            setFont(new Font("Segoe UI", Font.BOLD, 11));
+        }
+
+        @Override public Dimension getPreferredSize() {
+            return new Dimension(20, 160);
+        }
+
+        @Override protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setFont(getFont());
+            g2.setColor(getForeground());
+            java.awt.FontMetrics fm = g2.getFontMetrics();
+            int tw = fm.stringWidth(texto);
+            int cx = getWidth() / 2;
+            int cy = getHeight() / 2;
+            g2.rotate(-Math.PI / 2, cx, cy);
+            g2.drawString(texto, cx - tw / 2, cy + fm.getAscent() / 2 - 2);
+            g2.dispose();
+        }
     }
 
     // ------------------------------------------------------------------------
