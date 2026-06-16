@@ -5,7 +5,8 @@
  */
 package Formularios;
 
-import Metodos.CellRendererFacturas;
+import Metodos.CellRendererOrdenes;
+import Metodos.ColoresBodega;
 import Metodos.TextPrompt;
 import Metodos.metodos;
 import com.ezware.oxbow.swingbits.table.filter.TableRowFilterSupport;
@@ -44,7 +45,7 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
     frm_editar_orden frm_editar_orden = new frm_editar_orden();
     static TableColumnModel columnModel = null;
     static TableColumnModel columncolumnModel_Editar = null;
-    CellRendererFacturas myRenderer = new CellRendererFacturas();
+    CellRendererOrdenes myRenderer = new CellRendererOrdenes();
 
     static DefaultTableModel modelo_facturas = new DefaultTableModel() {
         @Override
@@ -93,8 +94,15 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
 
     public void permisos() {
         if (frm_main.perfil == 2) {
-            btn_editar.setEnabled(false);
             btn_eliminar.setEnabled(false);
+        }
+        // Editar órdenes es ahora una opción gobernable ('ordenes_editar'),
+        // asignable a la persona o perfil que se necesite. Con la BD sin migrar
+        // se conserva lo anterior: todos editan menos el bodeguero (perfil 2).
+        if (Metodos.Permisos.estaCargado()) {
+            btn_editar.setEnabled(Metodos.Permisos.puede("ordenes_editar"));
+        } else {
+            btn_editar.setEnabled(frm_main.perfil != 2);
         }
         // Unir órdenes es una propiedad por usuario (opcion 'ordenes_unir');
         // con la BD sin migrar solo el admin ve el botón.
@@ -199,7 +207,7 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
                 .addContainerGap()
                 .addComponent(txt_Filtro, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 527, Short.MAX_VALUE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 508, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
@@ -283,7 +291,7 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(btn_editar)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(btn_unir)
+                .addComponent(btn_unir, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
@@ -343,7 +351,7 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, 1112, Short.MAX_VALUE)
+            .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, 1115, Short.MAX_VALUE)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -358,8 +366,8 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(lbl_cant_clientes, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(0, 0, Short.MAX_VALUE))))
+                        .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addContainerGap())))
         );
 
         pack();
@@ -370,6 +378,7 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
     }//GEN-LAST:event_mn_clientesActionPerformed
     public static void actualizar(String tipo) {
         modelo_facturas.setRowCount(0);
+        ColoresBodega.recargar();
         modelo_facturas.setColumnIdentifiers(new Object[]{"id", "# Factura", "Nombre cliente", "Fecha", "Tipo orden", "Estado", "Bodega"});
         String SQL_FACTURAS = "WITH\n"
                 + "  detalles AS (\n"
@@ -701,7 +710,12 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
                 return;
             }
         } else {
-            autorizado = DB_consultas_R_D.validar_admin();
+            // Con la opción 'ordenes_editar' concedida el usuario edita
+            // directamente; con la BD sin migrar se mantiene la clave de
+            // administrador como antes.
+            autorizado = Metodos.Permisos.estaCargado()
+                    ? Metodos.Permisos.puede("ordenes_editar")
+                    : DB_consultas_R_D.validar_admin();
         }
         if (autorizado) {
             DecimalFormatSymbols sim = new DecimalFormatSymbols();
