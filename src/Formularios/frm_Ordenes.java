@@ -117,6 +117,12 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
         columnModel.getColumn(0).setPreferredWidth(10);
         columnModel.getColumn(1).setPreferredWidth(10);
         columnModel.getColumn(2).setPreferredWidth(400);
+        // Columna "Imp." (indicador impreso): pequeña y de ancho fijo.
+        if (columnModel.getColumnCount() > 7) {
+            columnModel.getColumn(7).setMinWidth(30);
+            columnModel.getColumn(7).setMaxWidth(45);
+            columnModel.getColumn(7).setPreferredWidth(40);
+        }
     }
 
     /**
@@ -379,7 +385,7 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
     public static void actualizar(String tipo) {
         modelo_facturas.setRowCount(0);
         ColoresBodega.recargar();
-        modelo_facturas.setColumnIdentifiers(new Object[]{"id", "# Factura", "Nombre cliente", "Fecha", "Tipo orden", "Estado", "Bodega"});
+        modelo_facturas.setColumnIdentifiers(new Object[]{"id", "# Factura", "Nombre cliente", "Fecha", "Tipo orden", "Estado", "Bodega", "Imp."});
         String SQL_FACTURAS = "WITH\n"
                 + "  detalles AS (\n"
                 + "    SELECT \n"
@@ -406,7 +412,8 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
                 + "    - COALESCE(e.total_entregas,  0),\n"
                 + "    0\n"
                 + "  ) AS pendiente,\n"
-                + "  b.nombre AS bodega\n"
+                + "  b.nombre AS bodega,\n"
+                + "  COALESCE(fc.impreso_vendedor, 0) AS impresa\n"
                 + "FROM facturas_cabeceras fc\n"
                 + "JOIN contactos c\n"
                 + "  ON fc.id_contacto = c.id\n"
@@ -444,7 +451,8 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
                     rs.getString("fecha"),
                     rs.getString("tipo_factura"),
                     estado,
-                    rs.getString("bodega") // ← NUEVA COLUMNA AL FINAL
+                    rs.getString("bodega"),
+                    rs.getString("impresa") // ← indicador impreso (1 = sí, 0 = no)
                 });
             }
 

@@ -45,7 +45,7 @@
   <Layout>
     <DimensionLayout dim="0">
       <Group type="103" groupAlignment="0" attributes="0">
-          <Component id="jPanel4" pref="1112" max="32767" attributes="0"/>
+          <Component id="jPanel4" pref="1115" max="32767" attributes="0"/>
           <Group type="102" attributes="0">
               <EmptySpace max="-2" attributes="0"/>
               <Component id="jPanel3" min="-2" max="-2" attributes="0"/>
@@ -62,8 +62,8 @@
               <Group type="103" groupAlignment="0" attributes="0">
                   <Component id="lbl_cant_clientes" max="32767" attributes="0"/>
                   <Group type="102" attributes="0">
-                      <Component id="jPanel3" min="-2" max="-2" attributes="0"/>
-                      <EmptySpace min="0" pref="0" max="32767" attributes="0"/>
+                      <Component id="jPanel3" max="32767" attributes="0"/>
+                      <EmptySpace max="-2" attributes="0"/>
                   </Group>
               </Group>
           </Group>
@@ -100,7 +100,7 @@
                   <EmptySpace max="-2" attributes="0"/>
                   <Component id="txt_Filtro" min="-2" max="-2" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
-                  <Component id="jScrollPane1" pref="527" max="32767" attributes="0"/>
+                  <Component id="jScrollPane1" pref="508" max="32767" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
               </Group>
           </Group>
@@ -189,7 +189,7 @@
                   <EmptySpace max="-2" attributes="0"/>
                   <Component id="btn_editar" min="-2" max="-2" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
-                  <Component id="btn_unir" min="-2" max="-2" attributes="0"/>
+                  <Component id="btn_unir" min="-2" pref="45" max="-2" attributes="0"/>
                   <EmptySpace max="32767" attributes="0"/>
               </Group>
           </Group>

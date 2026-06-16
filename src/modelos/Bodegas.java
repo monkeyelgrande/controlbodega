@@ -20,8 +20,17 @@ public class Bodegas {
     String nombre;
     int id, imprime;
     boolean generaOrdenAutomatica;
+    String color;
 
     public Bodegas() {
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
     }
 
     public int getImprime() {

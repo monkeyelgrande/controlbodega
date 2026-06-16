@@ -69,23 +69,62 @@ public class frm_bodegas extends javax.swing.JInternalFrame {
 
     public void mostrar() {
 
-        ResultSet rs = DB_consultas_R_D.getTabla("select id, nombre, imprime, genera_orden_automatica from bodegas order by id");
-        modelo.setColumnIdentifiers(new Object[]{"id", "Nombre", "Imprime", "Orden auto"});
+        ResultSet rs = DB_consultas_R_D.getTabla("select id, nombre, imprime, genera_orden_automatica, color from bodegas order by id");
+        modelo.setColumnIdentifiers(new Object[]{"id", "Nombre", "Imprime", "Orden auto", "Color"});
         try {
             while (rs.next()) {
                 modelo.addRow(new Object[]{
                     rs.getString("id"),
                     rs.getString("nombre"),
                     rs.getInt("imprime") == 1 ? "Sí" : "No",
-                    rs.getBoolean("genera_orden_automatica") ? "Sí" : "No"
+                    rs.getBoolean("genera_orden_automatica") ? "Sí" : "No",
+                    rs.getString("color")
                 });
             }
             rs.close();
             jtabla_clientes.setModel(modelo);
+            aplicarRendererColor();
             TamanosTablaAbonos();
         } catch (Exception e) {
             System.out.println(e);
         }
+    }
+
+    /**
+     * Pinta la celda de la columna "Color" con el color asignado a la bodega
+     * (hex "#RRGGBB"), para diferenciarlas de un vistazo. Si no tiene color, deja
+     * el fondo normal.
+     */
+    private void aplicarRendererColor() {
+        int colColor = modelo.findColumn("Color");
+        if (colColor < 0) {
+            return;
+        }
+        jtabla_clientes.getColumnExt(colColor).setCellRenderer(new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public java.awt.Component getTableCellRendererComponent(javax.swing.JTable table, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                java.awt.Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                String hex = value == null ? "" : value.toString().trim();
+                if (!isSelected) {
+                    if (!hex.isEmpty()) {
+                        try {
+                            java.awt.Color col = java.awt.Color.decode(hex);
+                            c.setBackground(col);
+                            double lum = (0.299 * col.getRed() + 0.587 * col.getGreen() + 0.114 * col.getBlue()) / 255.0;
+                            c.setForeground(lum < 0.55 ? java.awt.Color.WHITE : java.awt.Color.BLACK);
+                        } catch (NumberFormatException ex) {
+                            c.setBackground(table.getBackground());
+                            c.setForeground(table.getForeground());
+                        }
+                    } else {
+                        c.setBackground(table.getBackground());
+                        c.setForeground(table.getForeground());
+                    }
+                }
+                return c;
+            }
+        });
     }
 
     /**
@@ -404,8 +443,10 @@ public class frm_bodegas extends javax.swing.JInternalFrame {
                         jif_crear_bodegas.rbtn_Si_imprime.setSelected(true);
                     }
                     jif_crear_bodegas.chk_genera_orden.setSelected(rs.getBoolean("genera_orden_automatica"));
+                    jif_crear_bodegas.colorSeleccionado = rs.getString("color");
                 }
                 rs.close();
+                frm.aplicarColorBoton();
 
             } catch (SQLException ex) {
                 Logger.getLogger(frm_contactos.class.getName()).log(Level.SEVERE, null, ex);
@@ -419,6 +460,7 @@ public class frm_bodegas extends javax.swing.JInternalFrame {
                 frm.btn_guardar.setEnabled(false);
                 frm.btn_limpiar.setEnabled(false);
                 frm.chk_cerrar.setEnabled(false);
+                frm.btn_color.setEnabled(false);
                 frm.btn_editar.setVisible(true);
             }
             frm.show();
@@ -462,19 +504,21 @@ public class frm_bodegas extends javax.swing.JInternalFrame {
             modelo.removeRow(i);
             i -= 1;
         }
-        ResultSet rs = DB_consultas_R_D.getTabla("select id, nombre, imprime, genera_orden_automatica from bodegas order by id");
-        modelo.setColumnIdentifiers(new Object[]{"id", "Nombre", "Imprime", "Orden auto"});
+        ResultSet rs = DB_consultas_R_D.getTabla("select id, nombre, imprime, genera_orden_automatica, color from bodegas order by id");
+        modelo.setColumnIdentifiers(new Object[]{"id", "Nombre", "Imprime", "Orden auto", "Color"});
         try {
             while (rs.next()) {
                 modelo.addRow(new Object[]{
                     rs.getString("id"),
                     rs.getString("nombre"),
                     rs.getInt("imprime") == 1 ? "Sí" : "No",
-                    rs.getBoolean("genera_orden_automatica") ? "Sí" : "No"
+                    rs.getBoolean("genera_orden_automatica") ? "Sí" : "No",
+                    rs.getString("color")
                 });
             }
             rs.close();
             jtabla_clientes.setModel(modelo);
+            aplicarRendererColor();
         } catch (Exception e) {
             System.out.println(e);
         }

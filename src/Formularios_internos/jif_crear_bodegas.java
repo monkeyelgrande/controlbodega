@@ -9,6 +9,8 @@ import Formularios.frm_bodegas;
 import Metodos.metodos;
 import conexiondb.DB_Bodegas;
 import conexiondb.DB_consultas_R_D;
+import java.awt.Color;
+import javax.swing.JColorChooser;
 import javax.swing.JOptionPane;
 import modelos.Bodegas;
 
@@ -21,6 +23,11 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
     /**
      * Creates new form jif_crear_familias
      */
+    // Color identificador de la bodega en formato hex "#RRGGBB" (null = sin color).
+    // Estatico para poder fijarlo desde frm_bodegas al editar, igual que el resto
+    // de campos de este dialogo.
+    public static String colorSeleccionado = null;
+
     public jif_crear_bodegas() {
         initComponents();
         txt_id.setText(DB_consultas_R_D.cargarId("bodegas"));
@@ -28,6 +35,49 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
         btn_editar.setVisible(false);
         metodos.addEscapeListenerWindowDialog(this);
 
+        // Por defecto (Nuevo) arranca sin color. Al editar, frm_bodegas fija
+        // colorSeleccionado y vuelve a llamar aplicarColorBoton().
+        colorSeleccionado = null;
+        aplicarColorBoton();
+    }
+
+    private void btn_colorActionPerformed(java.awt.event.ActionEvent evt) {
+        Color inicial = Color.WHITE;
+        if (colorSeleccionado != null && !colorSeleccionado.trim().isEmpty()) {
+            try {
+                inicial = Color.decode(colorSeleccionado.trim());
+            } catch (NumberFormatException ignore) {
+            }
+        }
+        Color elegido = JColorChooser.showDialog(this, "Seleccione el color de la bodega", inicial);
+        if (elegido != null) {
+            colorSeleccionado = String.format("#%02X%02X%02X",
+                    elegido.getRed(), elegido.getGreen(), elegido.getBlue());
+            aplicarColorBoton();
+        }
+    }
+
+    /**
+     * Refleja el color seleccionado en el boton: pinta su fondo con ese color y
+     * muestra el codigo hex, con texto claro u oscuro segun el contraste. Si no
+     * hay color, vuelve al texto "Seleccionar color".
+     */
+    public void aplicarColorBoton() {
+        if (colorSeleccionado != null && !colorSeleccionado.trim().isEmpty()) {
+            try {
+                Color c = Color.decode(colorSeleccionado.trim());
+                btn_color.setBackground(c);
+                btn_color.setOpaque(true);
+                btn_color.setText(colorSeleccionado);
+                double lum = (0.299 * c.getRed() + 0.587 * c.getGreen() + 0.114 * c.getBlue()) / 255.0;
+                btn_color.setForeground(lum < 0.55 ? Color.WHITE : Color.BLACK);
+                return;
+            } catch (NumberFormatException ignore) {
+            }
+        }
+        btn_color.setBackground(null);
+        btn_color.setText("Seleccionar color");
+        btn_color.setForeground(Color.BLACK);
     }
 
     /**
@@ -50,6 +100,7 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
         rbtn_Si_imprime = new javax.swing.JRadioButton();
         rbtn_NO_imprime = new javax.swing.JRadioButton();
         chk_genera_orden = new javax.swing.JCheckBox();
+        btn_color = new javax.swing.JButton();
 
         setModal(true);
 
@@ -103,6 +154,14 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
 
         chk_genera_orden.setText("Genera orden de entrega automática al facturar venta");
 
+        btn_color.setText("Seleccionar color");
+        btn_color.setToolTipText("Color identificador de la bodega (para tablas, reportes y gráficos)");
+        btn_color.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_colorActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
@@ -130,7 +189,8 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
                                 .addComponent(rbtn_Si_imprime)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(rbtn_NO_imprime))
-                            .addComponent(chk_genera_orden))))
+                            .addComponent(chk_genera_orden)
+                            .addComponent(btn_color, javax.swing.GroupLayout.PREFERRED_SIZE, 250, javax.swing.GroupLayout.PREFERRED_SIZE))))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel2Layout.setVerticalGroup(
@@ -152,6 +212,8 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
                     .addComponent(rbtn_NO_imprime))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(chk_genera_orden)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(btn_color, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btn_guardar)
@@ -198,6 +260,8 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
 
             bodega.setGeneraOrdenAutomatica(chk_genera_orden.isSelected());
 
+            bodega.setColor(colorSeleccionado);
+
             if (DB_consultas_R_D.consultarId(txt_id.getText(), "bodegas") == 1) {
                 dbmarcas.Actualizar(bodega);
             } else {
@@ -221,14 +285,18 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
         btn_guardar.setEnabled(true);
         btn_limpiar.setEnabled(true);
         chk_cerrar.setEnabled(true);
+        btn_color.setEnabled(true);
     }//GEN-LAST:event_btn_editarActionPerformed
     public void limpiar() {
         txt_nombre.setText("");
         chk_genera_orden.setSelected(false);
+        colorSeleccionado = null;
+        aplicarColorBoton();
         txt_nombre.requestFocus();
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    public static javax.swing.JButton btn_color;
     public static javax.swing.JButton btn_editar;
     public static javax.swing.JButton btn_guardar;
     public static javax.swing.JButton btn_limpiar;

@@ -541,9 +541,9 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
     }//GEN-LAST:event_btn_cerrarActionPerformed
 
     private void btn_editarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_editarActionPerformed
-        if (DB_consultas_R_D.validar_admin()) {
+//        if (DB_consultas_R_D.validar_admin()) {
             ver_ingreso_mercancia("editar");
-        }
+//        }
     }//GEN-LAST:event_btn_editarActionPerformed
 
     /**
@@ -637,39 +637,42 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
 
     public void actualizar() {
         modelo.setRowCount(0);
+        CellRendererIngresos.recargarColoresBodega();
         ResultSet rs = null;
         String consulta = "";
 
-        modelo.setColumnIdentifiers(new Object[]{"id", "proveedor", "Numero factura", "Fecha", "Fecha vencimiento", "Estado", "Total", "Abono", "Saldo", "Dias"});
+        modelo.setColumnIdentifiers(new Object[]{"id", "proveedor", "Numero factura", "Fecha", "Fecha vencimiento", "Estado", "Total", "Abono", "Saldo", "Dias", "Bodega"});
         if (act) {
             consulta = "with con2 as (\n"
                     + "	with consulta as (\n"
-                    + "		select i.id, c.nombre as proveedor, i.fecha, coalesce(i.fecha_vencimiento,i.fecha) as fecha_vencimiento, i.no_factura, i.estado, coalesce(sum(id.precio_costo*id.cantidad),0) as total\n"
+                    + "		select i.id, c.nombre as proveedor, i.fecha, coalesce(i.fecha_vencimiento,i.fecha) as fecha_vencimiento, i.no_factura, i.estado, b.nombre as bodega, coalesce(sum(id.precio_costo*id.cantidad),0) as total\n"
                     + "		from ingresos_mercancias_cabecera i \n"
-                    + "		inner join ingresos_mercancias_detalle id on id.id_ingreso_cabecera=i.id, contactos c\n"
+                    + "		inner join ingresos_mercancias_detalle id on id.id_ingreso_cabecera=i.id \n"
+                    + "		left join bodegas b on i.id_bodega=b.id, contactos c\n"
                     + "		where i.id_proveedor=c.id \n"
-                    + "		group by i.id, c.nombre, i.fecha, i.fecha_vencimiento, i.no_factura, i.estado\n"
+                    + "		group by i.id, c.nombre, i.fecha, i.fecha_vencimiento, i.no_factura, i.estado, b.nombre\n"
                     + "		order by fecha desc,  i.id desc\n"
                     + "	)\n"
                     + "	select c.*, (current_date-c.fecha_vencimiento) as dias, coalesce(sum(p.total),0) as abono, c.total-coalesce(sum(p.total),0) as saldo\n"
                     + "	from consulta c left join pagos_ingresos p on p.id_ingresos_mercancias_cabecera=c.id\n"
-                    + "	group by c.id, c.proveedor, c.fecha, c.fecha_vencimiento, c.no_factura, c.estado, c.total\n"
+                    + "	group by c.id, c.proveedor, c.fecha, c.fecha_vencimiento, c.no_factura, c.estado, c.bodega, c.total\n"
                     + ")\n"
                     + "select * from con2 where saldo>0 order by id desc";
             act = false;
         } else {
             consulta = "with con2 as (\n"
                     + "	with consulta as (\n"
-                    + "		select i.id, c.nombre as proveedor, i.fecha, coalesce(i.fecha_vencimiento,i.fecha) as fecha_vencimiento, i.no_factura, i.estado, coalesce(sum(id.precio_costo*id.cantidad),0) as total\n"
+                    + "		select i.id, c.nombre as proveedor, i.fecha, coalesce(i.fecha_vencimiento,i.fecha) as fecha_vencimiento, i.no_factura, i.estado, b.nombre as bodega, coalesce(sum(id.precio_costo*id.cantidad),0) as total\n"
                     + "		from ingresos_mercancias_cabecera i \n"
-                    + "		inner join ingresos_mercancias_detalle id on id.id_ingreso_cabecera=i.id, contactos c\n"
+                    + "		inner join ingresos_mercancias_detalle id on id.id_ingreso_cabecera=i.id \n"
+                    + "		left join bodegas b on i.id_bodega=b.id, contactos c\n"
                     + "		where i.id_proveedor=c.id \n"
-                    + "		group by i.id, c.nombre, i.fecha, i.fecha_vencimiento, i.no_factura, i.estado\n"
+                    + "		group by i.id, c.nombre, i.fecha, i.fecha_vencimiento, i.no_factura, i.estado, b.nombre\n"
                     + "		order by fecha desc,  i.id desc\n"
                     + "	)\n"
                     + "	select c.*, (current_date-c.fecha_vencimiento) as dias, coalesce(sum(p.total),0) as abono, c.total-coalesce(sum(p.total),0) as saldo\n"
                     + "	from consulta c left join pagos_ingresos p on p.id_ingresos_mercancias_cabecera=c.id\n"
-                    + "	group by c.id, c.proveedor, c.fecha, c.fecha_vencimiento, c.no_factura, c.estado, c.total\n"
+                    + "	group by c.id, c.proveedor, c.fecha, c.fecha_vencimiento, c.no_factura, c.estado, c.bodega, c.total\n"
                     + ")\n"
                     + "select * from con2 order by id desc";
             act = true;
@@ -694,7 +697,7 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
                 }
                 modelo.addRow(new Object[]{rs.getString("id"), rs.getString("proveedor"), rs.getString("no_factura"), rs.getDate("fecha"), rs.getDate("fecha_vencimiento"), estado,
                     metodos.formateador_dinero().format(rs.getDouble("total")), metodos.formateador_dinero().format(rs.getDouble("abono")),
-                    metodos.formateador_dinero().format(rs.getDouble("saldo")), dias});
+                    metodos.formateador_dinero().format(rs.getDouble("saldo")), dias, rs.getString("bodega")});
 
             }
             rs.close();

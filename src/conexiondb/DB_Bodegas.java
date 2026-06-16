@@ -19,8 +19,8 @@ public class DB_Bodegas {
     public int Guardar(Bodegas bodega) {
         int resultado = 0;
         Connection con = null;
-        String SSQL = "INSERT INTO bodegas (id, nombre, imprime, genera_orden_automatica) "
-                + "VALUES (?, ?, ?, ?)";
+        String SSQL = "INSERT INTO bodegas (id, nombre, imprime, genera_orden_automatica, color) "
+                + "VALUES (?, ?, ?, ?, ?)";
         try {
             con = DB_consultas_R_D.getConexion();
             PreparedStatement psql = con.prepareStatement(SSQL);
@@ -28,6 +28,7 @@ public class DB_Bodegas {
             psql.setString(2, bodega.getNombre());
             psql.setInt(3, bodega.getImprime());
             psql.setBoolean(4, bodega.isGeneraOrdenAutomatica());
+            psql.setString(5, bodega.getColor());
 
             resultado = psql.executeUpdate();
             psql.close();
@@ -56,7 +57,8 @@ public class DB_Bodegas {
         String SQL = "UPDATE bodegas SET "
                 + "nombre = ?, "
                 + "imprime = ?, "
-                + "genera_orden_automatica = ? "
+                + "genera_orden_automatica = ?, "
+                + "color = ? "
                 + "WHERE id = ?";
         try {
             con = DB_consultas_R_D.getConexion();
@@ -64,7 +66,8 @@ public class DB_Bodegas {
             psql.setString(1, obj.getNombre());
             psql.setInt(2, obj.getImprime());
             psql.setBoolean(3, obj.isGeneraOrdenAutomatica());
-            psql.setInt(4, obj.getId());
+            psql.setString(4, obj.getColor());
+            psql.setInt(5, obj.getId());
             resultado = psql.executeUpdate();
             psql.close();
 
