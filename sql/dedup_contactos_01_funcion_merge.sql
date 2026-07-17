@@ -109,7 +109,6 @@ BEGIN
 
     -- 2c) Resto de tablas: reasignacion simple.
     UPDATE cotizaciones_cabeceras       SET id_contacto        = p_super WHERE id_contacto        = p_dup;
-    UPDATE recortes_detalle             SET id_contacto        = p_super WHERE id_contacto        = p_dup;
     UPDATE productos                    SET id_proveedor       = p_super WHERE id_proveedor       = p_dup;
     UPDATE ordenes_compra_detalle       SET id_proveedor       = p_super WHERE id_proveedor       = p_dup;
     UPDATE comparativos_proveedores     SET id_proveedor       = p_super WHERE id_proveedor       = p_dup;

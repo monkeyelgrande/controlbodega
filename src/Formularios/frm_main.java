@@ -47,8 +47,6 @@ public class frm_main extends javax.swing.JFrame {
     public static boolean cerra = false;
     frm_contactos frm_contacto = null;
     frm_productos frm_producto = null;
-    frm_Recortes frm_recortes = null;
-    frm_Recortes_pendientes frm_recortes_pendientes = null;
     frm_ingreso_mercancia frm_ingreso_mercancias = null;
     public static frm_Ordenes frm_factura = null;
     public static frm_facturas_ventas frm_factura_ventas = null;
@@ -566,9 +564,6 @@ public class frm_main extends javax.swing.JFrame {
         m.put("btn_facturar", btn_facturar);
         m.put("btn_ver_facturas", btn_ver_facturas);
         m.put("btn_decolucion", btn_decolucion);
-        m.put("jMenu_recortes", jMenu_recortes);
-        m.put("btn_generar_recorte", btn_generar_recorte);
-        m.put("btn_ver_recortes", btn_ver_recortes);
         // Entradas del menú Precios: la visibilidad del menú completo la dan
         // los roles (actualizarMenuPrecios); estas opciones afinan qué
         // entradas ve cada perfil/usuario dentro del menú.
@@ -608,7 +603,6 @@ public class frm_main extends javax.swing.JFrame {
                 btn_productos.setVisible(false);
                 btn_ingreso_productos.setVisible(false);
 //                btn_generar_orden.setVisible(false);
-                btn_generar_recorte.setVisible(false);
 
                 btn_facturar.setVisible(false);
                 btn_ver_facturas.setVisible(false);
@@ -631,7 +625,6 @@ public class frm_main extends javax.swing.JFrame {
                 btn_productos.setVisible(false);
                 btn_ingreso_productos.setVisible(false);
 //                btn_generar_orden.setVisible(false);
-//                btn_generar_recorte.setVisible(false);
 
                 btn_facturar.setVisible(false);
                 btn_ver_facturas.setVisible(false);
@@ -649,17 +642,14 @@ public class frm_main extends javax.swing.JFrame {
                 jMenu_tipo_ingreso.setVisible(false);
                 jmenu_bodegas.setVisible(false);
                 jMenu_unidades.setVisible(false);
-                jMenu_recortes.setVisible(false);
                 jMenu_ordenes.setVisible(false);
 
                 btn_contactos.setVisible(false);
                 btn_productos.setVisible(false);
                 btn_ingreso_productos.setVisible(false);
                 btn_generar_orden.setVisible(false);
-                btn_generar_recorte.setVisible(false);
                 btn_ver_ordenes.setVisible(false);
-                btn_ver_recortes.setVisible(false);
-//                
+//
 //                btn_facturar.setVisible(false);
 //                btn_ver_facturas.setVisible(false);
 //                btn_decolucion.setVisible(false);
@@ -681,7 +671,6 @@ public class frm_main extends javax.swing.JFrame {
 //                btn_productos.setVisible(false);
                 btn_ingreso_productos.setVisible(false);
 //                btn_generar_orden.setVisible(false);
-//                btn_generar_recorte.setVisible(false);
 
                 btn_facturar.setVisible(false);
                 btn_ver_facturas.setVisible(false);
@@ -712,8 +701,6 @@ public class frm_main extends javax.swing.JFrame {
         btn_ingreso_productos = new javax.swing.JButton();
         btn_generar_orden = new javax.swing.JButton();
         btn_ver_ordenes = new javax.swing.JButton();
-        btn_generar_recorte = new javax.swing.JButton();
-        btn_ver_recortes = new javax.swing.JButton();
         btn_ingreso_productos1 = new javax.swing.JButton();
         btn_cotizacion = new javax.swing.JButton();
         btn_ver_cotizaciones = new javax.swing.JButton();
@@ -732,9 +719,6 @@ public class frm_main extends javax.swing.JFrame {
         jmenu_facturacion = new javax.swing.JMenuItem();
         jmenu_ver_factura = new javax.swing.JMenuItem();
         jmenu_ver_anulados = new javax.swing.JMenuItem();
-        jMenu_recortes = new javax.swing.JMenu();
-        jmenu_reportes1 = new javax.swing.JMenuItem();
-        jmenu_reportes2 = new javax.swing.JMenuItem();
         jMenu6 = new javax.swing.JMenu();
         jmenu_reportes = new javax.swing.JMenuItem();
         jmenu_admin = new javax.swing.JMenu();
@@ -864,28 +848,6 @@ public class frm_main extends javax.swing.JFrame {
             }
         });
 
-        btn_generar_recorte.setBackground(new java.awt.Color(153, 0, 0));
-        btn_generar_recorte.setFont(new java.awt.Font("Yu Gothic Medium", 1, 18)); // NOI18N
-        btn_generar_recorte.setForeground(new java.awt.Color(255, 255, 255));
-        btn_generar_recorte.setIcon(new javax.swing.ImageIcon(getClass().getResource("/imagenes/Cut Paper.png"))); // NOI18N
-        btn_generar_recorte.setText("Generar Recorte");
-        btn_generar_recorte.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn_generar_recorteActionPerformed(evt);
-            }
-        });
-
-        btn_ver_recortes.setBackground(new java.awt.Color(153, 0, 0));
-        btn_ver_recortes.setFont(new java.awt.Font("Yu Gothic Medium", 1, 18)); // NOI18N
-        btn_ver_recortes.setForeground(new java.awt.Color(255, 255, 255));
-        btn_ver_recortes.setIcon(new javax.swing.ImageIcon(getClass().getResource("/imagenes/Look For.png"))); // NOI18N
-        btn_ver_recortes.setText("Ver Recortes");
-        btn_ver_recortes.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btn_ver_recortesActionPerformed(evt);
-            }
-        });
-
         btn_ingreso_productos1.setBackground(new java.awt.Color(0, 153, 153));
         btn_ingreso_productos1.setFont(new java.awt.Font("Yu Gothic Medium", 1, 18)); // NOI18N
         btn_ingreso_productos1.setForeground(new java.awt.Color(255, 255, 255));
@@ -951,8 +913,6 @@ public class frm_main extends javax.swing.JFrame {
         escritorio.setLayer(btn_ingreso_productos, javax.swing.JLayeredPane.DEFAULT_LAYER);
         escritorio.setLayer(btn_generar_orden, javax.swing.JLayeredPane.DEFAULT_LAYER);
         escritorio.setLayer(btn_ver_ordenes, javax.swing.JLayeredPane.DEFAULT_LAYER);
-        escritorio.setLayer(btn_generar_recorte, javax.swing.JLayeredPane.DEFAULT_LAYER);
-        escritorio.setLayer(btn_ver_recortes, javax.swing.JLayeredPane.DEFAULT_LAYER);
         escritorio.setLayer(btn_ingreso_productos1, javax.swing.JLayeredPane.DEFAULT_LAYER);
         escritorio.setLayer(btn_cotizacion, javax.swing.JLayeredPane.DEFAULT_LAYER);
         escritorio.setLayer(btn_ver_cotizaciones, javax.swing.JLayeredPane.DEFAULT_LAYER);
@@ -998,9 +958,7 @@ public class frm_main extends javax.swing.JFrame {
                     .addComponent(lbl_bodega_user)
                     .addGroup(escritorioLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                         .addComponent(btn_generar_orden, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(btn_ver_ordenes, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(btn_generar_recorte, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(btn_ver_recortes, javax.swing.GroupLayout.PREFERRED_SIZE, 251, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addComponent(btn_ver_ordenes, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addContainerGap(559, Short.MAX_VALUE))
         );
         escritorioLayout.setVerticalGroup(
@@ -1024,11 +982,9 @@ public class frm_main extends javax.swing.JFrame {
                             .addComponent(btn_ver_ordenes))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(escritorioLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(btn_generar_recorte)
                             .addComponent(btn_ingreso_productos1))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(escritorioLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(btn_ver_recortes)
                             .addComponent(jButton1))))
                 .addGap(19, 19, 19)
                 .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -1159,32 +1115,6 @@ public class frm_main extends javax.swing.JFrame {
         jMenu_ordenes.add(jmenu_ver_anulados);
 
         jMenuBar1.add(jMenu_ordenes);
-
-        jMenu_recortes.setIcon(new javax.swing.ImageIcon(getClass().getResource("/imagenes/WaterPipe24.png"))); // NOI18N
-        jMenu_recortes.setText("Recortes");
-        jMenu_recortes.setFont(new java.awt.Font("Tahoma", 0, 16)); // NOI18N
-
-        jmenu_reportes1.setFont(new java.awt.Font("Tahoma", 0, 16)); // NOI18N
-        jmenu_reportes1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/imagenes/WaterPipe24.png"))); // NOI18N
-        jmenu_reportes1.setText("Recortes");
-        jmenu_reportes1.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jmenu_reportes1ActionPerformed(evt);
-            }
-        });
-        jMenu_recortes.add(jmenu_reportes1);
-
-        jmenu_reportes2.setFont(new java.awt.Font("Tahoma", 0, 16)); // NOI18N
-        jmenu_reportes2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/imagenes/database_peq.png"))); // NOI18N
-        jmenu_reportes2.setText("Recortes pendientes");
-        jmenu_reportes2.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jmenu_reportes2ActionPerformed(evt);
-            }
-        });
-        jMenu_recortes.add(jmenu_reportes2);
-
-        jMenuBar1.add(jMenu_recortes);
 
         jMenu6.setIcon(new javax.swing.ImageIcon(getClass().getResource("/imagenes/estadisticas.png"))); // NOI18N
         jMenu6.setText("Reportes");
@@ -1619,67 +1549,6 @@ public class frm_main extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_jmenu_bodegasActionPerformed
 
-    private void jmenu_reportes1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jmenu_reportes1ActionPerformed
-        if (metodos.estacerrado(frm_recortes)) {
-            frm_recortes = new frm_Recortes();
-            escritorio.add(frm_recortes);
-            try {
-                frm_recortes.setMaximum(true);
-            } catch (PropertyVetoException ex) {
-                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            frm_recortes.show();
-        } else {
-            frm_recortes.toFront();
-        }
-    }//GEN-LAST:event_jmenu_reportes1ActionPerformed
-
-    private void btn_generar_recorteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_generar_recorteActionPerformed
-        if (metodos.estacerrado(frm_recortes)) {
-            frm_recortes = new frm_Recortes();
-            escritorio.add(frm_recortes);
-            try {
-                frm_recortes.setMaximum(true);
-            } catch (PropertyVetoException ex) {
-                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            frm_recortes.show();
-        } else {
-            frm_recortes.toFront();
-        }
-    }//GEN-LAST:event_btn_generar_recorteActionPerformed
-
-    private void btn_ver_recortesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_ver_recortesActionPerformed
-
-        if (metodos.estacerrado(frm_recortes_pendientes)) {
-            frm_recortes_pendientes = new frm_Recortes_pendientes();
-            escritorio.add(frm_recortes_pendientes);
-            try {
-                frm_recortes_pendientes.setMaximum(true);
-            } catch (PropertyVetoException ex) {
-                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            frm_recortes_pendientes.show();
-        } else {
-            frm_recortes_pendientes.toFront();
-        }
-    }//GEN-LAST:event_btn_ver_recortesActionPerformed
-
-    private void jmenu_reportes2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jmenu_reportes2ActionPerformed
-        if (metodos.estacerrado(frm_recortes_pendientes)) {
-            frm_recortes_pendientes = new frm_Recortes_pendientes();
-            escritorio.add(frm_recortes_pendientes);
-            try {
-                frm_recortes_pendientes.setMaximum(true);
-            } catch (PropertyVetoException ex) {
-                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            frm_recortes_pendientes.show();
-        } else {
-            frm_recortes_pendientes.toFront();
-        }
-    }//GEN-LAST:event_jmenu_reportes2ActionPerformed
-
     private void btn_facturarMouseEntered(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btn_facturarMouseEntered
         // TODO add your handling code here:
     }//GEN-LAST:event_btn_facturarMouseEntered
@@ -1860,14 +1729,12 @@ public class frm_main extends javax.swing.JFrame {
     private javax.swing.JButton btn_decolucion;
     private javax.swing.JButton btn_facturar;
     private javax.swing.JButton btn_generar_orden;
-    private javax.swing.JButton btn_generar_recorte;
     private javax.swing.JButton btn_ingreso_productos;
     private javax.swing.JButton btn_ingreso_productos1;
     private javax.swing.JButton btn_productos;
     private javax.swing.JButton btn_ver_cotizaciones;
     private javax.swing.JButton btn_ver_facturas;
     private javax.swing.JButton btn_ver_ordenes;
-    private javax.swing.JButton btn_ver_recortes;
     public static javax.swing.JDesktopPane escritorio;
     private javax.swing.JButton jButton1;
     private javax.swing.JMenu jMenu6;
@@ -1878,7 +1745,6 @@ public class frm_main extends javax.swing.JFrame {
     private javax.swing.JMenuItem jMenuItem3;
     private javax.swing.JMenu jMenu_ordenes;
     private javax.swing.JMenu jMenu_productos_principal;
-    private javax.swing.JMenu jMenu_recortes;
     private javax.swing.JMenuItem jMenu_tipo_ingreso;
     private javax.swing.JMenuItem jMenu_unidades;
     private javax.swing.JMenuItem jMenu_verificar_inventario;
@@ -1894,8 +1760,6 @@ public class frm_main extends javax.swing.JFrame {
     private javax.swing.JMenuItem jmenu_mover_productos;
     private javax.swing.JMenuItem jmenu_productos;
     private javax.swing.JMenuItem jmenu_reportes;
-    private javax.swing.JMenuItem jmenu_reportes1;
-    private javax.swing.JMenuItem jmenu_reportes2;
     private javax.swing.JMenuItem jmenu_user;
     private javax.swing.JMenuItem jmenu_ver_anulados;
     private javax.swing.JMenuItem jmenu_ver_factura;

@@ -388,47 +388,6 @@ WITH (
 );
 
 
-CREATE TABLE recortes_cabecera
-(
-  id serial NOT NULL,
-  id_producto integer,
-  cantidad double precision,
-  fecha date,
-  hora character varying,
-  id_user integer,
-  observacion character varying,
-  CONSTRAINT pk_recorte PRIMARY KEY (id),
-  CONSTRAINT fk_producto_recorte FOREIGN KEY (id_producto) REFERENCES productos(id) on delete CASCADE,
-  CONSTRAINT fk_user_recorte FOREIGN KEY (id_user) REFERENCES users (id)
-)
-WITH (
-  OIDS=FALSE
-);
-
-
-CREATE TABLE recortes_detalle
-(
-  id serial NOT NULL,
-  id_cabecera integer NOT NULL,
-  cantidad double precision,
-  fecha date,
-  hora character varying(8),
-  observacion character varying,
-  id_user integer,
-  codigo character varying,
-  id_contacto integer,
-  estado integer,
-  fecha_entrega date,
-  hora_entrega character varying(8),
-  CONSTRAINT pk_recorte_detalle PRIMARY KEY (id),
-  CONSTRAINT fk_recorte_det FOREIGN KEY (id_cabecera) REFERENCES recortes_cabecera (id) on delete CASCADE,
-  CONSTRAINT fk_user_recorte_detalle FOREIGN KEY (id_user) REFERENCES users (id),
-  CONSTRAINT fk_contacto_recorte FOREIGN KEY (id_contacto) REFERENCES contactos (id)
-)
-WITH (
-  OIDS=FALSE
-);
-
 CREATE TABLE pagos_ingresos(
   id serial,
   id_ingresos_mercancias_cabecera integer,
