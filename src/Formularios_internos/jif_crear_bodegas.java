@@ -100,6 +100,7 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
         rbtn_Si_imprime = new javax.swing.JRadioButton();
         rbtn_NO_imprime = new javax.swing.JRadioButton();
         chk_genera_orden = new javax.swing.JCheckBox();
+        chk_entrega_automatica = new javax.swing.JCheckBox();
         btn_color = new javax.swing.JButton();
 
         setModal(true);
@@ -154,6 +155,9 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
 
         chk_genera_orden.setText("Genera orden de entrega automática al facturar venta");
 
+        chk_entrega_automatica.setText("Entrega masiva: sus órdenes pendientes se entregan con el botón \"Entregar todo\"");
+        chk_entrega_automatica.setToolTipText("Marca esta bodega (p. ej. Almacén Piso Uno) para poder entregar de una vez todas sus órdenes pendientes desde la pantalla de Órdenes");
+
         btn_color.setText("Seleccionar color");
         btn_color.setToolTipText("Color identificador de la bodega (para tablas, reportes y gráficos)");
         btn_color.addActionListener(new java.awt.event.ActionListener() {
@@ -190,6 +194,7 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(rbtn_NO_imprime))
                             .addComponent(chk_genera_orden)
+                            .addComponent(chk_entrega_automatica)
                             .addComponent(btn_color, javax.swing.GroupLayout.PREFERRED_SIZE, 250, javax.swing.GroupLayout.PREFERRED_SIZE))))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
@@ -212,6 +217,8 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
                     .addComponent(rbtn_NO_imprime))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(chk_genera_orden)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(chk_entrega_automatica)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(btn_color, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
@@ -260,6 +267,8 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
 
             bodega.setGeneraOrdenAutomatica(chk_genera_orden.isSelected());
 
+            bodega.setEntregaAutomatica(chk_entrega_automatica.isSelected());
+
             bodega.setColor(colorSeleccionado);
 
             if (DB_consultas_R_D.consultarId(txt_id.getText(), "bodegas") == 1) {
@@ -290,6 +299,7 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
     public void limpiar() {
         txt_nombre.setText("");
         chk_genera_orden.setSelected(false);
+        chk_entrega_automatica.setSelected(false);
         colorSeleccionado = null;
         aplicarColorBoton();
         txt_nombre.requestFocus();
@@ -302,6 +312,7 @@ public class jif_crear_bodegas extends javax.swing.JDialog {
     public static javax.swing.JButton btn_limpiar;
     private javax.swing.ButtonGroup buttonGroup1;
     public static javax.swing.JCheckBox chk_cerrar;
+    public static javax.swing.JCheckBox chk_entrega_automatica;
     public static javax.swing.JCheckBox chk_genera_orden;
     private javax.swing.JLabel jLabel12;
     private javax.swing.JLabel jLabel3;

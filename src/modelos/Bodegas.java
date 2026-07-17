@@ -20,6 +20,7 @@ public class Bodegas {
     String nombre;
     int id, imprime;
     boolean generaOrdenAutomatica;
+    boolean entregaAutomatica;
     String color;
 
     public Bodegas() {
@@ -47,6 +48,14 @@ public class Bodegas {
 
     public void setGeneraOrdenAutomatica(boolean generaOrdenAutomatica) {
         this.generaOrdenAutomatica = generaOrdenAutomatica;
+    }
+
+    public boolean isEntregaAutomatica() {
+        return entregaAutomatica;
+    }
+
+    public void setEntregaAutomatica(boolean entregaAutomatica) {
+        this.entregaAutomatica = entregaAutomatica;
     }
 
     public Bodegas(int id, String nombre) {

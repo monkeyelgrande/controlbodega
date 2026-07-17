@@ -167,6 +167,17 @@ public class EntregaQRService {
         }
         if (efectivos.isEmpty()) return -1;
 
+        // ESTRICTO: nunca registrar una entrega en una bodega distinta a la de la
+        // orden. Es una barrera de seguridad: los llamadores ya deberían pasar la
+        // bodega de la orden, pero si por cualquier motivo no coincide, se rechaza.
+        if (orden == null || idBodegaEntrega != orden.idBodegaOrden) {
+            System.out.println("EntregaQRService.ejecutarEntrega: bodega de entrega ("
+                    + idBodegaEntrega + ") distinta a la de la orden #"
+                    + (orden == null ? "?" : orden.idFactura + " (bodega " + orden.idBodegaOrden + ")")
+                    + ". Entrega rechazada.");
+            return -1;
+        }
+
         Connection con = null;
         boolean autoCommitPrev = true;
         try {
@@ -232,6 +243,42 @@ public class EntregaQRService {
         } finally {
             try { if (con != null) con.setAutoCommit(autoCommitPrev); } catch (Exception ignore) {}
         }
+    }
+
+    /**
+     * Entrega por completo una orden (todos sus pendientes) sin pasar por un
+     * escaneo QR. Pensada para la entrega masiva por bodega desde frm_Ordenes.
+     *
+     * La entrega se acredita al usuario indicado y se registra en la bodega de
+     * la propia orden. Entrega aunque el stock quede negativo (mismo criterio
+     * que la entrega manual). Reusa {@link #ejecutarEntrega} para mover el
+     * stock exactamente igual que la entrega manual o por QR.
+     *
+     * @return id de la cabecera de entrega creada, o -1 si la orden no existe,
+     * está anulada o no tiene pendientes.
+     */
+    public static int entregarOrdenCompleta(int idFactura, int idUser) {
+        OrdenInfo info = cargarOrden(idFactura);
+        if (info == null || info.anulada) {
+            return -1;
+        }
+        if (info.getTotalPendiente() <= 0) {
+            return -1;
+        }
+
+        List<ItemEntrega> items = new ArrayList<>();
+        for (ProductoPendiente p : info.productos) {
+            if (p.pendiente > 0) {
+                items.add(new ItemEntrega(p.idProducto, p.codigo, p.descripcion, p.pendiente));
+            }
+        }
+        if (items.isEmpty()) {
+            return -1;
+        }
+
+        // idEscaneo = -1: no proviene de un escaneo, ejecutarEntrega lo ignora.
+        return ejecutarEntrega(info, items, idUser, info.idBodegaOrden,
+                Accion.ENTREGA_COMPLETA, -1);
     }
 
     /** Item simple para construir la entrega. */

@@ -69,8 +69,8 @@ public class frm_bodegas extends javax.swing.JInternalFrame {
 
     public void mostrar() {
 
-        ResultSet rs = DB_consultas_R_D.getTabla("select id, nombre, imprime, genera_orden_automatica, color from bodegas order by id");
-        modelo.setColumnIdentifiers(new Object[]{"id", "Nombre", "Imprime", "Orden auto", "Color"});
+        ResultSet rs = DB_consultas_R_D.getTabla("select id, nombre, imprime, genera_orden_automatica, entrega_automatica, color from bodegas order by id");
+        modelo.setColumnIdentifiers(new Object[]{"id", "Nombre", "Imprime", "Orden auto", "Entrega masiva", "Color"});
         try {
             while (rs.next()) {
                 modelo.addRow(new Object[]{
@@ -78,6 +78,7 @@ public class frm_bodegas extends javax.swing.JInternalFrame {
                     rs.getString("nombre"),
                     rs.getInt("imprime") == 1 ? "Sí" : "No",
                     rs.getBoolean("genera_orden_automatica") ? "Sí" : "No",
+                    rs.getBoolean("entrega_automatica") ? "Sí" : "No",
                     rs.getString("color")
                 });
             }
@@ -443,6 +444,7 @@ public class frm_bodegas extends javax.swing.JInternalFrame {
                         jif_crear_bodegas.rbtn_Si_imprime.setSelected(true);
                     }
                     jif_crear_bodegas.chk_genera_orden.setSelected(rs.getBoolean("genera_orden_automatica"));
+                    jif_crear_bodegas.chk_entrega_automatica.setSelected(rs.getBoolean("entrega_automatica"));
                     jif_crear_bodegas.colorSeleccionado = rs.getString("color");
                 }
                 rs.close();
@@ -461,6 +463,7 @@ public class frm_bodegas extends javax.swing.JInternalFrame {
                 frm.btn_limpiar.setEnabled(false);
                 frm.chk_cerrar.setEnabled(false);
                 frm.btn_color.setEnabled(false);
+                frm.chk_entrega_automatica.setEnabled(false);
                 frm.btn_editar.setVisible(true);
             }
             frm.show();
@@ -504,8 +507,8 @@ public class frm_bodegas extends javax.swing.JInternalFrame {
             modelo.removeRow(i);
             i -= 1;
         }
-        ResultSet rs = DB_consultas_R_D.getTabla("select id, nombre, imprime, genera_orden_automatica, color from bodegas order by id");
-        modelo.setColumnIdentifiers(new Object[]{"id", "Nombre", "Imprime", "Orden auto", "Color"});
+        ResultSet rs = DB_consultas_R_D.getTabla("select id, nombre, imprime, genera_orden_automatica, entrega_automatica, color from bodegas order by id");
+        modelo.setColumnIdentifiers(new Object[]{"id", "Nombre", "Imprime", "Orden auto", "Entrega masiva", "Color"});
         try {
             while (rs.next()) {
                 modelo.addRow(new Object[]{
@@ -513,6 +516,7 @@ public class frm_bodegas extends javax.swing.JInternalFrame {
                     rs.getString("nombre"),
                     rs.getInt("imprime") == 1 ? "Sí" : "No",
                     rs.getBoolean("genera_orden_automatica") ? "Sí" : "No",
+                    rs.getBoolean("entrega_automatica") ? "Sí" : "No",
                     rs.getString("color")
                 });
             }

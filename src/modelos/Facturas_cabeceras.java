@@ -183,6 +183,7 @@ public class Facturas_cabeceras {
                     frm.txt_observacion_entrega.setText(rs.getString("observacion_entrega"));
                     frm.jbox_bodega.setSelectedItem(rs.getString("bodega"));
                     frm.id_bodega = rs.getInt("id_bodega");
+                    frm.nombre_bodega = rs.getString("bodega");
                 }
                 rs.close();
             } catch (SQLException ex) {
@@ -285,9 +286,10 @@ public class Facturas_cabeceras {
                 frm.txt_observacion_entrega.setEnabled(false);
             }
             frm.txt_codigo.requestFocus();
-            if (frm_main.perfil == 2) {
-                frm.jbox_bodega.setEnabled(false);
-            }
+            // La bodega de entrega NO es editable: siempre es la de la orden. Se
+            // bloquea el combo para todos los perfiles (antes solo el bodeguero),
+            // de modo que no se pueda entregar en una bodega distinta.
+            frm.jbox_bodega.setEnabled(false);
             frm.show();
         }
 

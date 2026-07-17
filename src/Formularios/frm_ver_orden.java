@@ -110,6 +110,9 @@ public class frm_ver_orden extends javax.swing.JDialog {
 
     String nombre_impresora;
     public static int id_bodega;
+    // Nombre de la bodega de la orden (para mostrar en la tabla de entregas).
+    // Se fija al cargar la orden, junto con id_bodega.
+    public static String nombre_bodega;
 
     Calendar fecha_calendario = new GregorianCalendar();
     CellRendererVerFactura myRenderer = new CellRendererVerFactura();
@@ -211,12 +214,16 @@ public class frm_ver_orden extends javax.swing.JDialog {
 
                         String codigo_barras = jtabla_productos.getValueAt(fila, 1).toString();
 
-                        // Obtener bodega seleccionada para la entrega
-                        int id_bodega_entrega = 1;
-                        try {
-                            id_bodega_entrega = jbox_bodega.getItemAt(jbox_bodega.getSelectedIndex()).getId();
-                        } catch (Exception e) {
-                            id_bodega_entrega = 1;
+                        // ESTRICTO: la entrega SIEMPRE se hace en la bodega de la orden
+                        // (facturas_cabeceras.id_bodega, cargada en el campo id_bodega),
+                        // nunca en la seleccionada en el combo. Evita entregas con una
+                        // bodega distinta a la de la orden.
+                        int id_bodega_entrega = id_bodega;
+                        if (id_bodega_entrega <= 0) {
+                            JOptionPane.showMessageDialog(rootPane,
+                                    "No se pudo determinar la bodega de la orden.\n"
+                                    + "Cierre y vuelva a abrir la orden antes de entregar.");
+                            return;
                         }
 
                         // Validar stock disponible
@@ -243,7 +250,7 @@ public class frm_ver_orden extends javax.swing.JDialog {
                             if (cabecera) {
                                 modelo_entregados_cabecera.addRow(new Object[]{
                                     id_entrega_cabecera, frm_main.lbl_user.getText(), fecha,
-                                    DB_consultas_R_D.obtener_hora(), jbox_bodega.getSelectedItem().toString()});
+                                    DB_consultas_R_D.obtener_hora(), nombre_bodega});
 
                                 SQL = "insert into entregas_productos_cabecera (id, id_factura, id_user, fecha_entrega, hora_entrega, id_bodega) "
                                         + "values (" + id_entrega_cabecera + "," + lbl_numerofactura.getText() + ","
@@ -952,12 +959,15 @@ public class frm_ver_orden extends javax.swing.JDialog {
             int id_detalle = Integer.parseInt(DB_consultas_R_D.cargarId("entregas_productos"));
             String SQL = "";
 
-            // Obtener bodega de entrega
-            int id_bodega_entrega = 1;
-            try {
-                id_bodega_entrega = jbox_bodega.getItemAt(jbox_bodega.getSelectedIndex()).getId();
-            } catch (Exception e) {
-                id_bodega_entrega = 1;
+            // ESTRICTO: la entrega SIEMPRE se hace en la bodega de la orden, nunca en
+            // la seleccionada en el combo (ver campo id_bodega, cargado desde
+            // facturas_cabeceras.id_bodega).
+            int id_bodega_entrega = id_bodega;
+            if (id_bodega_entrega <= 0) {
+                JOptionPane.showMessageDialog(rootPane,
+                        "No se pudo determinar la bodega de la orden.\n"
+                        + "Cierre y vuelva a abrir la orden antes de entregar.");
+                return;
             }
 
             int idOrden = Integer.parseInt(lbl_numerofactura.getText());
@@ -984,7 +994,7 @@ public class frm_ver_orden extends javax.swing.JDialog {
                     if (cabecera) {
                         modelo_entregados_cabecera.addRow(new Object[]{
                             id_entrega_cabecera, frm_main.lbl_user.getText(), fecha,
-                            DB_consultas_R_D.obtener_hora(), jbox_bodega.getSelectedItem().toString()});
+                            DB_consultas_R_D.obtener_hora(), nombre_bodega});
 
                         SQL = "insert into entregas_productos_cabecera (id, id_factura, id_user, fecha_entrega, hora_entrega, id_bodega) "
                                 + "values (" + id_entrega_cabecera + "," + lbl_numerofactura.getText() + ","

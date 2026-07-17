@@ -172,6 +172,7 @@
                       <Component id="btn_actualizar" alignment="0" min="-2" pref="142" max="-2" attributes="0"/>
                       <Component id="btn_editar" alignment="0" min="-2" pref="142" max="-2" attributes="0"/>
                       <Component id="btn_unir" alignment="0" min="-2" pref="142" max="-2" attributes="0"/>
+                      <Component id="btn_entregar_todo" alignment="0" min="-2" pref="142" max="-2" attributes="0"/>
                   </Group>
                   <EmptySpace max="32767" attributes="0"/>
               </Group>
@@ -190,6 +191,8 @@
                   <Component id="btn_editar" min="-2" max="-2" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
                   <Component id="btn_unir" min="-2" pref="45" max="-2" attributes="0"/>
+                  <EmptySpace max="-2" attributes="0"/>
+                  <Component id="btn_entregar_todo" min="-2" pref="45" max="-2" attributes="0"/>
                   <EmptySpace max="32767" attributes="0"/>
               </Group>
           </Group>
@@ -290,6 +293,20 @@
           </Properties>
           <Events>
             <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_unirActionPerformed"/>
+          </Events>
+        </Component>
+        <Component class="javax.swing.JButton" name="btn_entregar_todo">
+          <Properties>
+            <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+              <Font name="Tahoma" size="14" style="1"/>
+            </Property>
+            <Property name="text" type="java.lang.String" value="Entregar todo"/>
+            <Property name="border" type="javax.swing.border.Border" editor="org.netbeans.modules.form.editors2.BorderEditor">
+              <Border info="null"/>
+            </Property>
+          </Properties>
+          <Events>
+            <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_entregar_todoActionPerformed"/>
           </Events>
         </Component>
       </SubComponents>

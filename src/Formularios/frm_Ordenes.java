@@ -111,6 +111,13 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
         } else {
             btn_unir.setVisible(frm_main.perfil == 1);
         }
+        // Entrega masiva por bodega es propiedad por usuario ('ordenes_entrega_masiva');
+        // con la BD sin migrar solo el admin (perfil 1) ve el botón.
+        if (Metodos.Permisos.estaCargado()) {
+            btn_entregar_todo.setVisible(Metodos.Permisos.puede("ordenes_entrega_masiva"));
+        } else {
+            btn_entregar_todo.setVisible(frm_main.perfil == 1);
+        }
     }
 
     public static void TamanosTablaAbonos() {
@@ -146,6 +153,7 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
         btn_eliminar = new javax.swing.JButton();
         btn_editar = new javax.swing.JButton();
         btn_unir = new javax.swing.JButton();
+        btn_entregar_todo = new javax.swing.JButton();
         jPanel4 = new javax.swing.JPanel();
         lbl_titulo = new javax.swing.JLabel();
         jButton2 = new javax.swing.JButton();
@@ -271,6 +279,15 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
             }
         });
 
+        btn_entregar_todo.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        btn_entregar_todo.setText("Entregar todo");
+        btn_entregar_todo.setBorder(null);
+        btn_entregar_todo.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_entregar_todoActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(
@@ -282,7 +299,8 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
                     .addComponent(btn_ver, javax.swing.GroupLayout.PREFERRED_SIZE, 142, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btn_actualizar, javax.swing.GroupLayout.PREFERRED_SIZE, 142, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btn_editar, javax.swing.GroupLayout.PREFERRED_SIZE, 142, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btn_unir, javax.swing.GroupLayout.PREFERRED_SIZE, 142, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(btn_unir, javax.swing.GroupLayout.PREFERRED_SIZE, 142, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btn_entregar_todo, javax.swing.GroupLayout.PREFERRED_SIZE, 142, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel3Layout.setVerticalGroup(
@@ -298,6 +316,8 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
                 .addComponent(btn_editar)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(btn_unir, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(btn_entregar_todo, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
@@ -677,6 +697,106 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
         }
     }//GEN-LAST:event_btn_unirActionPerformed
 
+    // ════════════════════════════════════════════════════════════════════════
+    // ENTREGA MASIVA POR BODEGA (flag bodegas.entrega_automatica)
+    // Entrega por completo, de una sola vez, todas las órdenes pendientes de las
+    // bodegas marcadas para entrega masiva (p.ej. Almacén Piso Uno). Reusa
+    // EntregaQRService para mover el stock igual que la entrega manual/QR.
+    // ════════════════════════════════════════════════════════════════════════
+    private void btn_entregar_todoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_entregar_todoActionPerformed
+        // 1. Bodegas marcadas para entrega masiva.
+        java.util.List<String> nombresBodega = new java.util.ArrayList<>();
+        try (ResultSet rs = DB_consultas_R_D.getTabla(
+                "SELECT nombre FROM bodegas WHERE entrega_automatica = true ORDER BY nombre")) {
+            while (rs != null && rs.next()) {
+                nombresBodega.add(rs.getString("nombre"));
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this,
+                    "No se pudo leer la configuración de bodegas: " + e.getMessage()
+                    + "\n¿Está aplicada la migración 'entrega_automatica'?",
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        if (nombresBodega.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Ninguna bodega está configurada para entrega masiva.\n"
+                    + "Marque la bodega con 'entrega_automatica = true' en la base de datos.",
+                    "Sin bodegas configuradas", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // 2. Órdenes vigentes con pendientes en esas bodegas (cualquier origen, menos ventas).
+        java.util.List<Integer> idsPendientes = new java.util.ArrayList<>();
+        String sql = "WITH detalles AS ("
+                + "  SELECT id_cabecera, SUM(cantidad) AS total_detalles"
+                + "  FROM facturas_detalles GROUP BY id_cabecera"
+                + "), entregas AS ("
+                + "  SELECT id_factura AS id_cabecera, SUM(cantidad) AS total_entregas"
+                + "  FROM entregas_productos GROUP BY id_factura"
+                + ") "
+                + "SELECT fc.id "
+                + "FROM facturas_cabeceras fc "
+                + "JOIN bodegas b ON b.id = fc.id_bodega "
+                + "LEFT JOIN detalles d ON d.id_cabecera = fc.id "
+                + "LEFT JOIN entregas e ON e.id_cabecera = fc.id "
+                + "WHERE fc.anulado = 1 "
+                + "  AND b.entrega_automatica = true "
+                + "  AND fc.tipo_factura <> 'Venta' "
+                + "  AND COALESCE(d.total_detalles, 0) - COALESCE(e.total_entregas, 0) > 0 "
+                + "ORDER BY fc.id";
+        try (ResultSet rs = DB_consultas_R_D.getTabla(sql)) {
+            while (rs != null && rs.next()) {
+                idsPendientes.add(rs.getInt("id"));
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this,
+                    "No se pudieron consultar las órdenes pendientes: " + e.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (idsPendientes.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "No hay órdenes pendientes en: " + String.join(", ", nombresBodega),
+                    "Nada por entregar", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // 3. Confirmación.
+        int confirmar = JOptionPane.showConfirmDialog(this,
+                "Se entregarán por completo " + idsPendientes.size()
+                + " orden(es) pendiente(s) de: " + String.join(", ", nombresBodega) + ".\n\n"
+                + "La entrega se registrará a tu nombre y descontará el stock\n"
+                + "aunque quede en negativo. Esta acción no se puede deshacer.\n\n¿Continuar?",
+                "Entregar todo", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (confirmar != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        // 4. Entregar una por una reusando la lógica existente.
+        int ok = 0, fallidas = 0;
+        for (int idOrden : idsPendientes) {
+            int idCab = Metodos.EntregaQRService.entregarOrdenCompleta(idOrden, frm_main.id_user);
+            if (idCab > 0) {
+                ok++;
+            } else {
+                fallidas++;
+            }
+        }
+
+        StringBuilder msg = new StringBuilder();
+        msg.append("Entrega masiva finalizada.\n\nEntregadas: ").append(ok);
+        if (fallidas > 0) {
+            msg.append("\nNo entregadas: ").append(fallidas)
+                    .append("\n(pudieron quedar sin pendientes o con error; revise el log)");
+        }
+        JOptionPane.showMessageDialog(this, msg.toString(),
+                "Entregar todo", JOptionPane.INFORMATION_MESSAGE);
+
+        actualizar("pendientes");
+    }//GEN-LAST:event_btn_entregar_todoActionPerformed
+
     private void txt_FiltroKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_txt_FiltroKeyTyped
 
     }//GEN-LAST:event_txt_FiltroKeyTyped
@@ -865,6 +985,7 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
     public static javax.swing.JButton btn_actualizar;
     public static javax.swing.JButton btn_editar;
     private javax.swing.JButton btn_eliminar;
+    private javax.swing.JButton btn_entregar_todo;
     private javax.swing.JButton btn_unir;
     public static javax.swing.JButton btn_ver;
     private javax.swing.JButton btn_ver_con_entregadas;
