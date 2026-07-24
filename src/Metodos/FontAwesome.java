@@ -56,6 +56,17 @@ public final class FontAwesome {
     public static final String CHEVRON_RIGHT = "";
     public static final String BARS          = "";
 
+    /** Glifos adicionales para el modulo Caja (FA6 Free Solid, por unicode). */
+    public static final String PRINTER    = ""; // print
+    public static final String IMAGE      = ""; // image
+    public static final String FILE_EXCEL = ""; // file-excel
+    public static final String BALANCE    = ""; // scale-balanced (comparar)
+    public static final String CALCULATOR = ""; // calculator
+    public static final String ELLIPSIS_V = ""; // ellipsis-vertical
+    public static final String CAMERA     = ""; // camera
+    public static final String UPLOAD     = ""; // upload
+    public static final String MONEY_BILL = ""; // money-bill
+
     private static Font solidBase;
     private static Font regularBase;
 
