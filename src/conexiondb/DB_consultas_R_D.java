@@ -6,6 +6,7 @@
 package conexiondb;
 
 import Formularios.frm_main;
+import java.awt.Desktop;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -103,6 +104,104 @@ public class DB_consultas_R_D {
         }
 
         return false;
+    }
+
+    /**
+     * Sobrecarga usada por el modulo Creditos (control_creditos traia una
+     * version que ademas registraba en la tabla logs; aqui se delega en la
+     * validacion estandar sin auditoria).
+     */
+    public static boolean validar_admin(String tabla, String accion, String observacion) {
+        return validar_admin();
+    }
+
+    // ------------------------------------------------------------------
+    // Utilidades traidas de control_creditos para el modulo Creditos
+    // ------------------------------------------------------------------
+
+    /** Carpeta donde el modulo Creditos guarda fotos y PDF de soportes (configuraciones.ruta_imagenes). */
+    public static String Ruta_Imagenes() {
+        String resultado = "";
+        ResultSet rs = getTabla("select ruta_imagenes from configuraciones");
+        try {
+            while (rs.next()) {
+                resultado = (rs.getString("ruta_imagenes"));
+            }
+            rs.close();
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+        if (resultado == null) {
+            resultado = "1";
+        }
+        return resultado;
+    }
+
+    public static String obtener_hora_con_guiones() {
+        String fecha = "";
+        Calendar calendario = new GregorianCalendar();
+        int hora, minutos, segundos;
+        hora = calendario.get(Calendar.HOUR_OF_DAY);
+        minutos = calendario.get(Calendar.MINUTE);
+        segundos = calendario.get(Calendar.SECOND);
+
+        fecha = hora + "-" + minutos + "-" + segundos;
+        return fecha;
+    }
+
+    public static String obtener_fecha_seguiente_mes() {
+        String fecha = "";
+        Calendar calendario = new GregorianCalendar();
+        int dia, mes, ano;
+
+        dia = calendario.get(Calendar.DAY_OF_MONTH);
+        mes = calendario.get(Calendar.MARCH) + 2;
+        ano = calendario.get(Calendar.YEAR);
+
+        fecha = ano + "-" + mes + "-" + dia;
+        return fecha;
+    }
+
+    public static void Abrir_Archivo(String archivo) {
+        try {
+            File objetofile = new File(archivo);
+            Desktop.getDesktop().open(objetofile);
+        } catch (IOException ex) {
+            System.out.println(ex);
+        }
+    }
+
+    public static void Eliminar_Archivo(String archivo) {
+        File objetofile = new File(archivo);
+        objetofile.delete();
+    }
+
+    public static void Actualizar_Campo_String(String tabla, String campo, String id, String dato_nuevo) throws SQLException {
+
+        Connection con = null;
+        String SQL = "update " + tabla + " set " + campo + "='" + dato_nuevo + "' where id=" + id;
+
+        try {
+            con = getConexion();
+            PreparedStatement psql = con.prepareStatement(SQL);
+            psql.executeUpdate();
+            psql.close();
+
+        } catch (SQLException e) {
+
+            JOptionPane.showMessageDialog(null, "Error al intentar actualizar la información:\n"
+                    + e, "Error en la operación", JOptionPane.ERROR_MESSAGE);
+        } finally {
+            try {
+                if (con != null) {
+                    con.close();
+                }
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(null, "Error al intentar cerrar la conexión:\n"
+                        + ex, "Error en la operación", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+
     }
 
     public static double consutla_entregas(String id) {

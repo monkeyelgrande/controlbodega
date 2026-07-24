@@ -389,4 +389,21 @@ public class metodos {
         JXFindBar findBar = new JXFindBar(tabla.getSearchable());
         tabla.setSelectionModel(new ForcedListSelectionModel());
     }
+
+    /** Copia un archivo pisando el destino (usada por el modulo Creditos para fotos/PDF de soportes). */
+    public static void copyFile_Java7(String origen, String destino) {
+        try {
+            java.nio.file.Path FROM = java.nio.file.Paths.get(origen);
+            java.nio.file.Path TO = java.nio.file.Paths.get(destino);
+            java.nio.file.CopyOption[] options = new java.nio.file.CopyOption[]{
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                java.nio.file.StandardCopyOption.COPY_ATTRIBUTES
+            };
+
+            java.nio.file.Files.copy(FROM, TO, options);
+        } catch (java.io.IOException e) {
+            JOptionPane.showMessageDialog(null, "Error al Guardar Imagen: " + e);
+            System.err.println(e.toString());
+        }
+    }
 }

@@ -31,8 +31,15 @@ public final class Permisos {
         return cargado;
     }
 
-    /** true si el usuario tiene la opcion. El perfil 1 (Admin) siempre puede. */
+    /**
+     * true si el usuario tiene la opcion. El perfil 1 (Admin) siempre puede,
+     * salvo que la opcion pertenezca a un modulo apagado en esta instalacion
+     * (ver Modulos): un modulo no licenciado no existe para nadie.
+     */
     public static boolean puede(String clave) {
+        if (Modulos.opcionApagada(clave)) {
+            return false;
+        }
         return Formularios.frm_main.perfil == 1 || opciones.contains(clave);
     }
 }

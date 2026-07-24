@@ -489,6 +489,10 @@ public class login extends JFrame {
 
                 main.perfil = per;
 
+                // Modulos licenciables por instalacion; si la BD no tiene la
+                // migracion de modulos, todo queda activo.
+                Metodos.Modulos.cargar();
+
                 // Permisos administrables en BD; si la carga falla, permisos()
                 // cae al switch por perfil anterior.
                 Metodos.Permisos.cargar(id_u, per);
@@ -559,20 +563,13 @@ public class login extends JFrame {
     }
 
     public static void main(String args[]) {
-        try {
-            FlatLightLaf.setup();
-            UIManager.put("Button.arc", 10);
-            UIManager.put("Component.arc", 10);
-            UIManager.put("ProgressBar.arc", 10);
-            UIManager.put("TextComponent.arc", 10);
-            UIManager.put("ScrollBar.thumbArc", 10);
-            UIManager.put("ScrollBar.width", 10);
-            UIManager.put("Component.focusColor", PRIMARY);
-            UIManager.put("Component.focusedBorderColor", PRIMARY);
-        } catch (Exception ex) {
-            java.util.logging.Logger.getLogger(login.class.getName())
-                    .log(java.util.logging.Level.SEVERE, "No se pudo aplicar FlatLaf", ex);
-        }
+        // FlatLaf global (modo claro/oscuro guardado, acento verde, fuentes
+        // Font Awesome). Reemplaza el setup local de FlatLightLaf: ahora el
+        // tema lo gobierna Estilos.Tema, igual que en electro-industrial.
+        Estilos.Tema.aplicar();
+        // El login mantiene su diseño claro propio (fondos blancos fijos)
+        UIManager.put("Component.focusColor", PRIMARY);
+        UIManager.put("Component.focusedBorderColor", PRIMARY);
 
         java.awt.EventQueue.invokeLater(new Runnable() {
             @Override public void run() {

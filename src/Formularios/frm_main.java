@@ -5,10 +5,29 @@
  */
 package Formularios;
 
+import Estilos.BarraLateral;
+import Estilos.FontAwesome;
+import Estilos.Tema;
 import Login.login;
 import Metodos.metodos;
+import java.awt.BorderLayout;
+import java.awt.Container;
+import java.awt.Dimension;
+import java.awt.GradientPaint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.Image;
+import java.awt.Insets;
+import java.awt.RenderingHints;
 import java.awt.Toolkit;
+import javax.swing.Box;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.UIManager;
 import java.beans.PropertyVetoException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -98,6 +117,51 @@ public class frm_main extends javax.swing.JFrame {
     private javax.swing.JMenuItem itemComisionesPrecios = null;
     private javax.swing.JMenu menuReportesPrecios = null;
     private javax.swing.JMenuItem itemConfigPrecios = null;
+    // Módulo Créditos (importado de control_creditos), licenciable por instalación
+    private javax.swing.JMenu menuCreditos = null;
+    private javax.swing.JMenuItem itemCreditosVer = null;
+    private javax.swing.JMenuItem itemCreditosClientes = null;
+    private javax.swing.JMenuItem itemCreditosCuentas = null;
+    private javax.swing.JMenuItem itemCreditosTipos = null;
+    private javax.swing.JMenuItem itemCreditosReportes = null;
+    Creditos.frm_Creditos frm_creditos_mod = null;
+    Creditos.frm_contactos frm_clientes_credito = null;
+    Creditos.frm_cuentas frm_cuentas_credito = null;
+    Creditos.frm_Tipos_abonos frm_tipos_abonos_credito = null;
+    Creditos.jif_PrincipalReportes jif_reportes_credito = null;
+    // Módulo Caja (importado de cajadiaria), licenciable por instalación
+    private javax.swing.JMenu menuCaja = null;
+    private javax.swing.JMenuItem itemCajaIngresos = null;
+    private javax.swing.JMenuItem itemCajaEgresos = null;
+    private javax.swing.JMenuItem itemCajaTraslados = null;
+    private javax.swing.JMenuItem itemCajaFondos = null;
+    private javax.swing.JMenuItem itemCajaCtasIngresos = null;
+    private javax.swing.JMenuItem itemCajaCtasEgresos = null;
+    Caja.frm_ingresos frm_caja_ingresos = null;
+    Caja.frm_egresos frm_caja_egresos = null;
+    Caja.frm_Traslados frm_caja_traslados = null;
+    Caja.frm_fondos frm_caja_fondos = null;
+    Caja.frm_cuentas_ingresos frm_caja_ctas_ingresos = null;
+    Caja.frm_cuentas_egresos frm_caja_ctas_egresos = null;
+    // Configuración del módulo Caja: si al crear un ingreso/egreso se captura
+    // de una vez el fondo (dinero recibido). Se carga en el constructor.
+    public static int ingreso_dinero = 0;
+    // Rediseño (estilo electro-industrial): barra lateral colapsable,
+    // barra superior con modo claro/oscuro y chip de usuario.
+    private BarraLateral barra;
+    private JButton btn_menu;
+    private JButton btn_tema;
+    private JPanel centro;
+    // Items del menú Compras, con campo propio para enlazarlos a la barra lateral
+    private javax.swing.JMenuItem itemComprasSugeridos = null;
+    private javax.swing.JMenuItem itemComprasRFQ = null;
+    private javax.swing.JMenuItem itemComprasComparativos = null;
+    private javax.swing.JMenuItem itemComprasOrdenes = null;
+    private javax.swing.JMenuItem itemComprasProveedores = null;
+    // Items de reportes del menú Precios, enlazables desde la barra lateral
+    private javax.swing.JMenuItem itemRepPreciosDiario = null;
+    private javax.swing.JMenuItem itemRepPreciosXFactura = null;
+    private javax.swing.JMenuItem itemRepPreciosXUsuario = null;
 
     jif_users jif_user = null;
     jif_PrincipalReportes jif_reportes = null;
@@ -125,7 +189,11 @@ public class frm_main extends javax.swing.JFrame {
 
         montarMenuOrdenesCompra();
         montarMenuPrecios();
+        montarMenuCreditos();
+        montarMenuCaja();
         montarMenuPermisos();
+        construirInterfaz();
+        cargarConfigCaja();
 
         // Detener el listener de auto-impresión al cerrar la app
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -149,19 +217,16 @@ public class frm_main extends javax.swing.JFrame {
         if (!barra_notificaciones) {
             return;
         }
-        java.awt.Container cp = getContentPane();
-        // Quitar layout actual y reorganizar: escritorio CENTER, barra EAST
-        cp.removeAll();
-        cp.setLayout(new java.awt.BorderLayout());
-        cp.add(escritorio, java.awt.BorderLayout.CENTER);
-
         int anchoPantalla = java.awt.Toolkit.getDefaultToolkit().getScreenSize().width;
         int anchoBarra = Math.max(250, Math.min(330, anchoPantalla / 6));
 
+        // El panel central (barra superior + escritorio) ya está organizado por
+        // construirInterfaz; la barra de notificaciones se cuelga a su derecha
+        // sin tocar la barra lateral.
         barraNotif = new Metodos.BarraNotificacionesPanel(anchoBarra);
-        cp.add(barraNotif, java.awt.BorderLayout.EAST);
-        cp.revalidate();
-        cp.repaint();
+        centro.add(barraNotif, java.awt.BorderLayout.EAST);
+        centro.revalidate();
+        centro.repaint();
 
         Metodos.NotificacionesService.getInstance().iniciar();
     }
@@ -210,22 +275,27 @@ public class frm_main extends javax.swing.JFrame {
     private void montarMenuOrdenesCompra() {
         menuCompras = new javax.swing.JMenu("Compras");
 
-        menuCompras.add(itemMenu("Sugeridos de pedido", new Runnable() {
+        itemComprasSugeridos = itemMenu("Sugeridos de pedido", new Runnable() {
             @Override public void run() { abrirSugeridos(); }
-        }));
-        menuCompras.add(itemMenu("Cotizaciones (RFQ)", new Runnable() {
+        });
+        menuCompras.add(itemComprasSugeridos);
+        itemComprasRFQ = itemMenu("Cotizaciones (RFQ)", new Runnable() {
             @Override public void run() { abrirCotizacionesCompra(); }
-        }));
-        menuCompras.add(itemMenu("Comparativos de cotizaciones", new Runnable() {
+        });
+        menuCompras.add(itemComprasRFQ);
+        itemComprasComparativos = itemMenu("Comparativos de cotizaciones", new Runnable() {
             @Override public void run() { abrirComparativos(); }
-        }));
-        menuCompras.add(itemMenu("Órdenes de compra", new Runnable() {
+        });
+        menuCompras.add(itemComprasComparativos);
+        itemComprasOrdenes = itemMenu("Órdenes de compra", new Runnable() {
             @Override public void run() { abrirOrdenesCompra(); }
-        }));
+        });
+        menuCompras.add(itemComprasOrdenes);
         menuCompras.addSeparator();
-        menuCompras.add(itemMenu("Proveedores por producto", new Runnable() {
+        itemComprasProveedores = itemMenu("Proveedores por producto", new Runnable() {
             @Override public void run() { abrirAmarreProveedores(); }
-        }));
+        });
+        menuCompras.add(itemComprasProveedores);
 
         jMenuBar1.add(menuCompras);
         jMenuBar1.revalidate();
@@ -348,35 +418,35 @@ public class frm_main extends javax.swing.JFrame {
         javax.swing.JMenu menuReportes = new javax.swing.JMenu("Reportes");
         menuReportesPrecios = menuReportes;
 
-        javax.swing.JMenuItem itemRepDiario = new javax.swing.JMenuItem("Ingresos del día");
-        itemRepDiario.addActionListener(new java.awt.event.ActionListener() {
+        itemRepPreciosDiario = new javax.swing.JMenuItem("Ingresos del día");
+        itemRepPreciosDiario.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 Precios.jd_reporte_ingresos_diario rep = new Precios.jd_reporte_ingresos_diario(null, false);
                 rep.setVisible(true);
             }
         });
-        menuReportes.add(itemRepDiario);
+        menuReportes.add(itemRepPreciosDiario);
 
-        javax.swing.JMenuItem itemRepXFactura = new javax.swing.JMenuItem("Entre fechas (por factura)");
-        itemRepXFactura.addActionListener(new java.awt.event.ActionListener() {
+        itemRepPreciosXFactura = new javax.swing.JMenuItem("Entre fechas (por factura)");
+        itemRepPreciosXFactura.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 Precios.jd_reporte_ingresos_x_factura rep = new Precios.jd_reporte_ingresos_x_factura(null, false);
                 rep.setVisible(true);
             }
         });
-        menuReportes.add(itemRepXFactura);
+        menuReportes.add(itemRepPreciosXFactura);
 
-        javax.swing.JMenuItem itemRepXUsuario = new javax.swing.JMenuItem("Entre fechas (por usuario)");
-        itemRepXUsuario.addActionListener(new java.awt.event.ActionListener() {
+        itemRepPreciosXUsuario = new javax.swing.JMenuItem("Entre fechas (por usuario)");
+        itemRepPreciosXUsuario.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 Precios.jd_reporte_ingresos_x_producto rep = new Precios.jd_reporte_ingresos_x_producto(null, false);
                 rep.setVisible(true);
             }
         });
-        menuReportes.add(itemRepXUsuario);
+        menuReportes.add(itemRepPreciosXUsuario);
 
         menuPrecios.add(menuReportes);
 
@@ -399,9 +469,306 @@ public class frm_main extends javax.swing.JFrame {
     /** Llamar tras el login, cuando ya se conocen perfil y rol_precios. */
     public void actualizarMenuPrecios() {
         if (menuPrecios != null) {
-            menuPrecios.setVisible(rol_precios > 0 || perfil == 1);
+            // El menu Precios se gobierna por roles, no por opciones, asi que
+            // el interruptor de modulo se aplica aqui de forma explicita.
+            menuPrecios.setVisible(Metodos.Modulos.activo("Precios")
+                    && (rol_precios > 0 || perfil == 1));
             jMenuBar1.revalidate();
             jMenuBar1.repaint();
+            if (barra != null) {
+                barra.sincronizar();
+            }
+        }
+    }
+
+    /**
+     * Agrega el menú "Créditos" (módulo importado de control_creditos).
+     * Se construye oculto; la visibilidad la decide permisos() con las
+     * opciones del módulo Creditos, y el interruptor comercial es la fila
+     * 'Creditos' de la tabla modulos (un módulo apagado no existe para nadie,
+     * ni para el Admin — ver Metodos.Modulos).
+     */
+    private void montarMenuCreditos() {
+        menuCreditos = new javax.swing.JMenu("Créditos");
+
+        itemCreditosVer = new javax.swing.JMenuItem("Créditos");
+        itemCreditosVer.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirCreditos();
+            }
+        });
+        menuCreditos.add(itemCreditosVer);
+
+        itemCreditosClientes = new javax.swing.JMenuItem("Clientes de crédito");
+        itemCreditosClientes.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirClientesCredito();
+            }
+        });
+        menuCreditos.add(itemCreditosClientes);
+
+        itemCreditosCuentas = new javax.swing.JMenuItem("Cuentas");
+        itemCreditosCuentas.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirCuentasCredito();
+            }
+        });
+        menuCreditos.add(itemCreditosCuentas);
+
+        itemCreditosTipos = new javax.swing.JMenuItem("Tipos de abonos");
+        itemCreditosTipos.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirTiposAbonos();
+            }
+        });
+        menuCreditos.add(itemCreditosTipos);
+
+        itemCreditosReportes = new javax.swing.JMenuItem("Reportes");
+        itemCreditosReportes.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirReportesCredito();
+            }
+        });
+        menuCreditos.add(itemCreditosReportes);
+
+        menuCreditos.setVisible(false);
+        jMenuBar1.add(menuCreditos);
+        jMenuBar1.revalidate();
+        jMenuBar1.repaint();
+    }
+
+    private void abrirCreditos() {
+        if (metodos.estacerrado(frm_creditos_mod)) {
+            frm_creditos_mod = new Creditos.frm_Creditos();
+            escritorio.add(frm_creditos_mod);
+            try {
+                frm_creditos_mod.setMaximum(true);
+            } catch (java.beans.PropertyVetoException ex) {
+                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            frm_creditos_mod.show();
+        } else {
+            frm_creditos_mod.toFront();
+        }
+    }
+
+    private void abrirClientesCredito() {
+        if (metodos.estacerrado(frm_clientes_credito)) {
+            frm_clientes_credito = new Creditos.frm_contactos();
+            escritorio.add(frm_clientes_credito);
+            try {
+                frm_clientes_credito.setMaximum(true);
+            } catch (java.beans.PropertyVetoException ex) {
+                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            frm_clientes_credito.show();
+        } else {
+            frm_clientes_credito.toFront();
+        }
+    }
+
+    private void abrirCuentasCredito() {
+        if (metodos.estacerrado(frm_cuentas_credito)) {
+            frm_cuentas_credito = new Creditos.frm_cuentas();
+            escritorio.add(frm_cuentas_credito);
+            try {
+                frm_cuentas_credito.setMaximum(true);
+            } catch (java.beans.PropertyVetoException ex) {
+                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            frm_cuentas_credito.show();
+        } else {
+            frm_cuentas_credito.toFront();
+        }
+    }
+
+    private void abrirTiposAbonos() {
+        if (metodos.estacerrado(frm_tipos_abonos_credito)) {
+            frm_tipos_abonos_credito = new Creditos.frm_Tipos_abonos();
+            escritorio.add(frm_tipos_abonos_credito);
+            try {
+                frm_tipos_abonos_credito.setMaximum(true);
+            } catch (java.beans.PropertyVetoException ex) {
+                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            frm_tipos_abonos_credito.show();
+        } else {
+            frm_tipos_abonos_credito.toFront();
+        }
+    }
+
+    private void abrirReportesCredito() {
+        if (metodos.estacerrado(jif_reportes_credito)) {
+            jif_reportes_credito = new Creditos.jif_PrincipalReportes();
+            escritorio.add(jif_reportes_credito);
+            jif_reportes_credito.show();
+        } else {
+            jif_reportes_credito.toFront();
+        }
+    }
+
+    /**
+     * Agrega el menú "Caja" (módulo importado de cajadiaria: ingresos y egresos
+     * de dinero contra fondos). Se construye oculto; la visibilidad la decide
+     * permisos() con las opciones del módulo Caja, y el interruptor comercial
+     * es la fila 'Caja' de la tabla modulos (ver Metodos.Modulos).
+     */
+    private void montarMenuCaja() {
+        menuCaja = new javax.swing.JMenu("Caja");
+
+        itemCajaIngresos = new javax.swing.JMenuItem("Ingresos");
+        itemCajaIngresos.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirCajaIngresos();
+            }
+        });
+        menuCaja.add(itemCajaIngresos);
+
+        itemCajaEgresos = new javax.swing.JMenuItem("Egresos");
+        itemCajaEgresos.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirCajaEgresos();
+            }
+        });
+        menuCaja.add(itemCajaEgresos);
+
+        itemCajaTraslados = new javax.swing.JMenuItem("Traslados entre fondos");
+        itemCajaTraslados.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirCajaTraslados();
+            }
+        });
+        menuCaja.add(itemCajaTraslados);
+
+        itemCajaFondos = new javax.swing.JMenuItem("Fondos");
+        itemCajaFondos.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirCajaFondos();
+            }
+        });
+        menuCaja.add(itemCajaFondos);
+
+        itemCajaCtasIngresos = new javax.swing.JMenuItem("Cuentas de ingresos");
+        itemCajaCtasIngresos.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirCajaCtasIngresos();
+            }
+        });
+        menuCaja.add(itemCajaCtasIngresos);
+
+        itemCajaCtasEgresos = new javax.swing.JMenuItem("Cuentas de egresos");
+        itemCajaCtasEgresos.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirCajaCtasEgresos();
+            }
+        });
+        menuCaja.add(itemCajaCtasEgresos);
+
+        menuCaja.setVisible(false);
+        jMenuBar1.add(menuCaja);
+        jMenuBar1.revalidate();
+        jMenuBar1.repaint();
+    }
+
+    /** Lee la configuración que usa el módulo Caja (flag ingreso_dinero). */
+    private void cargarConfigCaja() {
+        try {
+            java.sql.ResultSet rs = conexiondb.DB_consultas_R_D
+                    .getTabla("select coalesce(ingreso_dinero,0) as ingreso_dinero from configuraciones limit 1");
+            if (rs != null && rs.next()) {
+                ingreso_dinero = rs.getInt("ingreso_dinero");
+            }
+            if (rs != null) {
+                rs.close();
+            }
+        } catch (Exception e) {
+            System.out.println("cargarConfigCaja: " + e);
+        }
+    }
+
+    private void abrirCajaIngresos() {
+        if (metodos.estacerrado(frm_caja_ingresos)) {
+            frm_caja_ingresos = new Caja.frm_ingresos();
+            escritorio.add(frm_caja_ingresos);
+            try {
+                frm_caja_ingresos.setMaximum(true);
+            } catch (java.beans.PropertyVetoException ex) {
+                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            frm_caja_ingresos.show();
+        } else {
+            frm_caja_ingresos.toFront();
+        }
+    }
+
+    private void abrirCajaEgresos() {
+        if (metodos.estacerrado(frm_caja_egresos)) {
+            frm_caja_egresos = new Caja.frm_egresos();
+            escritorio.add(frm_caja_egresos);
+            try {
+                frm_caja_egresos.setMaximum(true);
+            } catch (java.beans.PropertyVetoException ex) {
+                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            frm_caja_egresos.show();
+        } else {
+            frm_caja_egresos.toFront();
+        }
+    }
+
+    private void abrirCajaTraslados() {
+        if (metodos.estacerrado(frm_caja_traslados)) {
+            frm_caja_traslados = new Caja.frm_Traslados();
+            escritorio.add(frm_caja_traslados);
+            try {
+                frm_caja_traslados.setMaximum(true);
+            } catch (java.beans.PropertyVetoException ex) {
+                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            frm_caja_traslados.show();
+        } else {
+            frm_caja_traslados.toFront();
+        }
+    }
+
+    private void abrirCajaFondos() {
+        if (metodos.estacerrado(frm_caja_fondos)) {
+            frm_caja_fondos = new Caja.frm_fondos();
+            escritorio.add(frm_caja_fondos);
+            frm_caja_fondos.show();
+        } else {
+            frm_caja_fondos.toFront();
+        }
+    }
+
+    private void abrirCajaCtasIngresos() {
+        if (metodos.estacerrado(frm_caja_ctas_ingresos)) {
+            frm_caja_ctas_ingresos = new Caja.frm_cuentas_ingresos();
+            escritorio.add(frm_caja_ctas_ingresos);
+            frm_caja_ctas_ingresos.show();
+        } else {
+            frm_caja_ctas_ingresos.toFront();
+        }
+    }
+
+    private void abrirCajaCtasEgresos() {
+        if (metodos.estacerrado(frm_caja_ctas_egresos)) {
+            frm_caja_ctas_egresos = new Caja.frm_cuentas_egresos();
+            escritorio.add(frm_caja_ctas_egresos);
+            frm_caja_ctas_egresos.show();
+        } else {
+            frm_caja_ctas_egresos.toFront();
         }
     }
 
@@ -508,6 +875,229 @@ public class frm_main extends javax.swing.JFrame {
         }
     }
 
+    /**
+     * Reorganiza la ventana con el rediseño traído de electro-industrial:
+     * barra lateral colapsable a la izquierda, barra superior con usuario y
+     * modo oscuro, y el escritorio MDI al centro. El JMenuBar original se
+     * conserva con tamaño cero para no perder los atajos de teclado
+     * (F3..F11) ni la lógica de permisos: cada opción de la barra lateral
+     * dispara el JMenuItem o JButton equivalente y refleja su visibilidad.
+     */
+    private void construirInterfaz() {
+        jMenuBar1.setPreferredSize(new Dimension(0, 0));
+
+        // el escritorio queda limpio como área MDI; los botones grandes y las
+        // etiquetas de usuario se retiran (siguen existiendo para permisos()
+        // y el login: la barra lateral y el chip de usuario los reutilizan)
+        escritorio.removeAll();
+        escritorio.setLayout(null);
+
+        barra = new BarraLateral("Control Bodega", "ContaMonkey");
+        construirMenuLateral();
+
+        centro = new JPanel(new BorderLayout());
+        centro.add(construirBarraSuperior(), BorderLayout.NORTH);
+        centro.add(escritorio, BorderLayout.CENTER);
+
+        Container cp = getContentPane();
+        cp.removeAll();
+        cp.setLayout(new BorderLayout());
+        cp.add(barra, BorderLayout.WEST);
+        cp.add(centro, BorderLayout.CENTER);
+    }
+
+    /**
+     * Construye la navegación de la barra lateral enlazando los menús y los
+     * botones del escritorio original (así cada opción conserva su permiso).
+     */
+    private void construirMenuLateral() {
+        barra.agregarSeccion("Operación");
+        barra.agregarItem("Contactos", FontAwesome.CONTACTOS, jmenu_contactos, jmenu_con);
+
+        BarraLateral.Grupo prod = barra.agregarGrupo("Productos", FontAwesome.CAJAS)
+                .gobernadoPor(jMenu_productos_principal);
+        prod.agregarItem("Productos", jmenu_productos);
+        prod.agregarItem("Ingreso productos", jMenuItem2);
+        prod.agregarItem("Consulta", jMenuItem3);
+        prod.agregarItem("Traslado entre bodegas", jmenu_mover_productos);
+        prod.agregarItem("Ajustar inventario", jMenu_verificar_inventario);
+
+        BarraLateral.Grupo ord = barra.agregarGrupo("Órdenes", FontAwesome.FACTURA)
+                .gobernadoPor(jMenu_ordenes);
+        ord.agregarItem("Generar orden", jmenu_facturacion);
+        ord.agregarItem("Ver órdenes", jmenu_ver_factura);
+        ord.agregarItem("Órdenes anuladas", jmenu_ver_anulados);
+
+        // Ventas/cotizaciones solo existían como botones del escritorio; la
+        // barra los dispara directamente y hereda sus permisos (btn_*)
+        BarraLateral.Grupo ventas = barra.agregarGrupo("Ventas", FontAwesome.CAJA_REGISTRADORA);
+        ventas.agregarItem("Facturar", btn_facturar);
+        ventas.agregarItem("Ver facturas", btn_ver_facturas);
+        ventas.agregarItem("Devolución", btn_decolucion);
+        ventas.agregarItem("Cotización", btn_cotizacion);
+        ventas.agregarItem("Ver cotizaciones", btn_ver_cotizaciones);
+
+        BarraLateral.Grupo compras = barra.agregarGrupo("Compras", FontAwesome.CAMION)
+                .gobernadoPor(menuCompras);
+        compras.agregarItem("Sugeridos de pedido", itemComprasSugeridos);
+        compras.agregarItem("Cotizaciones (RFQ)", itemComprasRFQ);
+        compras.agregarItem("Comparativos", itemComprasComparativos);
+        compras.agregarItem("Órdenes de compra", itemComprasOrdenes);
+        compras.agregarItem("Proveedores por producto", itemComprasProveedores);
+
+        BarraLateral.Grupo precios = barra.agregarGrupo("Precios", FontAwesome.ETIQUETA)
+                .gobernadoPor(menuPrecios);
+        precios.agregarItem("Ingresos de productos", itemIngresosPrecios);
+        precios.agregarItem("Precios de productos", itemPreciosProductos);
+        precios.agregarItem("Descuentos escalonados", itemDescuentosPrecios);
+        precios.agregarItem("Imprimir etiquetas", itemEtiquetasPrecios);
+        precios.agregarItem("Analizar comisiones", itemComisionesPrecios);
+        precios.agregarItem("Reporte ingresos del día", itemRepPreciosDiario, menuReportesPrecios);
+        precios.agregarItem("Reporte por factura", itemRepPreciosXFactura, menuReportesPrecios);
+        precios.agregarItem("Reporte por usuario", itemRepPreciosXUsuario, menuReportesPrecios);
+        precios.agregarItem("Configuración de precios", itemConfigPrecios);
+
+        BarraLateral.Grupo cred = barra.agregarGrupo("Créditos", FontAwesome.BILLETERA)
+                .gobernadoPor(menuCreditos);
+        cred.agregarItem("Créditos", itemCreditosVer);
+        cred.agregarItem("Clientes de crédito", itemCreditosClientes);
+        cred.agregarItem("Cuentas", itemCreditosCuentas);
+        cred.agregarItem("Tipos de abonos", itemCreditosTipos);
+        cred.agregarItem("Reportes", itemCreditosReportes);
+
+        BarraLateral.Grupo caja = barra.agregarGrupo("Caja", FontAwesome.DINERO)
+                .gobernadoPor(menuCaja);
+        caja.agregarItem("Ingresos", itemCajaIngresos);
+        caja.agregarItem("Egresos", itemCajaEgresos);
+        caja.agregarItem("Traslados entre fondos", itemCajaTraslados);
+        caja.agregarItem("Fondos", itemCajaFondos);
+        caja.agregarItem("Cuentas de ingresos", itemCajaCtasIngresos);
+        caja.agregarItem("Cuentas de egresos", itemCajaCtasEgresos);
+
+        barra.agregarItem("Reportes", FontAwesome.GRAFICA, jmenu_reportes);
+        barra.agregarItem("Calculadora retenciones", FontAwesome.CALCULADORA,
+                jmenu_calculadora_retenciones);
+
+        barra.agregarSeccion("Administración");
+
+        BarraLateral.Grupo sis = barra.agregarGrupo("Sistema", FontAwesome.ENGRANAJE);
+        sis.agregarItem("Usuarios", jmenu_user);
+        sis.agregarItem("Configuraciones", jmenu_configuraciones);
+        sis.agregarItem("Copia de seguridad", jmenu_backup);
+        sis.agregarItem("Tipo de ingreso", jMenu_tipo_ingreso);
+        sis.agregarItem("Unidades de medida", jMenu_unidades);
+        sis.agregarItem("Bodegas", jmenu_bodegas);
+        sis.agregarItem("Permisos de la aplicación", itemPermisos);
+        sis.agregarItem("Consulta (versión anterior)", jButton1);
+
+        barra.agregarItemPie("Cerrar sesión", FontAwesome.SALIR, jMenuItem1);
+        barra.sincronizar();
+    }
+
+    /** Barra superior: botón de menú, título, modo oscuro y usuario. */
+    private JComponent construirBarraSuperior() {
+        JPanel top = new JPanel(new GridBagLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                g.setColor(Tema.tarjeta());
+                g.fillRect(0, 0, getWidth(), getHeight());
+                g.setColor(Tema.borde());
+                g.fillRect(0, getHeight() - 1, getWidth(), 1);
+            }
+        };
+        top.setOpaque(false);
+        top.setPreferredSize(new Dimension(10, 52));
+        top.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 16));
+
+        btn_menu = new JButton();
+        btn_menu.putClientProperty("JButton.buttonType", "toolBarButton");
+        btn_menu.setFocusable(false);
+        btn_menu.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn_menu.setToolTipText("Expandir / contraer menú");
+        btn_menu.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                barra.alternar();
+            }
+        });
+
+        JLabel lbl_titulo = new JLabel(titulo == null ? "ContaMonkey" : titulo);
+        lbl_titulo.setFont(Tema.fuenteBase(Font.BOLD, 14));
+
+        btn_tema = new JButton();
+        btn_tema.putClientProperty("JButton.buttonType", "toolBarButton");
+        btn_tema.setFocusable(false);
+        btn_tema.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn_tema.setToolTipText("Cambiar entre modo claro y oscuro");
+        btn_tema.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                Tema.alternar();
+                refrescarIconosBarraSuperior();
+            }
+        });
+
+        // chip de usuario: avatar circular + nombre, perfil y bodega
+        // (las etiquetas las llena el login, por eso se reutilizan)
+        JComponent avatar = new JComponent() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+                        RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                g2.setPaint(new GradientPaint(0, 0, Tema.PRIMARIO,
+                        getWidth(), getHeight(), Tema.PRIMARIO_CLARO));
+                g2.fillOval(0, 0, getWidth(), getHeight());
+                g2.setColor(Color.WHITE);
+                g2.setFont(FontAwesome.solid(13f));
+                java.awt.FontMetrics fm = g2.getFontMetrics();
+                String s = String.valueOf(FontAwesome.USUARIO);
+                g2.drawString(s, (getWidth() - fm.stringWidth(s)) / 2,
+                        (getHeight() - fm.getHeight()) / 2 + fm.getAscent());
+                g2.dispose();
+            }
+        };
+        avatar.setPreferredSize(new Dimension(30, 30));
+
+        lbl_user.setFont(Tema.fuenteBase(Font.BOLD, 13));
+        lbl_user.setForeground(null); // hereda el color del tema activo
+        lbl_perfil.setFont(Tema.fuenteBase(Font.PLAIN, 12));
+        lbl_perfil.setForeground(null);
+        lbl_bodega_user.setFont(Tema.fuenteBase(Font.PLAIN, 12));
+        lbl_bodega_user.setForeground(null);
+
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridy = 0;
+        c.insets = new Insets(0, 5, 0, 5);
+        top.add(btn_menu, c);
+        top.add(lbl_titulo, c);
+
+        GridBagConstraints relleno = new GridBagConstraints();
+        relleno.gridy = 0;
+        relleno.weightx = 1;
+        relleno.fill = GridBagConstraints.HORIZONTAL;
+        top.add(Box.createHorizontalGlue(), relleno);
+
+        top.add(btn_tema, c);
+        top.add(avatar, c);
+        top.add(lbl_user, c);
+        top.add(lbl_perfil, c);
+        top.add(lbl_bodega_user, c);
+
+        refrescarIconosBarraSuperior();
+        return top;
+    }
+
+    /** Regenera los iconos de la barra superior con el color del tema. */
+    private void refrescarIconosBarraSuperior() {
+        Color color = UIManager.getColor("Label.foreground");
+        btn_menu.setIcon(FontAwesome.icono(FontAwesome.BARRAS, 15f, color));
+        btn_tema.setIcon(FontAwesome.icono(
+                Tema.esOscuro() ? FontAwesome.SOL : FontAwesome.LUNA, 15f, color));
+    }
+
     public static void consulta_database_name(String archivo) throws FileNotFoundException, IOException {
         String cadena;
         FileReader f = new FileReader(archivo);
@@ -529,6 +1119,9 @@ public class frm_main extends javax.swing.JFrame {
     public void permisos() {
         if (!Metodos.Permisos.estaCargado()) {
             permisosLegacy();
+            if (barra != null) {
+                barra.sincronizar();
+            }
             return;
         }
         for (java.util.Map.Entry<String, javax.swing.JComponent> e : registroComponentes().entrySet()) {
@@ -536,6 +1129,10 @@ public class frm_main extends javax.swing.JFrame {
         }
         if (itemPermisos != null) {
             itemPermisos.setVisible(Metodos.Permisos.puede("jmenu_permisos"));
+        }
+        // La barra lateral refleja la visibilidad de los menús/botones gobernados
+        if (barra != null) {
+            barra.sincronizar();
         }
     }
 
@@ -575,6 +1172,25 @@ public class frm_main extends javax.swing.JFrame {
         m.put("menu_precios_comisiones", itemComisionesPrecios);
         m.put("menu_precios_reportes", menuReportesPrecios);
         m.put("menu_precios_config", itemConfigPrecios);
+        // Módulo Créditos: si la instalación tiene el módulo apagado en la
+        // tabla modulos, Permisos.puede devuelve false para todas estas
+        // claves y el menú desaparece completo, incluso para el Admin.
+        m.put("menu_creditos", menuCreditos);
+        m.put("creditos_ver", itemCreditosVer);
+        m.put("creditos_clientes", itemCreditosClientes);
+        m.put("creditos_cuentas", itemCreditosCuentas);
+        m.put("creditos_tipos_abonos", itemCreditosTipos);
+        m.put("creditos_reportes", itemCreditosReportes);
+        // Módulo Caja: mismo esquema que Créditos (módulo apagado en la tabla
+        // modulos → desaparece completo; la opción caja_reportes existe en BD
+        // pero su pantalla aún no está portada, por eso no se mapea todavía).
+        m.put("menu_caja", menuCaja);
+        m.put("caja_ingresos", itemCajaIngresos);
+        m.put("caja_egresos", itemCajaEgresos);
+        m.put("caja_traslados", itemCajaTraslados);
+        m.put("caja_fondos", itemCajaFondos);
+        m.put("caja_cuentas_ingresos", itemCajaCtasIngresos);
+        m.put("caja_cuentas_egresos", itemCajaCtasEgresos);
         return m;
     }
 
@@ -1691,29 +2307,8 @@ public class frm_main extends javax.swing.JFrame {
      * @param args the command line arguments
      */
     public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(frm_main.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(frm_main.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(frm_main.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(frm_main.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-        //</editor-fold>
+        // FlatLaf con modo claro/oscuro guardado y fuentes Font Awesome
+        Tema.aplicar();
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {

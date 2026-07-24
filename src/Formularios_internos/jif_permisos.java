@@ -115,6 +115,13 @@ public class jif_permisos extends JDialog {
         setResizable(false);
 
         opciones = DBpermisos.listarOpciones();
+        // Las opciones de modulos apagados en esta instalacion no se
+        // administran: el modulo no existe para este cliente.
+        for (java.util.Iterator<Opcion> it = opciones.iterator(); it.hasNext();) {
+            if (!Metodos.Modulos.activo(it.next().getModulo())) {
+                it.remove();
+            }
+        }
 
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(EstiloCompras.BG_FORM);

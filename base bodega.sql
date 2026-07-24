@@ -32,6 +32,11 @@ CREATE TABLE configuraciones
   servicios character varying,
   dinero integer,
   impresora_venta_80mm character varying,
+  -- Modulo Creditos: carpeta donde se guardan fotos y PDF de soportes
+  ruta_imagenes character varying,
+  -- Modulo Caja: tipo de impresora de recibos y flag de ingreso de dinero
+  tipo_impresora character varying,
+  ingreso_dinero integer,
   CONSTRAINT configuraciones_pkey PRIMARY KEY (id)
 )
 WITH (
@@ -56,6 +61,14 @@ CREATE TABLE contactos
   observaciones character varying,
   proveedor integer,
   contacto_maestro integer,
+  -- Campos del modulo Creditos (cliente de credito); nullables, sin efecto
+  -- para instalaciones sin el modulo
+  cupo double precision,
+  interes double precision,
+  empleado integer,
+  antiguo integer,
+  -- Campo del modulo Caja: contacto por defecto en ingresos de dinero
+  predeterminado integer,
   CONSTRAINT claveprimaria_ PRIMARY KEY (id)
 )
 WITH (
@@ -929,3 +942,367 @@ WITH (
 );
 
 CREATE INDEX idx_ordenes_compra_detalle_cabecera ON ordenes_compra_detalle (id_orden_cabecera);
+
+
+
+-- =============================================================================
+-- SISTEMA DE PERMISOS ADMINISTRABLES
+-- (equivale a sql/migracion_permisos.sql ya aplicada en produccion)
+--
+-- Modelo:
+--   opciones               catalogo de funciones gobernables (menus/botones/acciones)
+--   perfil_opciones        lo que cada perfil concede por defecto (presencia = concedido)
+--   usuario_opciones       excepciones por usuario (concedido=true agrega, false revoca)
+--   usuario_roles_precios  roles del modulo Precios por usuario (2=almacenista,
+--                          3=contable, 4=precios); un usuario puede tener varios
+--
+-- Permiso efectivo = perfil_opciones(perfil del usuario)
+--                    + usuario_opciones(concedido=true)
+--                    - usuario_opciones(concedido=false)
+-- El perfil 1 (Admin) siempre tiene todo (la app no lo consulta).
+--
+-- En una instalacion nueva los perfiles se crean vacios: concede sus opciones
+-- desde la pantalla "Permisos de la aplicacion" (menu Configuraciones, Admin).
+-- =============================================================================
+
+CREATE TABLE opciones (
+    id serial NOT NULL,
+    clave character varying(60) NOT NULL,    -- identificador estable usado por el codigo
+    nombre character varying(100) NOT NULL,  -- etiqueta legible para la pantalla de admin
+    modulo character varying(60) NOT NULL,   -- agrupacion en el arbol de admin (= modulos.clave)
+    componente character varying(60),        -- campo de frm_main que gobierna (null = accion logica)
+    orden integer NOT NULL DEFAULT 0,
+    CONSTRAINT pk_opciones PRIMARY KEY (id),
+    CONSTRAINT uq_opciones_clave UNIQUE (clave)
+);
+
+CREATE TABLE perfil_opciones (
+    id_perfil integer NOT NULL,
+    id_opcion integer NOT NULL,
+    CONSTRAINT pk_perfil_opciones PRIMARY KEY (id_perfil, id_opcion),
+    CONSTRAINT fk_po_perfil FOREIGN KEY (id_perfil) REFERENCES perfiles (id) ON DELETE CASCADE,
+    CONSTRAINT fk_po_opcion FOREIGN KEY (id_opcion) REFERENCES opciones (id) ON DELETE CASCADE
+);
+
+CREATE TABLE usuario_opciones (
+    id_user integer NOT NULL,
+    id_opcion integer NOT NULL,
+    concedido boolean NOT NULL DEFAULT true,
+    CONSTRAINT pk_usuario_opciones PRIMARY KEY (id_user, id_opcion),
+    CONSTRAINT fk_uo_user FOREIGN KEY (id_user) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_uo_opcion FOREIGN KEY (id_opcion) REFERENCES opciones (id) ON DELETE CASCADE
+);
+
+CREATE TABLE usuario_roles_precios (
+    id_user integer NOT NULL,
+    rol integer NOT NULL,                    -- 2=almacenista 3=contable 4=precios
+    CONSTRAINT pk_usuario_roles_precios PRIMARY KEY (id_user, rol),
+    CONSTRAINT fk_urp_user FOREIGN KEY (id_user) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT ck_urp_rol CHECK (rol IN (2, 3, 4))
+);
+
+-- Catalogo de opciones gobernables. Espejo del catalogo de produccion
+-- (sin Recortes, modulo eliminado de la aplicacion). Al agregar una opcion
+-- nueva por migracion incremental, agregarla tambien aqui.
+INSERT INTO opciones (clave, nombre, modulo, componente, orden) VALUES
+    -- Compras
+    ('menu_compras', 'Menu Compras (ordenes de compra)', 'Compras', 'menuCompras', 10),
+    ('compras_crear', 'Crear orden de compra', 'Compras', 'btn_nueva', 20),
+    ('compras_editar', 'Editar orden de compra', 'Compras', 'btn_editar', 30),
+    -- Configuracion
+    ('jmenu_configuraciones', 'Configuraciones', 'Configuracion', 'jmenu_configuraciones', 10),
+    ('jmenu_user', 'Usuarios', 'Configuracion', 'jmenu_user', 20),
+    ('jmenu_backup', 'BackUp', 'Configuracion', 'jmenu_backup', 30),
+    ('jMenu_tipo_ingreso', 'Tipo de ingreso', 'Configuracion', 'jMenu_tipo_ingreso', 40),
+    ('jmenu_bodegas', 'Bodegas', 'Configuracion', 'jmenu_bodegas', 50),
+    ('jMenu_unidades', 'Unidades de medida', 'Configuracion', 'jMenu_unidades', 60),
+    ('jmenu_permisos', 'Permisos de la aplicacion', 'Configuracion', NULL, 70),
+    -- Contactos
+    ('jmenu_con', 'Contactos (menu)', 'Contactos', 'jmenu_con', 10),
+    ('jmenu_contactos', 'Contactos (item de menu)', 'Contactos', 'jmenu_contactos', 20),
+    ('btn_contactos', 'Contactos (boton)', 'Contactos', 'btn_contactos', 30),
+    -- Ordenes
+    ('jMenu_ordenes', 'Ordenes (menu)', 'Ordenes', 'jMenu_ordenes', 10),
+    ('ordenes_unir', 'Unir ordenes de entrega', 'Ordenes', 'btn_unir', 10),
+    ('ordenes_entrega_masiva', 'Entrega masiva por bodega', 'Ordenes', 'btn_entregar_todo', 11),
+    ('jmenu_facturacion', 'Generar orden (menu)', 'Ordenes', 'jmenu_facturacion', 20),
+    ('btn_generar_orden', 'Generar orden (boton)', 'Ordenes', 'btn_generar_orden', 30),
+    ('btn_ver_ordenes', 'Ver ordenes', 'Ordenes', 'btn_ver_ordenes', 40),
+    ('ordenes_editar', 'Editar ordenes', 'Ordenes', 'btn_editar', 45),
+    ('btn_facturar', 'Ordenes (boton)', 'Ordenes', 'btn_facturar', 50),
+    ('btn_ver_facturas', 'Ver ordenes (boton)', 'Ordenes', 'btn_ver_facturas', 60),
+    ('btn_decolucion', 'Devolucion', 'Ordenes', 'btn_decolucion', 70),
+    -- Precios
+    ('menu_precios_ingresos', 'Ingresos de productos', 'Precios', 'itemIngresosPrecios', 10),
+    ('menu_precios_productos', 'Precios de productos', 'Precios', 'itemPreciosProductos', 20),
+    ('menu_precios_descuentos', 'Descuentos escalonados', 'Precios', 'itemDescuentosPrecios', 30),
+    ('menu_precios_etiquetas', 'Imprimir etiquetas', 'Precios', 'itemEtiquetasPrecios', 40),
+    ('menu_precios_comisiones', 'Analizar comisiones', 'Precios', 'itemComisionesPrecios', 45),
+    ('menu_precios_reportes', 'Reportes', 'Precios', 'menuReportesPrecios', 50),
+    ('menu_precios_config', 'Configuracion de precios', 'Precios', 'itemConfigPrecios', 60),
+    -- Productos
+    ('jMenu_productos_principal', 'Productos (menu)', 'Productos', 'jMenu_productos_principal', 10),
+    ('btn_productos', 'Productos (boton)', 'Productos', 'btn_productos', 20),
+    ('btn_ingreso_productos', 'Ingreso de productos', 'Productos', 'btn_ingreso_productos', 30),
+    -- Creditos (modulo licenciable importado de control_creditos)
+    ('menu_creditos', 'Menu Creditos (completo)', 'Creditos', 'menuCreditos', 10),
+    ('creditos_ver', 'Creditos (cartera)', 'Creditos', 'itemCreditosVer', 20),
+    ('creditos_clientes', 'Clientes de credito', 'Creditos', 'itemCreditosClientes', 30),
+    ('creditos_cuentas', 'Cuentas', 'Creditos', 'itemCreditosCuentas', 40),
+    ('creditos_tipos_abonos', 'Tipos de abonos', 'Creditos', 'itemCreditosTipos', 50),
+    ('creditos_reportes', 'Reportes de creditos', 'Creditos', 'itemCreditosReportes', 60),
+    -- Caja (modulo licenciable importado de cajadiaria)
+    ('menu_caja', 'Menu Caja (completo)', 'Caja', 'menuCaja', 10),
+    ('caja_ingresos', 'Ingresos de dinero', 'Caja', 'itemCajaIngresos', 20),
+    ('caja_egresos', 'Egresos de dinero', 'Caja', 'itemCajaEgresos', 30),
+    ('caja_traslados', 'Traslados entre fondos', 'Caja', 'itemCajaTraslados', 40),
+    ('caja_fondos', 'Fondos (cajas y bancos)', 'Caja', 'itemCajaFondos', 50),
+    ('caja_cuentas_ingresos', 'Cuentas de ingresos', 'Caja', 'itemCajaCtasIngresos', 60),
+    ('caja_cuentas_egresos', 'Cuentas de egresos', 'Caja', 'itemCajaCtasEgresos', 70),
+    ('caja_reportes', 'Reportes de caja', 'Caja', 'itemCajaReportes', 80);
+
+
+
+-- =============================================================================
+-- MODULOS LICENCIABLES POR INSTALACION
+-- (equivale a sql/migracion_modulos.sql)
+--
+-- Interruptor comercial por cliente, distinto de los permisos por usuario:
+--   * modulos.clave se corresponde con opciones.modulo.
+--   * Un modulo SIN fila aqui es NUCLEO: siempre activo.
+--   * activo = false apaga el modulo completo para todos, incluso Admin.
+--
+-- Para un cliente que no licencia un modulo:
+--   UPDATE modulos SET activo = false WHERE clave = 'Compras';
+-- =============================================================================
+
+CREATE TABLE modulos (
+    id     serial       PRIMARY KEY,
+    clave  varchar(50)  NOT NULL UNIQUE,
+    nombre varchar(100) NOT NULL,
+    activo boolean      NOT NULL DEFAULT true
+);
+
+INSERT INTO modulos (clave, nombre, activo) VALUES
+    ('Compras', 'Compras (pipeline de ordenes de compra)', true),
+    ('Precios', 'Precios (agroinsumos y comisiones)', true),
+    ('Creditos', 'Creditos (cartera y abonos)', true),
+    ('Caja', 'Caja (ingresos, egresos y fondos)', true);
+
+
+
+-- =============================================================================
+-- MODULO CREDITOS (importado de control_creditos)
+-- (equivale a sql/migracion_modulo_creditos.sql)
+--
+-- creditos          el credito otorgado (en control_creditos era "facturas")
+-- abonos_cabeceras  el pago como evento (total + soportes foto/pdf)
+-- abonos (detalle)  aplicacion de un pago a un credito; saldo a favor
+--                   implicito = cabecera.total - SUM(detalle)
+-- tipos_abonos      catalogo de tipos de pago (color y flag anticipo)
+-- cuentas           catalogo de cuentas destino
+--
+-- Reutiliza users y contactos de bodega (campos cupo/interes/empleado/antiguo
+-- estan en CREATE TABLE contactos, y configuraciones.ruta_imagenes arriba).
+-- =============================================================================
+
+CREATE TABLE cuentas
+(
+  id serial NOT NULL,
+  nombre character varying,
+  CONSTRAINT cuentas_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE tipos_abonos
+(
+  id serial NOT NULL,
+  nombre character varying,
+  color character varying,
+  anticipo integer,
+  CONSTRAINT tipos_abonos_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE creditos
+(
+  id serial NOT NULL,
+  codigo character varying,
+  id_contacto integer,
+  id_user integer,
+  total double precision,
+  fecha_creacion date,
+  fecha_vencimiento date,
+  estado integer,
+  interes double precision,
+  hora character varying(8),
+  descripcion character varying,
+  monto_descuento double precision,
+  id_cuenta integer,
+  foto character varying,
+  pdf character varying,
+  CONSTRAINT pk_creditos PRIMARY KEY (id),
+  CONSTRAINT fk_creditos_user FOREIGN KEY (id_user)
+      REFERENCES users (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION,
+  CONSTRAINT fk_creditos_contacto FOREIGN KEY (id_contacto)
+      REFERENCES contactos (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION,
+  CONSTRAINT fk_creditos_cuenta FOREIGN KEY (id_cuenta)
+      REFERENCES cuentas (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION
+);
+
+CREATE TABLE abonos_cabeceras
+(
+  id serial PRIMARY KEY,
+  id_contacto integer NOT NULL REFERENCES contactos (id),
+  id_user integer REFERENCES users (id),
+  id_tipo_abono integer REFERENCES tipos_abonos (id),
+  total double precision NOT NULL,
+  fecha date NOT NULL,
+  hora character varying DEFAULT '',
+  observacion character varying DEFAULT '',
+  foto character varying DEFAULT '',
+  pdf character varying DEFAULT ''
+);
+
+CREATE TABLE abonos
+(
+  id serial PRIMARY KEY,
+  id_cabecera integer NOT NULL REFERENCES abonos_cabeceras (id) ON DELETE CASCADE,
+  id_credito integer NOT NULL REFERENCES creditos (id),
+  abono double precision NOT NULL,
+  fecha date NOT NULL,
+  hora character varying DEFAULT ''
+);
+
+CREATE INDEX idx_abonos_id_cabecera        ON abonos(id_cabecera);
+CREATE INDEX idx_abonos_id_credito         ON abonos(id_credito);
+CREATE INDEX idx_abonos_cabeceras_contacto ON abonos_cabeceras(id_contacto);
+CREATE INDEX idx_abonos_cabeceras_fecha    ON abonos_cabeceras(fecha);
+CREATE INDEX idx_creditos_contacto         ON creditos(id_contacto);
+
+
+
+-- =============================================================================
+-- MODULO CAJA (importado de cajadiaria / ContaMonkey V2.0, rediseñado)
+-- (equivale a sql/migracion_modulo_caja.sql)
+--
+-- fondos            a donde entra/sale el dinero (caja fisica o digital).
+--                   Distinto de "cuentas" del modulo Creditos: separados
+--                   a proposito.
+-- cuentas_ingresos  catalogo de conceptos de ingreso
+-- cuentas_egresos   catalogo de conceptos de egreso
+-- ingresos          documento de entrada de DINERO (no confundir con
+--                   ingresos_mercancias_*); id_fondo directo: un ingreso
+--                   tiene UN solo pago (sin tablas de abonos)
+-- egresos           documento de salida de dinero
+-- transferencias    traslado entre fondos; genera un par egreso (origen) +
+--                   ingreso (destino) marcados con transferencia=1
+-- fotos_registros   soportes fotograficos de ingresos/egresos
+--
+-- Saldo de un fondo = SUM(ingresos.total) - SUM(egresos.total) por id_fondo
+-- (derivado por consulta; sin base_diaria ni cierres de caja).
+--
+-- Reutiliza users y contactos de bodega (contactos.predeterminado arriba es
+-- de este modulo, igual que configuraciones.tipo_impresora e ingreso_dinero).
+-- =============================================================================
+
+CREATE TABLE fondos (
+    id serial NOT NULL,
+    nombre character varying(100),
+    predeterminado integer,
+    fisico_digital integer,          -- 0=fisico (efectivo), 1=digital (banco)
+    CONSTRAINT pk_fondos PRIMARY KEY (id)
+);
+
+CREATE TABLE cuentas_ingresos (
+    id serial NOT NULL,
+    nombre character varying(50),
+    predeterminado integer,
+    CONSTRAINT pk_cuentas_ingresos PRIMARY KEY (id)
+);
+
+CREATE TABLE cuentas_egresos (
+    id serial NOT NULL,
+    nombre character varying(50),
+    predeterminado integer,
+    CONSTRAINT pk_cuentas_egresos PRIMARY KEY (id)
+);
+
+-- factura_remision: 1=Factura, 0=Remision (filtro de reportes)
+-- transferencia:    1 cuando el registro lo genero un traslado entre fondos
+CREATE TABLE ingresos (
+    id serial NOT NULL,
+    id_user integer,
+    id_cuenta integer NOT NULL,
+    id_cliente integer,
+    id_fondo integer,
+    descripcion character varying,
+    total double precision,
+    fecha date,
+    hora character varying(8),
+    factura_remision integer,
+    transferencia integer,
+    -- pk_ingresos ya lo usa ingresos_mercancias_cabecera; nombre distinto
+    CONSTRAINT pk_caja_ingresos PRIMARY KEY (id),
+    CONSTRAINT fk_ingreso_cuenta FOREIGN KEY (id_cuenta) REFERENCES cuentas_ingresos (id),
+    CONSTRAINT fk_ingreso_cliente FOREIGN KEY (id_cliente) REFERENCES contactos (id),
+    CONSTRAINT fk_ingreso_fondo FOREIGN KEY (id_fondo) REFERENCES fondos (id),
+    CONSTRAINT fk_ingreso_user FOREIGN KEY (id_user) REFERENCES users (id)
+);
+
+CREATE TABLE egresos (
+    id serial NOT NULL,
+    id_user integer,
+    id_cuenta integer NOT NULL,
+    id_cliente integer,
+    id_fondo integer,
+    descripcion character varying,
+    total double precision,
+    fecha date,
+    hora character varying(8),
+    factura_remision integer,
+    transferencia integer,
+    CONSTRAINT pk_egresos PRIMARY KEY (id),
+    CONSTRAINT fk_egreso_cuenta FOREIGN KEY (id_cuenta) REFERENCES cuentas_egresos (id),
+    CONSTRAINT fk_egreso_cliente FOREIGN KEY (id_cliente) REFERENCES contactos (id),
+    CONSTRAINT fk_egreso_fondo FOREIGN KEY (id_fondo) REFERENCES fondos (id),
+    CONSTRAINT fk_egreso_user FOREIGN KEY (id_user) REFERENCES users (id)
+);
+
+CREATE TABLE transferencias (
+    id serial NOT NULL,
+    id_user integer,
+    id_fondo_origen integer,
+    id_fondo_destino integer,
+    descripcion character varying,
+    total double precision,
+    fecha date,
+    hora character varying(8),
+    id_ingreso integer,              -- ingreso generado en el fondo destino
+    id_egreso integer,               -- egreso generado en el fondo origen
+    CONSTRAINT pk_transferencias PRIMARY KEY (id),
+    CONSTRAINT fk_transferencia_fondo_origen FOREIGN KEY (id_fondo_origen) REFERENCES fondos (id),
+    CONSTRAINT fk_transferencia_fondo_destino FOREIGN KEY (id_fondo_destino) REFERENCES fondos (id),
+    CONSTRAINT fk_transferencia_ingreso FOREIGN KEY (id_ingreso) REFERENCES ingresos (id),
+    CONSTRAINT fk_transferencia_egreso FOREIGN KEY (id_egreso) REFERENCES egresos (id),
+    CONSTRAINT fk_transferencia_user FOREIGN KEY (id_user) REFERENCES users (id)
+);
+
+-- tipo_registro: 1=ingreso, 2=egreso (id_registro apunta a esa tabla)
+CREATE TABLE fotos_registros (
+    id serial NOT NULL,
+    nombre character varying,
+    id_registro integer,
+    tipo_registro integer,
+    CONSTRAINT pk_fotos_registros PRIMARY KEY (id)
+);
+
+CREATE INDEX idx_ingresos_fecha           ON ingresos(fecha);
+CREATE INDEX idx_ingresos_fondo           ON ingresos(id_fondo);
+CREATE INDEX idx_ingresos_cliente         ON ingresos(id_cliente);
+CREATE INDEX idx_egresos_fecha            ON egresos(fecha);
+CREATE INDEX idx_egresos_fondo            ON egresos(id_fondo);
+CREATE INDEX idx_egresos_cliente          ON egresos(id_cliente);
+CREATE INDEX idx_transferencias_fecha     ON transferencias(fecha);
+CREATE INDEX idx_fotos_registros_registro ON fotos_registros(id_registro, tipo_registro);
