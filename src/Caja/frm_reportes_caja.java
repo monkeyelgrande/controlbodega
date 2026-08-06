@@ -744,28 +744,42 @@ public class frm_reportes_caja extends javax.swing.JInternalFrame {
         limpiarFilas();
 
         int tsel = tipoSel(); // -1 = todos, 1 = Empresa, 0 = Personal
+        boolean todosFondos = fondoId() == 0;
         double ing = suma("ingresos", true);
         double egr = suma("egresos", true);
         double saldo = saldoAcumulado();
 
-        // Cuando se filtra por un tipo, el "Total" ya viene filtrado (suma respeta
-        // tipoSel), así que solo se muestra la línea de desglose correspondiente.
+        // INGRESOS: total del periodo + desglose. Con "Todos los fondos" el
+        // desglose es por fondo (cuánto entró a cada uno); con un fondo puntual
+        // es por tipo (Empresa/Personal). Todo respeta el filtro de tipo activo.
         modelo.addRow(new Object[]{"INGRESOS", "Total del periodo", fmt.format(ing)});
-        if (tsel != 0) {
-            modelo.addRow(new Object[]{"", "  Empresa (E)", fmt.format(sumaTipo("ingresos", 1))});
-        }
-        if (tsel != 1) {
-            modelo.addRow(new Object[]{"", "  Personal (P)", fmt.format(sumaTipo("ingresos", 0))});
+        if (todosFondos) {
+            agregarDesgloseFondo(sqlIngEgrPorFondo("ingresos", tsel));
+        } else {
+            if (tsel != 0) {
+                modelo.addRow(new Object[]{"", "  Empresa (E)", fmt.format(sumaTipo("ingresos", 1))});
+            }
+            if (tsel != 1) {
+                modelo.addRow(new Object[]{"", "  Personal (P)", fmt.format(sumaTipo("ingresos", 0))});
+            }
         }
         modelo.addRow(new Object[]{"EGRESOS", "Total del periodo", fmt.format(egr)});
-        if (tsel != 0) {
-            modelo.addRow(new Object[]{"", "  Empresa (E)", fmt.format(sumaTipo("egresos", 1))});
-        }
-        if (tsel != 1) {
-            modelo.addRow(new Object[]{"", "  Personal (P)", fmt.format(sumaTipo("egresos", 0))});
+        if (todosFondos) {
+            agregarDesgloseFondo(sqlIngEgrPorFondo("egresos", tsel));
+        } else {
+            if (tsel != 0) {
+                modelo.addRow(new Object[]{"", "  Empresa (E)", fmt.format(sumaTipo("egresos", 1))});
+            }
+            if (tsel != 1) {
+                modelo.addRow(new Object[]{"", "  Personal (P)", fmt.format(sumaTipo("egresos", 0))});
+            }
         }
         modelo.addRow(new Object[]{"BALANCE", "Ingresos − egresos del periodo", fmt.format(ing - egr)});
         modelo.addRow(new Object[]{"SALDO", "Acumulado histórico hasta " + hasta(), fmt.format(saldo)});
+        if (todosFondos) {
+            // Cuánto dinero hay HOY en cada fondo (saldo histórico por fondo).
+            agregarDesgloseFondo(sqlSaldoPorFondo(tsel));
+        }
 
         jtabla.setModel(modelo);
         anchos(new int[]{160, 380, 170});
@@ -806,6 +820,55 @@ public class frm_reportes_caja extends javax.swing.JInternalFrame {
             w += " and coalesce(transferencia,0)=0";
         }
         return escalar("select coalesce(sum(total),0) as v from " + tabla + " " + w);
+    }
+
+    /** Fragmento " and factura_remision=.. and coalesce(transferencia,0)=0" segun filtros activos. */
+    private String extraTipoTras(String alias, int tsel) {
+        String p = alias.isEmpty() ? "" : alias + ".";
+        String s = tsel >= 0 ? " and " + p + "factura_remision=" + tsel : "";
+        if (!chk_traslados.isSelected()) {
+            s += " and coalesce(" + p + "transferencia,0)=0";
+        }
+        return s;
+    }
+
+    /** Ingresos o egresos del periodo agrupados por fondo (incluye "Sin fondo"). */
+    private String sqlIngEgrPorFondo(String tabla, int tsel) {
+        String a = tabla.substring(0, 1); // 'i' o 'e'
+        return "select coalesce(f.nombre,'Sin fondo') as fondo, coalesce(sum(" + a + ".total),0) as v\n"
+                + "from " + tabla + " " + a + " left join fondos f on " + a + ".id_fondo=f.id\n"
+                + "where " + a + ".id_caja=" + idCaja
+                + " and " + a + ".fecha between cast('" + desde() + "' as date) and cast('" + hasta() + "' as date)"
+                + extraTipoTras(a, tsel)
+                + "\ngroup by coalesce(f.nombre,'Sin fondo') order by v desc";
+    }
+
+    /** Saldo historico por fondo (ingresos - egresos hasta "Hasta"), incluye "Sin fondo". */
+    private String sqlSaldoPorFondo(int tsel) {
+        return "select fondo, sum(v) as v from (\n"
+                + "  select coalesce(f.nombre,'Sin fondo') as fondo, i.total as v\n"
+                + "  from ingresos i left join fondos f on i.id_fondo=f.id\n"
+                + "  where i.id_caja=" + idCaja + " and i.fecha <= cast('" + hasta() + "' as date)"
+                + extraTipoTras("i", tsel) + "\n"
+                + "  union all\n"
+                + "  select coalesce(f.nombre,'Sin fondo'), -e.total\n"
+                + "  from egresos e left join fondos f on e.id_fondo=f.id\n"
+                + "  where e.id_caja=" + idCaja + " and e.fecha <= cast('" + hasta() + "' as date)"
+                + extraTipoTras("e", tsel) + "\n"
+                + ") t group by fondo order by v desc";
+    }
+
+    /** Agrega al modelo una fila indentada por cada fondo devuelto por la consulta. */
+    private void agregarDesgloseFondo(String sql) {
+        try {
+            ResultSet rs = DB_consultas_R_D.getTabla(sql);
+            while (rs.next()) {
+                modelo.addRow(new Object[]{"", "    " + rs.getString("fondo"), fmt.format(rs.getDouble("v"))});
+            }
+            rs.close();
+        } catch (Exception e) {
+            System.out.println("agregarDesgloseFondo: " + e);
+        }
     }
 
     /** Saldo historico (todo desde el inicio hasta "Hasta"), respetando el fondo elegido. */
