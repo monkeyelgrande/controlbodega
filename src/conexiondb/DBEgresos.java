@@ -25,8 +25,8 @@ public class DBEgresos {
     public int Guardar(Egresos obj, boolean seleccionado) {
         int idGenerado = 0;
         Connection con = null;
-        String SSQL = "INSERT INTO egresos (id_user, id_cuenta, descripcion, total, fecha, hora, id_cliente, factura_remision, transferencia, id_fondo) "
-                + "VALUES (?,?,?,?,cast(? as date),?,?,?,0,?) RETURNING id";
+        String SSQL = "INSERT INTO egresos (id_user, id_cuenta, descripcion, total, fecha, hora, id_cliente, factura_remision, transferencia, id_fondo, id_caja) "
+                + "VALUES (?,?,?,?,cast(? as date),?,?,?,0,?,?) RETURNING id";
 
         try {
             con = DB_consultas_R_D.getConexion();
@@ -44,6 +44,7 @@ public class DBEgresos {
             } else {
                 psql.setNull(9, Types.INTEGER);
             }
+            psql.setInt(10, obj.getId_caja());
 
             ResultSet rs = psql.executeQuery();
             if (rs.next()) {

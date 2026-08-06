@@ -67,6 +67,12 @@ public final class FontAwesome {
     public static final String UPLOAD     = ""; // upload
     public static final String MONEY_BILL = ""; // money-bill
 
+    /** Glifos del formulario de Traslados (FA6 Free Solid, por unicode). */
+    public static final String EXCHANGE    = ""; // arrow-right-arrow-left (traslado)
+    public static final String ARROW_RIGHT = ""; // arrow-right
+    public static final String WALLET      = ""; // wallet (fondo)
+    public static final String CALENDAR    = ""; // calendar-days
+
     private static Font solidBase;
     private static Font regularBase;
 

@@ -44,9 +44,16 @@ public class jd_comparar_ingresos extends javax.swing.JDialog {
         }
     };
 
-    public jd_comparar_ingresos(java.awt.Frame parent, boolean modal) {
+    /** Caja cuyos ingresos se concilian: 1 = Caja, 2 = Caja Dos. */
+    private final int idCaja;
+
+    public jd_comparar_ingresos(java.awt.Frame parent, boolean modal, int idCaja) {
         super(parent, modal);
+        this.idCaja = idCaja;
         initComponents();
+        if (idCaja == 2) {
+            jLabel13.setText("Comparativo Ingresos Entre Fechas - Caja Dos");
+        }
         poner_fechas();
         LimpiarModelos();
     }
@@ -566,7 +573,7 @@ public class jd_comparar_ingresos extends javax.swing.JDialog {
         fecha1 = sdf.format(jdate_fecha1.getDate());
         fecha2 = sdf.format(jdate_fecha2.getDate());
 
-        String consulta = "select i.fecha, i.hora, i.total, i.descripcion from ingresos i where fecha between  '" + fecha1 + "' and '" + fecha2 + "' \n"
+        String consulta = "select i.fecha, i.hora, i.total, i.descripcion from ingresos i where i.id_caja=" + idCaja + " and fecha between  '" + fecha1 + "' and '" + fecha2 + "' \n"
                 + "\n"
                 + "order by i.total";
 

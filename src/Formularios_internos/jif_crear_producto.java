@@ -22,6 +22,10 @@ import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.TreeMap;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -1004,40 +1008,71 @@ public class jif_crear_producto extends javax.swing.JDialog {
     }
 
     private void generarNuevoCodigo() {
-        String consulta = "SELECT codigo_barras FROM productos ORDER BY id DESC LIMIT 1";
-        String ultimoCodigo = "";
-        String nuevoCodigo = "";
-
-        ResultSet rs = DB_consultas_R_D.getTabla(consulta);
         try {
-
-            // Obtener todos los códigos para encontrar el número más alto
-            int maxNumero = 0;
-            while (rs.next()) {
-                ultimoCodigo = rs.getString("codigo_barras"); // Último código registrado
+            // Agrupa TODOS los codigos existentes por familia (su prefijo de
+            // letras) y guarda el mayor numero de cada una. Asi cada sistema de
+            // codigos (REM..., A..., solo numero, ...) continua su propia
+            // secuencia de forma independiente.
+            TreeMap<String, Integer> maxPorPrefijo = new TreeMap<>();
+            ResultSet rs = DB_consultas_R_D.getTabla("SELECT codigo_barras FROM productos");
+            while (rs != null && rs.next()) {
                 String codigo = rs.getString("codigo_barras");
-
-                // Extraer la parte numérica del código
-                String numeroStr = codigo.replaceAll("[^0-9]", ""); // Quita letras
+                if (codigo == null) {
+                    continue;
+                }
+                codigo = codigo.trim();
+                if (codigo.isEmpty()) {
+                    continue;
+                }
+                String prefijo = codigo.replaceAll("[0-9]", "");    // parte de letras
+                String numeroStr = codigo.replaceAll("[^0-9]", ""); // parte numerica
+                int numero = 0;
                 if (!numeroStr.isEmpty()) {
-                    int numero = Integer.parseInt(numeroStr);
-                    if (numero > maxNumero) {
-                        maxNumero = numero;
+                    try {
+                        numero = Integer.parseInt(numeroStr);
+                    } catch (NumberFormatException nfe) {
+                        numero = 0; // numero demasiado largo: se ignora
                     }
                 }
+                Integer actual = maxPorPrefijo.get(prefijo);
+                if (actual == null || numero > actual) {
+                    maxPorPrefijo.put(prefijo, numero);
+                }
+            }
+            rs.close();
+
+            // Sin productos aun: arranca la primera secuencia sin prefijo.
+            if (maxPorPrefijo.isEmpty()) {
+                txt_cod_barras.setText("1");
+                return;
             }
 
-            // Incrementar el número más alto encontrado
-            maxNumero++;
+            String prefijoElegido;
+            if (maxPorPrefijo.size() == 1) {
+                // Una sola familia: se continua directo, sin preguntar.
+                prefijoElegido = maxPorPrefijo.firstKey();
+            } else {
+                // Varias familias: se pregunta cual continuar, mostrando de una
+                // vez cual seria el proximo codigo de cada una.
+                List<String> prefijos = new ArrayList<>(maxPorPrefijo.keySet());
+                String[] opciones = new String[prefijos.size()];
+                for (int i = 0; i < prefijos.size(); i++) {
+                    String p = prefijos.get(i);
+                    int proximo = maxPorPrefijo.get(p) + 1;
+                    String etiqueta = p.isEmpty() ? "(solo numero)" : p;
+                    opciones[i] = etiqueta + "  →  " + p + proximo;
+                }
+                String sel = (String) JOptionPane.showInputDialog(this,
+                        "Existen varios sistemas de codigos.\nElija cual desea continuar:",
+                        "Generar codigo", JOptionPane.QUESTION_MESSAGE, null, opciones, opciones[0]);
+                if (sel == null) {
+                    return; // el usuario cancelo
+                }
+                prefijoElegido = prefijos.get(Arrays.asList(opciones).indexOf(sel));
+            }
 
-            // Extraer el prefijo del último código registrado
-            String prefijo = ultimoCodigo.replaceAll("[0-9]", ""); // Quita números
-
-            // Generar nuevo código con el prefijo del último código
-            nuevoCodigo = prefijo + maxNumero;
-
-            // Mostrar el nuevo código en el JTextField
-            txt_cod_barras.setText(nuevoCodigo);
+            int nuevoNumero = maxPorPrefijo.get(prefijoElegido) + 1;
+            txt_cod_barras.setText(prefijoElegido + nuevoNumero);
 
         } catch (Exception e) {
             e.printStackTrace();

@@ -137,12 +137,30 @@ public class frm_main extends javax.swing.JFrame {
     private javax.swing.JMenuItem itemCajaFondos = null;
     private javax.swing.JMenuItem itemCajaCtasIngresos = null;
     private javax.swing.JMenuItem itemCajaCtasEgresos = null;
+    private javax.swing.JMenuItem itemCajaReportes = null;
+    Caja.frm_reportes_caja frm_caja_reportes = null;
     Caja.frm_ingresos frm_caja_ingresos = null;
     Caja.frm_egresos frm_caja_egresos = null;
     Caja.frm_Traslados frm_caja_traslados = null;
     Caja.frm_fondos frm_caja_fondos = null;
     Caja.frm_cuentas_ingresos frm_caja_ctas_ingresos = null;
     Caja.frm_cuentas_egresos frm_caja_ctas_egresos = null;
+    // Módulo Caja Dos: segunda caja independiente (mismos formularios con idCaja=2)
+    private javax.swing.JMenu menuCaja2 = null;
+    private javax.swing.JMenuItem itemCaja2Ingresos = null;
+    private javax.swing.JMenuItem itemCaja2Egresos = null;
+    private javax.swing.JMenuItem itemCaja2Traslados = null;
+    private javax.swing.JMenuItem itemCaja2Fondos = null;
+    private javax.swing.JMenuItem itemCaja2CtasIngresos = null;
+    private javax.swing.JMenuItem itemCaja2CtasEgresos = null;
+    private javax.swing.JMenuItem itemCaja2Reportes = null;
+    Caja.frm_reportes_caja frm_caja2_reportes = null;
+    Caja.frm_ingresos frm_caja2_ingresos = null;
+    Caja.frm_egresos frm_caja2_egresos = null;
+    Caja.frm_Traslados frm_caja2_traslados = null;
+    Caja.frm_fondos frm_caja2_fondos = null;
+    Caja.frm_cuentas_ingresos frm_caja2_ctas_ingresos = null;
+    Caja.frm_cuentas_egresos frm_caja2_ctas_egresos = null;
     // Configuración del módulo Caja: si al crear un ingreso/egreso se captura
     // de una vez el fondo (dinero recibido). Se carga en el constructor.
     public static int ingreso_dinero = 0;
@@ -191,6 +209,7 @@ public class frm_main extends javax.swing.JFrame {
         montarMenuPrecios();
         montarMenuCreditos();
         montarMenuCaja();
+        montarMenuCajaDos();
         montarMenuPermisos();
         construirInterfaz();
         cargarConfigCaja();
@@ -675,6 +694,16 @@ public class frm_main extends javax.swing.JFrame {
         });
         menuCaja.add(itemCajaCtasEgresos);
 
+        menuCaja.addSeparator();
+        itemCajaReportes = new javax.swing.JMenuItem("Reportes de caja");
+        itemCajaReportes.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirCajaReportes();
+            }
+        });
+        menuCaja.add(itemCajaReportes);
+
         menuCaja.setVisible(false);
         jMenuBar1.add(menuCaja);
         jMenuBar1.revalidate();
@@ -727,6 +756,22 @@ public class frm_main extends javax.swing.JFrame {
         }
     }
 
+    /** Reportes propios del modulo Caja (no cuelgan del menu general de Reportes). */
+    private void abrirCajaReportes() {
+        if (metodos.estacerrado(frm_caja_reportes)) {
+            frm_caja_reportes = new Caja.frm_reportes_caja();
+            escritorio.add(frm_caja_reportes);
+            try {
+                frm_caja_reportes.setMaximum(true);
+            } catch (java.beans.PropertyVetoException ex) {
+                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            frm_caja_reportes.show();
+        } else {
+            frm_caja_reportes.toFront();
+        }
+    }
+
     private void abrirCajaTraslados() {
         if (metodos.estacerrado(frm_caja_traslados)) {
             frm_caja_traslados = new Caja.frm_Traslados();
@@ -769,6 +814,177 @@ public class frm_main extends javax.swing.JFrame {
             frm_caja_ctas_egresos.show();
         } else {
             frm_caja_ctas_egresos.toFront();
+        }
+    }
+
+    /**
+     * Agrega el menú "Caja Dos": una segunda caja totalmente independiente que
+     * reutiliza los mismos formularios que "Caja" pasandoles idCaja = 2. Cuentas,
+     * fondos, ingresos, egresos, traslados y reportes son propios de esta caja.
+     * Se construye oculto; la visibilidad la decide permisos() con las opciones
+     * del módulo 'Caja Dos', y el interruptor comercial es la fila 'Caja Dos' de
+     * la tabla modulos.
+     */
+    private void montarMenuCajaDos() {
+        menuCaja2 = new javax.swing.JMenu("Caja Dos");
+
+        itemCaja2Ingresos = new javax.swing.JMenuItem("Ingresos");
+        itemCaja2Ingresos.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirCaja2Ingresos();
+            }
+        });
+        menuCaja2.add(itemCaja2Ingresos);
+
+        itemCaja2Egresos = new javax.swing.JMenuItem("Egresos");
+        itemCaja2Egresos.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirCaja2Egresos();
+            }
+        });
+        menuCaja2.add(itemCaja2Egresos);
+
+        itemCaja2Traslados = new javax.swing.JMenuItem("Traslados entre fondos");
+        itemCaja2Traslados.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirCaja2Traslados();
+            }
+        });
+        menuCaja2.add(itemCaja2Traslados);
+
+        itemCaja2Fondos = new javax.swing.JMenuItem("Fondos");
+        itemCaja2Fondos.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirCaja2Fondos();
+            }
+        });
+        menuCaja2.add(itemCaja2Fondos);
+
+        itemCaja2CtasIngresos = new javax.swing.JMenuItem("Cuentas de ingresos");
+        itemCaja2CtasIngresos.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirCaja2CtasIngresos();
+            }
+        });
+        menuCaja2.add(itemCaja2CtasIngresos);
+
+        itemCaja2CtasEgresos = new javax.swing.JMenuItem("Cuentas de egresos");
+        itemCaja2CtasEgresos.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirCaja2CtasEgresos();
+            }
+        });
+        menuCaja2.add(itemCaja2CtasEgresos);
+
+        menuCaja2.addSeparator();
+        itemCaja2Reportes = new javax.swing.JMenuItem("Reportes de caja");
+        itemCaja2Reportes.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                abrirCaja2Reportes();
+            }
+        });
+        menuCaja2.add(itemCaja2Reportes);
+
+        menuCaja2.setVisible(false);
+        jMenuBar1.add(menuCaja2);
+        jMenuBar1.revalidate();
+        jMenuBar1.repaint();
+    }
+
+    private void abrirCaja2Ingresos() {
+        if (metodos.estacerrado(frm_caja2_ingresos)) {
+            frm_caja2_ingresos = new Caja.frm_ingresos(2);
+            escritorio.add(frm_caja2_ingresos);
+            try {
+                frm_caja2_ingresos.setMaximum(true);
+            } catch (java.beans.PropertyVetoException ex) {
+                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            frm_caja2_ingresos.show();
+        } else {
+            frm_caja2_ingresos.toFront();
+        }
+    }
+
+    private void abrirCaja2Egresos() {
+        if (metodos.estacerrado(frm_caja2_egresos)) {
+            frm_caja2_egresos = new Caja.frm_egresos(2);
+            escritorio.add(frm_caja2_egresos);
+            try {
+                frm_caja2_egresos.setMaximum(true);
+            } catch (java.beans.PropertyVetoException ex) {
+                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            frm_caja2_egresos.show();
+        } else {
+            frm_caja2_egresos.toFront();
+        }
+    }
+
+    private void abrirCaja2Reportes() {
+        if (metodos.estacerrado(frm_caja2_reportes)) {
+            frm_caja2_reportes = new Caja.frm_reportes_caja(2);
+            escritorio.add(frm_caja2_reportes);
+            try {
+                frm_caja2_reportes.setMaximum(true);
+            } catch (java.beans.PropertyVetoException ex) {
+                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            frm_caja2_reportes.show();
+        } else {
+            frm_caja2_reportes.toFront();
+        }
+    }
+
+    private void abrirCaja2Traslados() {
+        if (metodos.estacerrado(frm_caja2_traslados)) {
+            frm_caja2_traslados = new Caja.frm_Traslados(2);
+            escritorio.add(frm_caja2_traslados);
+            try {
+                frm_caja2_traslados.setMaximum(true);
+            } catch (java.beans.PropertyVetoException ex) {
+                Logger.getLogger(frm_main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            frm_caja2_traslados.show();
+        } else {
+            frm_caja2_traslados.toFront();
+        }
+    }
+
+    private void abrirCaja2Fondos() {
+        if (metodos.estacerrado(frm_caja2_fondos)) {
+            frm_caja2_fondos = new Caja.frm_fondos(2);
+            escritorio.add(frm_caja2_fondos);
+            frm_caja2_fondos.show();
+        } else {
+            frm_caja2_fondos.toFront();
+        }
+    }
+
+    private void abrirCaja2CtasIngresos() {
+        if (metodos.estacerrado(frm_caja2_ctas_ingresos)) {
+            frm_caja2_ctas_ingresos = new Caja.frm_cuentas_ingresos(2);
+            escritorio.add(frm_caja2_ctas_ingresos);
+            frm_caja2_ctas_ingresos.show();
+        } else {
+            frm_caja2_ctas_ingresos.toFront();
+        }
+    }
+
+    private void abrirCaja2CtasEgresos() {
+        if (metodos.estacerrado(frm_caja2_ctas_egresos)) {
+            frm_caja2_ctas_egresos = new Caja.frm_cuentas_egresos(2);
+            escritorio.add(frm_caja2_ctas_egresos);
+            frm_caja2_ctas_egresos.show();
+        } else {
+            frm_caja2_ctas_egresos.toFront();
         }
     }
 
@@ -973,6 +1189,17 @@ public class frm_main extends javax.swing.JFrame {
         caja.agregarItem("Fondos", itemCajaFondos);
         caja.agregarItem("Cuentas de ingresos", itemCajaCtasIngresos);
         caja.agregarItem("Cuentas de egresos", itemCajaCtasEgresos);
+        caja.agregarItem("Reportes de caja", itemCajaReportes);
+
+        BarraLateral.Grupo caja2 = barra.agregarGrupo("Caja Dos", FontAwesome.DINERO)
+                .gobernadoPor(menuCaja2);
+        caja2.agregarItem("Ingresos", itemCaja2Ingresos);
+        caja2.agregarItem("Egresos", itemCaja2Egresos);
+        caja2.agregarItem("Traslados entre fondos", itemCaja2Traslados);
+        caja2.agregarItem("Fondos", itemCaja2Fondos);
+        caja2.agregarItem("Cuentas de ingresos", itemCaja2CtasIngresos);
+        caja2.agregarItem("Cuentas de egresos", itemCaja2CtasEgresos);
+        caja2.agregarItem("Reportes de caja", itemCaja2Reportes);
 
         barra.agregarItem("Reportes", FontAwesome.GRAFICA, jmenu_reportes);
         barra.agregarItem("Calculadora retenciones", FontAwesome.CALCULADORA,
@@ -1182,8 +1409,7 @@ public class frm_main extends javax.swing.JFrame {
         m.put("creditos_tipos_abonos", itemCreditosTipos);
         m.put("creditos_reportes", itemCreditosReportes);
         // Módulo Caja: mismo esquema que Créditos (módulo apagado en la tabla
-        // modulos → desaparece completo; la opción caja_reportes existe en BD
-        // pero su pantalla aún no está portada, por eso no se mapea todavía).
+        // modulos → desaparece completo).
         m.put("menu_caja", menuCaja);
         m.put("caja_ingresos", itemCajaIngresos);
         m.put("caja_egresos", itemCajaEgresos);
@@ -1191,6 +1417,16 @@ public class frm_main extends javax.swing.JFrame {
         m.put("caja_fondos", itemCajaFondos);
         m.put("caja_cuentas_ingresos", itemCajaCtasIngresos);
         m.put("caja_cuentas_egresos", itemCajaCtasEgresos);
+        m.put("caja_reportes", itemCajaReportes);
+        // Módulo Caja Dos: permisos propios (módulo 'Caja Dos' en la tabla modulos).
+        m.put("menu_caja2", menuCaja2);
+        m.put("caja2_ingresos", itemCaja2Ingresos);
+        m.put("caja2_egresos", itemCaja2Egresos);
+        m.put("caja2_traslados", itemCaja2Traslados);
+        m.put("caja2_fondos", itemCaja2Fondos);
+        m.put("caja2_cuentas_ingresos", itemCaja2CtasIngresos);
+        m.put("caja2_cuentas_egresos", itemCaja2CtasEgresos);
+        m.put("caja2_reportes", itemCaja2Reportes);
         return m;
     }
 

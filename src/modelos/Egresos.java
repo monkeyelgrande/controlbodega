@@ -25,8 +25,18 @@ public class Egresos {
 
     String fecha, hora, descripcion, nombre_user, nombre_cuenta, nombre_fondo;
     int id, id_user, id_cuenta, id_cliente, id_fondo, factura_remision;
+    /** Caja a la que pertenece el egreso: 1 = Caja, 2 = Caja Dos. */
+    int id_caja = 1;
     double total;
     DecimalFormat formatea = new DecimalFormat("###,###.##");
+
+    public int getId_caja() {
+        return id_caja;
+    }
+
+    public void setId_caja(int id_caja) {
+        this.id_caja = id_caja;
+    }
 
     public int getId_cliente() {
         return id_cliente;

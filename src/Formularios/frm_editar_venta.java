@@ -1047,9 +1047,13 @@ public class frm_editar_venta extends javax.swing.JDialog {
     }//GEN-LAST:event_txt_FiltroKeyPressed
 
     private void jbox_clienteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbox_clienteActionPerformed
-
-        lbl_id_cliente.setText(DB_consultas_R_D.TraerIdCliente(jbox_cliente.getSelectedItem().toString()));
-
+        // El id se toma del objeto Contactos del combo, NO buscando por el texto
+        // mostrado: el item se muestra como "NOMBRE - CEDULA" y nunca coincidiria
+        // con contactos.nombre, dejando el id vacio y rompiendo el Actualizar.
+        Object sel = jbox_cliente.getSelectedItem();
+        if (sel instanceof Contactos) {
+            lbl_id_cliente.setText(String.valueOf(((Contactos) sel).getId()));
+        }
     }//GEN-LAST:event_jbox_clienteActionPerformed
 
     private void jbox_clienteMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jbox_clienteMouseClicked

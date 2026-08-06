@@ -12,6 +12,7 @@ import Formularios.frm_main;
 import Metodos.ExportarExcel;
 import Metodos.FontAwesome;
 import Metodos.metodos;
+import conexiondb.AuditoriaCaja;
 import conexiondb.DB_consultas_R_D;
 import conexiondb.DBIngresos;
 import conexiondb.DB_Fotos_servicios;
@@ -99,6 +100,8 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
     public static JComboBox<Contactos> jbox_contacto;
     private JRadioButton rbtn_F;
     private JRadioButton rbtn_R;
+    /** Marca informativa: 1 = el ingreso es un recibo de caja. Por defecto NO. */
+    private javax.swing.JCheckBox chk_recibo_caja;
     public static JTable jtabla_fotos;
     public static JLabel lbl_foto_1;
     public static JButton btn_cargar_foto;
@@ -134,10 +137,21 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
         }
     };
 
-    public frm_ingresos() {
-        buildUI();
+    /** Caja a la que pertenece este formulario: 1 = Caja, 2 = Caja Dos. */
+    private final int idCaja;
 
-        Fondos.mostrarFondos(jbox_Fondos);
+    public frm_ingresos() {
+        this(1);
+    }
+
+    public frm_ingresos(int idCaja) {
+        this.idCaja = idCaja;
+        buildUI();
+        if (idCaja == 2) {
+            setTitle("Ingresos - Caja Dos");
+        }
+
+        Fondos.mostrarFondos(jbox_Fondos, idCaja);
         modelo_fotos.setColumnIdentifiers(new Object[]{"Ruta", "Nombre", "id_foto"});
         jtabla_fotos.setModel(modelo_fotos);
         metodos.BuscarEnTabla(txt_Filtro, jtabla);
@@ -162,8 +176,8 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
         actualizarResumen();
         lbl_id.setText("Nuevo");
 
-        Cuentas_Ingresos.mostrarCuentas(jbox_Cuentas);
-        jbox_Cuentas.setSelectedItem(Cuentas_Ingresos.TraerPredeterminadoNombre());
+        Cuentas_Ingresos.mostrarCuentas(jbox_Cuentas, idCaja);
+        jbox_Cuentas.setSelectedItem(Cuentas_Ingresos.TraerPredeterminadoNombre(idCaja));
 
         jdate_fecha_entrada.setCalendar(fecha);
         metodos.EvitarTabEnJTextArea(jtxa_descripcion_crear);
@@ -234,8 +248,9 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
         lbl_id = new JLabel("Nuevo");
         jbox_Fondos = new JComboBox<>();
         jbox_contacto = new JComboBox<>();
-        rbtn_F = new JRadioButton("Factura (F)", true);
-        rbtn_R = new JRadioButton("Remisión (R)");
+        rbtn_F = new JRadioButton("Empresa (E)", true);
+        rbtn_R = new JRadioButton("Personal (P)");
+        chk_recibo_caja = new javax.swing.JCheckBox("Recibo de caja");
         jtabla_fotos = new JTable();
         lbl_foto_1 = new JLabel();
         btn_cargar_foto = EstiloCaja.ghost("Cargar", FontAwesome.UPLOAD);
@@ -269,6 +284,10 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
         rbtn_R.setFont(EstiloCaja.font(Font.PLAIN, 13));
         rbtn_F.setOpaque(false);
         rbtn_R.setOpaque(false);
+        chk_recibo_caja.setFont(EstiloCaja.font(Font.PLAIN, 13));
+        chk_recibo_caja.setOpaque(false);
+        chk_recibo_caja.setSelected(false); // por defecto NO es recibo de caja
+        chk_recibo_caja.setToolTipText("Marcar si este ingreso corresponde a un recibo de caja");
 
         EstiloCaja.styleCombo(jbox_contacto, ACENTO);
         EstiloCaja.styleCombo(jbox_Cuentas, ACENTO);
@@ -398,10 +417,10 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
         kpis.setMaximumSize(new Dimension(Integer.MAX_VALUE, 104));
         kpis.add(kpiCard("Total del día", FontAwesome.CALCULATOR, lblKpiTotal,
                 EstiloCaja.title("Suma de ingresos de hoy", 12, Font.PLAIN, EstiloCaja.TEXT_3), true));
-        kpis.add(kpiCard("Facturas (F)", FontAwesome.FILE_INVOICE, lblKpiF,
-                EstiloCaja.title("Ingresos con factura", 12, Font.PLAIN, EstiloCaja.TEXT_3)));
-        kpis.add(kpiCard("Remisiones (R)", FontAwesome.CLIPBOARD, lblKpiR,
-                EstiloCaja.title("Ingresos con remisión", 12, Font.PLAIN, EstiloCaja.TEXT_3)));
+        kpis.add(kpiCard("Empresa (E)", FontAwesome.FILE_INVOICE, lblKpiF,
+                EstiloCaja.title("Ingresos de empresa", 12, Font.PLAIN, EstiloCaja.TEXT_3)));
+        kpis.add(kpiCard("Personal (P)", FontAwesome.CLIPBOARD, lblKpiR,
+                EstiloCaja.title("Ingresos personales", 12, Font.PLAIN, EstiloCaja.TEXT_3)));
         kpis.add(kpiCard("Ingresos registrados", FontAwesome.LIST, lblKpiCount, lblKpiProm));
         header.add(kpis);
 
@@ -491,12 +510,19 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
 
         JScrollPane descScroll = new JScrollPane(jtxa_descripcion_crear);
         descScroll.setBorder(BorderFactory.createLineBorder(EstiloCaja.LINE_2, 1));
-        descScroll.putClientProperty(com.formdev.flatlaf.FlatClientProperties.STYLE, "arc:10;");
         addField(form, labeled("Descripción", descScroll, 82));
 
         // Fondo y Tipo en filas completas: media tarjeta no alcanza para los
         // dos radios y "Remisión (R)" se envolvia a una segunda linea.
         addField(form, labeled("Fondo", jbox_Fondos, 62));
+
+        // Recibo de caja va al frente (justo antes) de Empresa/Personal
+        JPanel reciboPanel = new JPanel();
+        reciboPanel.setOpaque(false);
+        reciboPanel.setLayout(new BoxLayout(reciboPanel, BoxLayout.X_AXIS));
+        reciboPanel.add(chk_recibo_caja);
+        reciboPanel.add(Box.createHorizontalGlue());
+        addField(form, labeled("Recibo de caja", reciboPanel, 52));
 
         JPanel tipoPanel = new JPanel();
         tipoPanel.setOpaque(false);
@@ -600,8 +626,8 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
 
         JPanel totals = new JPanel(new FlowLayout(FlowLayout.RIGHT, 18, 0));
         totals.setOpaque(false);
-        totals.add(totalChunk("F", lbl_total_F, EstiloCaja.INFO, Font.BOLD, 17));
-        totals.add(totalChunk("R", lbl_total_R, EstiloCaja.TEXT_2, Font.BOLD, 17));
+        totals.add(totalChunk("E", lbl_total_F, EstiloCaja.INFO, Font.BOLD, 17));
+        totals.add(totalChunk("P", lbl_total_R, EstiloCaja.TEXT_2, Font.BOLD, 17));
         totals.add(totalChunk("Total", lbl_total_suma, ACENTO.base, Font.BOLD, 22));
         foot.add(totals, BorderLayout.EAST);
         card.add(foot, BorderLayout.SOUTH);
@@ -713,11 +739,11 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
         modelo_resumen.setColumnIdentifiers(new Object[]{"Fondo", "Tipo", "Total"});
 
         String consulta = "SELECT coalesce(f.nombre, 'Sin fondo') as fondo, "
-                + "CASE WHEN i.factura_remision = 1 THEN 'F' ELSE 'R' END as tipo, "
+                + "CASE WHEN i.factura_remision = 1 THEN 'E' ELSE 'P' END as tipo, "
                 + "SUM(i.total) as total "
                 + "FROM ingresos i "
                 + "LEFT JOIN fondos f ON i.id_fondo = f.id "
-                + "WHERE i.fecha = CURRENT_DATE "
+                + "WHERE i.fecha = CURRENT_DATE AND i.id_caja = " + idCaja + " "
                 + "GROUP BY coalesce(f.nombre, 'Sin fondo'), i.factura_remision "
                 + "ORDER BY fondo, tipo";
         try {
@@ -752,10 +778,10 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
         int cnt = 0;
         try {
             ResultSet rs = DB_consultas_R_D.getTabla(
-                    "select coalesce((select sum(total) from ingresos where fecha='" + fecha_hoy + "'),0) as total,"
-                    + "coalesce((select sum(total) from ingresos where fecha='" + fecha_hoy + "' and factura_remision=1),0) as total_f,"
-                    + "coalesce((select sum(total) from ingresos where fecha='" + fecha_hoy + "' and factura_remision=0),0) as total_r,"
-                    + "coalesce((select count(*) from ingresos where fecha='" + fecha_hoy + "'),0) as cnt");
+                    "select coalesce((select sum(total) from ingresos where fecha='" + fecha_hoy + "' and id_caja=" + idCaja + "),0) as total,"
+                    + "coalesce((select sum(total) from ingresos where fecha='" + fecha_hoy + "' and id_caja=" + idCaja + " and factura_remision=1),0) as total_f,"
+                    + "coalesce((select sum(total) from ingresos where fecha='" + fecha_hoy + "' and id_caja=" + idCaja + " and factura_remision=0),0) as total_r,"
+                    + "coalesce((select count(*) from ingresos where fecha='" + fecha_hoy + "' and id_caja=" + idCaja + "),0) as cnt");
             while (rs.next()) {
                 total_general = rs.getDouble("total");
                 total_F = rs.getDouble("total_f");
@@ -780,23 +806,25 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
     }
 
     public static void TamanosTablaAbonos() {
-        if (columnModel == null || columnModel.getColumnCount() < 8) {
+        if (columnModel == null || columnModel.getColumnCount() < 9) {
             return;
         }
         columnModel.getColumn(0).setPreferredWidth(50);   // id
-        columnModel.getColumn(1).setPreferredWidth(120);  // cuenta
-        columnModel.getColumn(2).setPreferredWidth(300);  // descripcion
-        columnModel.getColumn(3).setPreferredWidth(80);   // fecha
-        columnModel.getColumn(4).setPreferredWidth(70);   // hora
-        columnModel.getColumn(5).setPreferredWidth(120);  // total
-        columnModel.getColumn(6).setPreferredWidth(120);  // fondo
-        columnModel.getColumn(7).setPreferredWidth(60);   // tipo
+        columnModel.getColumn(1).setPreferredWidth(115);  // cuenta
+        columnModel.getColumn(2).setPreferredWidth(280);  // descripcion
+        columnModel.getColumn(3).setPreferredWidth(75);   // fecha
+        columnModel.getColumn(4).setPreferredWidth(65);   // hora
+        columnModel.getColumn(5).setPreferredWidth(115);  // total
+        columnModel.getColumn(6).setPreferredWidth(115);  // fondo
+        columnModel.getColumn(7).setPreferredWidth(55);   // tipo
+        columnModel.getColumn(8).setPreferredWidth(100);  // recibo de caja
 
         columnModel.getColumn(0).setCellRenderer(new EstiloCaja.MutedRenderer());
         columnModel.getColumn(3).setCellRenderer(new EstiloCaja.MutedRenderer());
         columnModel.getColumn(4).setCellRenderer(new EstiloCaja.MutedRenderer());
         columnModel.getColumn(5).setCellRenderer(new EstiloCaja.MoneyRenderer());
         columnModel.getColumn(7).setCellRenderer(new EstiloCaja.TipoRenderer(ACENTO));
+        columnModel.getColumn(8).setCellRenderer(new EstiloCaja.SiNoRenderer(ACENTO));
     }
 
     public void verIngreso() throws SQLException {
@@ -872,7 +900,7 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
         try {
             obj.setId_fondo(jbox_Fondos.getItemAt(jbox_Fondos.getSelectedIndex()).getId());
         } catch (Exception e) {
-            obj.setId_fondo(Fondos.TraerPredeterminado());
+            obj.setId_fondo(Fondos.TraerPredeterminado(idCaja));
         }
         try {
             obj.setId_cliente(jbox_contacto.getItemAt(jbox_contacto.getSelectedIndex()).getId());
@@ -881,27 +909,37 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
         }
 
         obj.setId_user(frm_main.id_user);
+        obj.setId_caja(idCaja);
         obj.setTotal(Double.parseDouble(metodos.EliminaCaracteres(txt_total.getText(), ".")));
         obj.setFactura_remision(rbtn_F.isSelected() ? 1 : 0);
+        // 1 = recibo de caja, 0 = no (informativo, para reportes futuros)
+        obj.setRecibo_caja(chk_recibo_caja.isSelected() ? 1 : 0);
 
         // Todos los ingresos se reciben de contado: dinero recibido = true.
-        if (edita) {
-            obj.setId(Integer.parseInt(lbl_id.getText()));
-            db_ingreso.Actualizar(obj, true);
-            edita = false;
-        } else {
-            if (db_ingreso.Guardar(obj, true) > 0) {
-                if (modelo_fotos.getRowCount() > 0) {
-                    for (int i = 0; i < modelo_fotos.getRowCount(); i++) {
-                        if (jtabla_fotos.getValueAt(i, 2).toString().equals("0")) {
-                            metodos.copyFile_Java7(jtabla_fotos.getValueAt(i, 0).toString(), DB_consultas_R_D.Ruta_Imagenes() + jtabla_fotos.getValueAt(i, 1).toString());
-                            Fotos_registros foto = new Fotos_registros(jtabla_fotos.getValueAt(i, 1).toString(), obj.getId(), 0, 1);
-                            DB_Fotos_servicios db = new DB_Fotos_servicios();
-                            db.Guardar(foto);
+        // El origen queda en la auditoria de caja (trigger en base de datos).
+        try {
+            if (edita) {
+                AuditoriaCaja.setOrigen("Ingresos - editar");
+                obj.setId(Integer.parseInt(lbl_id.getText()));
+                db_ingreso.Actualizar(obj, true);
+                edita = false;
+            } else {
+                AuditoriaCaja.setOrigen("Ingresos - guardar");
+                if (db_ingreso.Guardar(obj, true) > 0) {
+                    if (modelo_fotos.getRowCount() > 0) {
+                        for (int i = 0; i < modelo_fotos.getRowCount(); i++) {
+                            if (jtabla_fotos.getValueAt(i, 2).toString().equals("0")) {
+                                metodos.copyFile_Java7(jtabla_fotos.getValueAt(i, 0).toString(), DB_consultas_R_D.Ruta_Imagenes() + jtabla_fotos.getValueAt(i, 1).toString());
+                                Fotos_registros foto = new Fotos_registros(jtabla_fotos.getValueAt(i, 1).toString(), obj.getId(), 0, 1);
+                                DB_Fotos_servicios db = new DB_Fotos_servicios();
+                                db.Guardar(foto);
+                            }
                         }
                     }
                 }
             }
+        } finally {
+            AuditoriaCaja.limpiar();
         }
         limpiar();
         act = 0;
@@ -917,11 +955,12 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
         jtxa_descripcion_crear.setBackground(Color.white);
         lbl_id.setText("Nuevo");
         edita = false;
-        jbox_Fondos.setSelectedItem(Fondos.TraerPredeterminadoNombre());
-        jbox_Cuentas.setSelectedItem(Cuentas_Ingresos.TraerPredeterminadoNombre());
+        jbox_Fondos.setSelectedItem(Fondos.TraerPredeterminadoNombre(idCaja));
+        jbox_Cuentas.setSelectedItem(Cuentas_Ingresos.TraerPredeterminadoNombre(idCaja));
         jbox_contacto.setSelectedItem(traerContactoPredeterminadoNombre());
         rbtn_F.setSelected(true);
-        id_cuenta = Cuentas_Ingresos.TraerPredeterminadoID();
+        chk_recibo_caja.setSelected(false); // por defecto no es recibo de caja
+        id_cuenta = Cuentas_Ingresos.TraerPredeterminadoID(idCaja);
         lbl_foto_1.setIcon(null);
         nombreArchivoImagen = "";
         ruta_origen_imagen = "";
@@ -945,6 +984,7 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
         }
         String id = "" + jtabla.getValueAt(fila, 0);
         String consulta = "select i.id, i.descripcion, i.total, i.fecha, i.factura_remision, "
+                + "coalesce(i.recibo_caja,0) as recibo_caja, "
                 + "u.nombre as user, cu.nombre as cuenta, cu.id as id_cuenta, "
                 + "coalesce(f.nombre,'default') as fondo, coalesce(f.id,0) as id_fondo, co.nombre as cliente \n"
                 + "from ingresos i \n"
@@ -966,8 +1006,9 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
                 } else {
                     rbtn_R.setSelected(true);
                 }
+                chk_recibo_caja.setSelected(rs.getInt("recibo_caja") == 1);
                 if (rs.getString("fondo").equals("default")) {
-                    jbox_Fondos.setSelectedItem(Fondos.TraerPredeterminadoNombre());
+                    jbox_Fondos.setSelectedItem(Fondos.TraerPredeterminadoNombre(idCaja));
                 } else {
                     jbox_Fondos.setSelectedItem(rs.getString("fondo"));
                 }
@@ -991,6 +1032,7 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
             try {
                 DefaultTableModel m = (DefaultTableModel) jtabla.getModel();
                 String id = (String) jtabla.getValueAt(fila, 0);
+                AuditoriaCaja.setOrigen("Ingresos - eliminar");
                 DB_consultas_R_D.eliminar("ingresos", id);
                 for (int i = 0; i < m.getRowCount(); i++) {
                     if (m.getValueAt(i, 0).equals(id)) {
@@ -1003,6 +1045,8 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+            } finally {
+                AuditoriaCaja.limpiar();
             }
         }
     }
@@ -1098,7 +1142,9 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
             if (dialogResult == JOptionPane.YES_OPTION) {
                 String id_foto = jtabla_fotos.getValueAt(fila, 2).toString();
                 String ruta = jtabla_fotos.getValueAt(fila, 0).toString();
+                AuditoriaCaja.setOrigen("Ingresos - eliminar soporte");
                 DB_consultas_R_D.eliminar("fotos_registros", id_foto);
+                AuditoriaCaja.limpiar();
                 DB_consultas_R_D.Eliminar_Archivo(ruta);
                 for (int i = 0; i < modelo_fotos.getRowCount(); i++) {
                     if (modelo_fotos.getValueAt(i, 2).toString().equals(id_foto)) {
@@ -1123,7 +1169,7 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
     }
 
     private void btn_compararActionPerformed() {
-        jd_comparar_ingresos frm = new jd_comparar_ingresos(null, false);
+        jd_comparar_ingresos frm = new jd_comparar_ingresos(null, false, idCaja);
         frm.setVisible(true);
     }
 
@@ -1165,13 +1211,15 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
         } catch (Exception e) {
         }
 
-        String base = "select i.id, i.factura_remision, c.nombre, i.total, i.descripcion, i.fecha, i.hora, f.nombre as fondo\n"
+        String base = "select i.id, i.factura_remision, coalesce(i.recibo_caja,0) as recibo_caja, "
+                + "c.nombre, i.total, i.descripcion, i.fecha, i.hora, f.nombre as fondo\n"
                 + "from ingresos i \n"
                 + "left join cuentas_ingresos c on i.id_cuenta=c.id \n"
-                + "left join fondos f on i.id_fondo=f.id \n";
+                + "left join fondos f on i.id_fondo=f.id \n"
+                + "where i.id_caja=" + idCaja + " \n";
         String consulta;
         if (act == 0) {
-            consulta = base + "where i.fecha=CURRENT_DATE \norder by i.fecha desc, i.id desc";
+            consulta = base + "and i.fecha=CURRENT_DATE \norder by i.fecha desc, i.id desc";
             act = 1;
         } else {
             consulta = base + "order by i.fecha desc, i.id desc";
@@ -1179,15 +1227,17 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
         }
 
         ResultSet rs = DB_consultas_R_D.getTabla(consulta);
-        modelo.setColumnIdentifiers(new Object[]{"id", "Cuenta", "Descripcion", "Fecha", "Hora", "Total", "Fondo", "Tipo"});
+        modelo.setColumnIdentifiers(new Object[]{"id", "Cuenta", "Descripcion", "Fecha", "Hora", "Total", "Fondo", "Tipo", "Recibo de caja"});
         try {
             int filas = 0;
             while (rs.next()) {
-                String tipo = rs.getInt("factura_remision") == 1 ? "F" : "R";
+                // E = Empresa (antes Factura), P = Personal (antes Remision)
+                String tipo = rs.getInt("factura_remision") == 1 ? "E" : "P";
+                String recibo = rs.getInt("recibo_caja") == 1 ? "Sí" : "No";
                 modelo.addRow(new Object[]{
                     rs.getString("id"), rs.getString("nombre"), rs.getString("descripcion"),
                     rs.getDate("fecha"), rs.getString("hora"), formatea.format(rs.getDouble("total")),
-                    rs.getString("fondo"), tipo});
+                    rs.getString("fondo"), tipo, recibo});
                 filas++;
             }
             rs.close();

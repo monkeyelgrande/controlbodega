@@ -99,6 +99,8 @@ CREATE TABLE IF NOT EXISTS ingresos (
     hora character varying(8),
     factura_remision integer,
     transferencia integer,
+    -- recibo_caja: 1 = el ingreso es un recibo de caja, 0 = no (informativo)
+    recibo_caja integer DEFAULT 0,
     -- pk_ingresos ya lo usa ingresos_mercancias_cabecera; nombre distinto
     CONSTRAINT pk_caja_ingresos PRIMARY KEY (id),
     CONSTRAINT fk_ingreso_cuenta FOREIGN KEY (id_cuenta)

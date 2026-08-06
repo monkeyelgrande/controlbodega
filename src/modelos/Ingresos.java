@@ -20,7 +20,19 @@ public class Ingresos {
 
     String fecha, hora, descripcion, nombre_user, nombre_cuenta, nombre_fondo;
     int id, id_user, id_cuenta, id_cliente, id_fondo, factura_remision;
+    /** Caja a la que pertenece el ingreso: 1 = Caja, 2 = Caja Dos. */
+    int id_caja = 1;
+    /** 1 = el ingreso es un recibo de caja, 0 = no lo es (informativo). */
+    int recibo_caja;
     double total;
+
+    public int getId_caja() {
+        return id_caja;
+    }
+
+    public void setId_caja(int id_caja) {
+        this.id_caja = id_caja;
+    }
 
     public int getFactura_remision() {
         return factura_remision;
@@ -28,6 +40,14 @@ public class Ingresos {
 
     public void setFactura_remision(int factura_remision) {
         this.factura_remision = factura_remision;
+    }
+
+    public int getRecibo_caja() {
+        return recibo_caja;
+    }
+
+    public void setRecibo_caja(int recibo_caja) {
+        this.recibo_caja = recibo_caja;
     }
 
     public int getId_cliente() {

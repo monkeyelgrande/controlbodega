@@ -291,6 +291,11 @@ public class DB_consultas_R_D {
             System.out.println(String.valueOf(e));
             JOptionPane.showMessageDialog(null, "Error de conexxion a la base de datos:\n " + e);
         }
+        // Le dice a la base quien esta trabajando: lo usan los triggers de
+        // auditoria del modulo Caja (sql/migracion_auditoria_caja.sql). Va aqui
+        // y no en cada DAO para cubrir tambien los caminos genericos como
+        // eliminar() y Actualizar_Campo_String().
+        AuditoriaCaja.aplicar(cn);
         return cn;
     }
 
@@ -438,6 +443,28 @@ public class DB_consultas_R_D {
             }
             rs.close();
 
+        } catch (Exception e) {
+            System.out.println(e);
+            return 0;
+        }
+        return 0;
+    }
+
+    /**
+     * Igual que {@link #consultar_existencia_campo_String(String, String, String)}
+     * pero acotando la busqueda a una caja (columna id_caja). Lo usan los
+     * catalogos del modulo Caja para que cada caja pueda tener nombres propios
+     * sin chocar con los de la otra caja.
+     */
+    public static int consultar_existencia_campo_String(String campo, String valor, String tabla, int idCaja) {
+        String cadena = "select count(" + campo + ") as codigo from " + tabla
+                + " where " + campo + " = '" + valor + "' and id_caja = " + idCaja;
+        ResultSet rs = getTabla(cadena);
+        try {
+            while (rs.next()) {
+                return Integer.parseInt(rs.getString("codigo"));
+            }
+            rs.close();
         } catch (Exception e) {
             System.out.println(e);
             return 0;

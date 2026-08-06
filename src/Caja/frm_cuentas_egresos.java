@@ -31,9 +31,20 @@ public class frm_cuentas_egresos extends javax.swing.JInternalFrame {
      */
     private TableRowSorter trsFiltro;
     boolean ver = false;
+    /** Caja que administra este formulario: 1 = Caja, 2 = Caja Dos. */
+    private final int idCaja;
 
     public frm_cuentas_egresos() {
+        this(1);
+    }
+
+    public frm_cuentas_egresos(int idCaja) {
+        this.idCaja = idCaja;
         initComponents();
+        if (idCaja == 2) {
+            setTitle("Cuentas - Caja Dos");
+            jLabel13.setText("Cuentas Egresos - Caja Dos");
+        }
         actualizar();
         TamanosTablaAbonos();
         Metodos.metodos.TablaAptaParaBusquedaAndSSM(jtabla);
@@ -307,7 +318,7 @@ public class frm_cuentas_egresos extends javax.swing.JInternalFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btn_crearActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_crearActionPerformed
-        jif_crear_cuenta_egresos frm = new jif_crear_cuenta_egresos();
+        jif_crear_cuenta_egresos frm = new jif_crear_cuenta_egresos(idCaja);
 //        frm_main.escritorio.add(frm);
 //        Dimension desktopSize = frm_main.escritorio.getSize();
 //        Dimension FrameSize = frm.getSize();
@@ -359,7 +370,7 @@ public class frm_cuentas_egresos extends javax.swing.JInternalFrame {
         } else {
             String id = (String) jtabla.getValueAt(fila, 0);
             ResultSet rs = DB_consultas_R_D.getTabla("select * from cuentas_egresos where id =" + id);
-            jif_crear_cuenta_egresos frm = new jif_crear_cuenta_egresos();
+            jif_crear_cuenta_egresos frm = new jif_crear_cuenta_egresos(idCaja);
 //            frm_main.escritorio.add(frm);
 //            frm.toFront();
             try {
@@ -415,7 +426,7 @@ public class frm_cuentas_egresos extends javax.swing.JInternalFrame {
             }
         } catch (Exception e) {
         }
-        ResultSet rs = DB_consultas_R_D.getTabla("select * from cuentas_egresos order by id");
+        ResultSet rs = DB_consultas_R_D.getTabla("select * from cuentas_egresos where id_caja = " + idCaja + " order by id");
         modelo.setColumnIdentifiers(new Object[]{"id", "Nombre", "Prdeterminado"});
         try {
             while (rs.next()) {

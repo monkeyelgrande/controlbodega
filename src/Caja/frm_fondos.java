@@ -31,9 +31,20 @@ public class frm_fondos extends javax.swing.JInternalFrame {
     private TableRowSorter trsFiltro;
     boolean ver = false;
     DecimalFormat formateador = new DecimalFormat("#,###");
+    /** Caja que administra este formulario: 1 = Caja, 2 = Caja Dos. */
+    private final int idCaja;
 
     public frm_fondos() {
+        this(1);
+    }
+
+    public frm_fondos(int idCaja) {
+        this.idCaja = idCaja;
         initComponents();
+        if (idCaja == 2) {
+            setTitle("Fondos - Caja Dos");
+            jLabel13.setText("Fondos - Caja Dos");
+        }
         actualizar();
         TamanosTablaAbonos();
         Metodos.metodos.TablaAptaParaBusquedaAndSSM(jtabla_clientes);
@@ -299,7 +310,7 @@ public class frm_fondos extends javax.swing.JInternalFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btn_crearActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_crearActionPerformed
-        jif_crear_fondo frm = new jif_crear_fondo();
+        jif_crear_fondo frm = new jif_crear_fondo(idCaja);
         frm.show();
         jif_crear_fondo.txt_nombre.requestFocus();
     }//GEN-LAST:event_btn_crearActionPerformed
@@ -360,7 +371,7 @@ public class frm_fondos extends javax.swing.JInternalFrame {
         } else {
             String id = (String) jtabla_clientes.getValueAt(fila, 0);
             ResultSet rs = DB_consultas_R_D.getTabla("select * from fondos where id =" + id);
-            jif_crear_fondo frm = new jif_crear_fondo();
+            jif_crear_fondo frm = new jif_crear_fondo(idCaja);
             try {
                 while (rs.next()) {
                     jif_crear_fondo.txt_id.setText(rs.getString("id"));
@@ -422,7 +433,7 @@ public class frm_fondos extends javax.swing.JInternalFrame {
         ResultSet rs = DB_consultas_R_D.getTabla("select f.id, f.nombre, f.predeterminado, f.fisico_digital, "
                 + "coalesce((select sum(i.total) from ingresos i where i.id_fondo = f.id), 0) "
                 + "- coalesce((select sum(e.total) from egresos e where e.id_fondo = f.id), 0) as saldo "
-                + "from fondos f order by f.id");
+                + "from fondos f where f.id_caja = " + idCaja + " order by f.id");
         modelo.setColumnIdentifiers(new Object[]{"id", "Nombre", "Saldo", "Predeterminado"});
         try {
             while (rs.next()) {

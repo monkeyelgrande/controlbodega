@@ -1293,7 +1293,12 @@ public class frm_ver_orden extends javax.swing.JDialog {
         try {
             int idFactura = Integer.parseInt(lbl_numerofactura.getText());
 
-            if (frm_main.perfil == 3) { // VENDEDOR: una sola impresion
+            // Usuario con permiso 'ordenes_reimprimir': imprime sin limite y sin
+            // pedir clave de admin, aunque sea vendedor. Se concede por usuario
+            // desde la pantalla de permisos (tabla usuario_opciones).
+            if (Metodos.Permisos.puede("ordenes_reimprimir")) {
+                new Metodos.ImprimirFacturaPDF().imprimir(idFactura);
+            } else if (frm_main.perfil == 3) { // VENDEDOR: una sola impresion
                 Connection con = DB_consultas_R_D.getConexion();
                 PreparedStatement ps = con.prepareStatement(
                         "SELECT COALESCE(impreso_vendedor, 0) FROM facturas_cabeceras WHERE id = ?");

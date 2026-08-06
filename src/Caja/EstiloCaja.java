@@ -86,6 +86,10 @@ public final class EstiloCaja {
     public static final Accent INGRESOS = new Accent(0x2E7D32, 0x388E3C, 0x1B5E20, 0xE8F5E9);
     /** Rojo material: modulo Egresos. */
     public static final Accent EGRESOS = new Accent(0xC62828, 0xD32F2F, 0xB71C1C, 0xFDECEA);
+    /** Azul material: modulo Traslados (el dinero no entra ni sale, se mueve). */
+    public static final Accent TRASLADOS = new Accent(0x1565C0, 0x1976D2, 0x0D47A1, 0xE7F0FB);
+    /** Indigo: pantalla de Reportes de caja (cubre ingresos y egresos a la vez). */
+    public static final Accent REPORTES = new Accent(0x4F46E5, 0x4338CA, 0x3730A3, 0xEEF0FE);
 
     // ---- Semanticos (solo estados) ----
     public static final Color INFO = new Color(0x175CD3);
@@ -331,8 +335,9 @@ public final class EstiloCaja {
     /** ScrollPane limpio (borde 1px redondeado gestionado por FlatLaf). */
     public static JScrollPane scroll(Component c) {
         JScrollPane sp = new JScrollPane(c);
+        // OJO: FlatScrollPaneUI no soporta la propiedad de estilo "arc"
+        // (lanza UnknownStyleException); el borde va con LineBorder.
         sp.setBorder(BorderFactory.createLineBorder(LINE_2, 1));
-        sp.putClientProperty(FlatClientProperties.STYLE, "arc:10;");
         sp.getViewport().setBackground(SURFACE);
         sp.getVerticalScrollBar().setUnitIncrement(16);
         return sp;
@@ -409,8 +414,9 @@ public final class EstiloCaja {
         public Component getTableCellRendererComponent(JTable table, Object value,
                 boolean isSelected, boolean hasFocus, int row, int column) {
             super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-            String v = value == null ? "" : value.toString();
-            setText(v.startsWith("$") ? v : "$" + v);
+            String v = value == null ? "" : value.toString().trim();
+            // celda vacia se deja vacia (no "$" suelto)
+            setText(v.isEmpty() ? "" : (v.startsWith("$") ? v : "$" + v));
             setFont(font(Font.BOLD, 13));
             setForeground(TEXT);
             setBorder(BorderFactory.createEmptyBorder(0, 14, 0, 16));
@@ -448,9 +454,37 @@ public final class EstiloCaja {
                 boolean isSelected, boolean hasFocus, int row, int column) {
             super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
             String v = value == null ? "" : value.toString().trim();
-            setText(v.equalsIgnoreCase("F") ? "F" : "R");
+            // F = Factura / E = Empresa se resaltan; R = Remision / P = Personal quedan neutros
+            boolean destacado = v.equalsIgnoreCase("F") || v.equalsIgnoreCase("E");
+            setText(v.toUpperCase());
             setFont(font(Font.BOLD, 12));
-            setForeground(v.equalsIgnoreCase("F") ? INFO : TEXT_2);
+            setForeground(destacado ? INFO : TEXT_2);
+            setBackground(isSelected ? accent.tint : SURFACE);
+            setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+            return this;
+        }
+    }
+
+    /** Renderer Si/No: "Si" resaltado con el color de identidad, "No" atenuado. */
+    public static class SiNoRenderer extends DefaultTableCellRenderer {
+
+        private final Accent accent;
+
+        public SiNoRenderer(Accent accent) {
+            this.accent = accent;
+            setHorizontalAlignment(SwingConstants.CENTER);
+            setOpaque(true);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus, int row, int column) {
+            super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            String v = value == null ? "" : value.toString().trim();
+            boolean si = v.equalsIgnoreCase("Sí") || v.equalsIgnoreCase("Si") || "1".equals(v);
+            setText(si ? "Sí" : "—");
+            setFont(font(Font.BOLD, 12));
+            setForeground(si ? accent.base : TEXT_4);
             setBackground(isSelected ? accent.tint : SURFACE);
             setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
             return this;

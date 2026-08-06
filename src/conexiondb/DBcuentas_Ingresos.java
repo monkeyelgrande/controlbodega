@@ -18,13 +18,14 @@ public class DBcuentas_Ingresos {
     public int Guardar(Cuentas_Ingresos cuenta) {
         int resultado = 0;
         Connection con = null;
-        String SSQL = "INSERT INTO cuentas_ingresos (nombre, predeterminado) "
-                + "VALUES (?, ?)";
+        String SSQL = "INSERT INTO cuentas_ingresos (nombre, predeterminado, id_caja) "
+                + "VALUES (?, ?, ?)";
         try {
             con = DB_consultas_R_D.getConexion();
             PreparedStatement psql = con.prepareStatement(SSQL);
             psql.setString(1, cuenta.getNombre());
             psql.setInt(2, cuenta.getPredeterminado());
+            psql.setInt(3, cuenta.getId_caja());
 
             resultado = psql.executeUpdate();
             psql.close();
@@ -52,8 +53,10 @@ public class DBcuentas_Ingresos {
         try {
             con = DB_consultas_R_D.getConexion();
 
-            // El original siempre reiniciaba el predeterminado antes de actualizar.
-            PreparedStatement preset = con.prepareStatement("update cuentas_ingresos set predeterminado=0");
+            // El original siempre reiniciaba el predeterminado antes de actualizar
+            // (acotado a la caja de la cuenta: cada caja tiene el suyo).
+            PreparedStatement preset = con.prepareStatement("update cuentas_ingresos set predeterminado=0 where id_caja=?");
+            preset.setInt(1, cuenta.getId_caja());
             preset.executeUpdate();
             preset.close();
 

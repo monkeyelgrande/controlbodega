@@ -17,10 +17,14 @@ import modelos.Fondos;
  */
 public class jif_crear_fondo extends javax.swing.JDialog {
 
+    /** Caja a la que pertenece el fondo creado/editado (1=Caja, 2=Caja Dos). */
+    private final int idCaja;
+
     /**
      * Creates new form jif_crear_cuenta
      */
-    public jif_crear_fondo() {
+    public jif_crear_fondo(int idCaja) {
+        this.idCaja = idCaja;
         initComponents();
         // El id lo asigna la BD (serial); vacio = registro nuevo
         txt_id.setText("");
@@ -213,6 +217,7 @@ public class jif_crear_fondo extends javax.swing.JDialog {
             if (chk_predeterminado.isSelected()) {
                 obj.setPredeterminado(1);
             }
+            obj.setId_caja(idCaja);
 
             if (!txt_id.getText().equals("") && DB_consultas_R_D.consultarId(txt_id.getText(), "fondos") == 1) {
                 dbcuenta.Actualizar(obj);

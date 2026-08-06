@@ -93,8 +93,13 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
 
 
     public void permisos() {
-        if (frm_main.perfil == 2) {
-            btn_eliminar.setEnabled(false);
+        // Anular órdenes es ahora una opción gobernable ('ordenes_anular'),
+        // asignable a la persona o perfil que se necesite. Con la BD sin migrar
+        // se conserva lo anterior: todos menos el bodeguero (perfil 2).
+        if (Metodos.Permisos.estaCargado()) {
+            btn_eliminar.setEnabled(Metodos.Permisos.puede("ordenes_anular"));
+        } else {
+            btn_eliminar.setEnabled(frm_main.perfil != 2);
         }
         // Editar órdenes es ahora una opción gobernable ('ordenes_editar'),
         // asignable a la persona o perfil que se necesite. Con la BD sin migrar
@@ -500,7 +505,12 @@ public class frm_Ordenes extends javax.swing.JInternalFrame {
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void btn_eliminarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_eliminarActionPerformed
-        if (DB_consultas_R_D.validar_admin()) {
+        // Con la opción 'ordenes_anular' concedida el usuario anula directamente;
+        // con la BD sin migrar se mantiene la clave de administrador como antes.
+        boolean autorizado = Metodos.Permisos.estaCargado()
+                ? Metodos.Permisos.puede("ordenes_anular")
+                : DB_consultas_R_D.validar_admin();
+        if (autorizado) {
             int fila = jtabla_facturas.getSelectedRow();
             if (fila == -1) {
                 JOptionPane.showMessageDialog(null, "Seleccione un registro");

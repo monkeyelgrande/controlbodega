@@ -49,6 +49,7 @@ public final class Tema {
 
     private static final String PREF_MODO_OSCURO = "modoOscuro";
     private static boolean oscuro;
+    private static String nombreFuente;
 
     private Tema() {
     }
@@ -173,12 +174,34 @@ public final class Tema {
     }
 
     /**
-     * Fuente base del sistema: Segoe UI Variable si está instalada
-     * (Windows 11), de lo contrario Segoe UI.
+     * Fuente base del sistema.
+     *
+     * Se usa Segoe UI (estática, presente en todo Windows) y no Segoe UI
+     * Variable: esta última es una fuente variable de Windows 11 y el motor
+     * de fuentes de Java 8 no la soporta, por lo que en algunos equipos
+     * resuelve mal el mapa de glifos y el texto sale corrido un carácter
+     * ("bodega_nuevo" se dibuja como "ancdf`^mtdun").
+     *
+     * Se puede forzar otra familia en campo con
+     * -Dcontrolbodega.fuente="Nombre de la fuente".
      */
     public static Font fuenteBase(int estilo, int tamano) {
-        String nombre = existeFuente("Segoe UI Variable") ? "Segoe UI Variable" : "Segoe UI";
-        return new Font(nombre, estilo, tamano);
+        return new Font(nombreFuenteBase(), estilo, tamano);
+    }
+
+    private static String nombreFuenteBase() {
+        // se resuelve una sola vez: fuenteBase() se llama desde paintComponent
+        if (nombreFuente == null) {
+            String forzada = System.getProperty("controlbodega.fuente");
+            if (forzada != null && !forzada.trim().isEmpty() && existeFuente(forzada.trim())) {
+                nombreFuente = forzada.trim();
+            } else if (existeFuente("Segoe UI")) {
+                nombreFuente = "Segoe UI";
+            } else {
+                nombreFuente = Font.SANS_SERIF;
+            }
+        }
+        return nombreFuente;
     }
 
     private static boolean existeFuente(String nombre) {

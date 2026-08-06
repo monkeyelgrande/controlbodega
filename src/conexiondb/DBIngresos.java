@@ -25,8 +25,8 @@ public class DBIngresos {
     public int Guardar(Ingresos obj, boolean seleccionado) {
         int resultado = 0;
         Connection con = null;
-        String SSQL = "INSERT INTO ingresos (id_user, id_cuenta, descripcion, total, fecha, hora, id_cliente, factura_remision, transferencia, id_fondo) "
-                + "VALUES (?,?,?,?,cast(? as date),?,?,?,0,?) RETURNING id";
+        String SSQL = "INSERT INTO ingresos (id_user, id_cuenta, descripcion, total, fecha, hora, id_cliente, factura_remision, transferencia, id_fondo, recibo_caja, id_caja) "
+                + "VALUES (?,?,?,?,cast(? as date),?,?,?,0,?,?,?) RETURNING id";
         try {
             con = DB_consultas_R_D.getConexion();
             PreparedStatement psql = con.prepareStatement(SSQL);
@@ -43,6 +43,8 @@ public class DBIngresos {
             } else {
                 psql.setNull(9, Types.INTEGER);
             }
+            psql.setInt(10, obj.getRecibo_caja());
+            psql.setInt(11, obj.getId_caja());
             ResultSet rs = psql.executeQuery();
             if (rs.next()) {
                 obj.setId(rs.getInt(1));
@@ -76,7 +78,7 @@ public class DBIngresos {
         int resultado = 0;
         Connection con = null;
         String SQL = "UPDATE ingresos set id_user=?, id_cuenta=?, id_cliente=?, descripcion=?, total=?, "
-                + "fecha=cast(? as date), factura_remision=?, hora=?, id_fondo=? where id=?";
+                + "fecha=cast(? as date), factura_remision=?, hora=?, id_fondo=?, recibo_caja=? where id=?";
 
         try {
             con = DB_consultas_R_D.getConexion();
@@ -94,7 +96,8 @@ public class DBIngresos {
             } else {
                 psql.setNull(9, Types.INTEGER);
             }
-            psql.setInt(10, ingreso.getId());
+            psql.setInt(10, ingreso.getRecibo_caja());
+            psql.setInt(11, ingreso.getId());
             resultado = psql.executeUpdate();
             psql.close();
 

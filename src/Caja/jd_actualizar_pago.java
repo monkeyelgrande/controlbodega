@@ -25,7 +25,9 @@ public class jd_actualizar_pago extends javax.swing.JDialog {
         initComponents();
         metodos.addEscapeListenerWindowDialog(this);
         this.setLocationRelativeTo(parent);
-        Fondos.mostrarFondos(jbox_Fondos);
+        // Dialogo heredado del flujo "pago pendiente" (hoy sin uso: todo es de
+        // contado). Si se reactivara, habria que pasarle la caja del formulario.
+        Fondos.mostrarFondos(jbox_Fondos, 1);
 
     }
 
@@ -108,7 +110,7 @@ public class jd_actualizar_pago extends javax.swing.JDialog {
         try {
             Id_fondo = (jbox_Fondos.getItemAt(jbox_Fondos.getSelectedIndex()).getId());
         } catch (Exception e) {
-            Id_fondo = (Fondos.TraerPredeterminado());
+            Id_fondo = (Fondos.TraerPredeterminado(1));
         }
 
         // Rediseno: el pago se registra asignando el fondo directo sobre la fila.

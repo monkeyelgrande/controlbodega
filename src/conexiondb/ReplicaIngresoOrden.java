@@ -21,7 +21,7 @@ import java.util.Map;
  */
 public class ReplicaIngresoOrden {
 
-    private static final int ID_TIPO_AJUSTE = 1;   // tipo_ingreso = AJUSTE DE INVENTARIO
+    private static final int ID_TIPO_FACTURA = 3;  // tipo_ingreso = FACTURA
     private static final int ESTADO_PENDIENTE = 0; // no afecta inventario hasta recibirse
 
     /** Una linea del ingreso a enviar. */
@@ -97,7 +97,7 @@ public class ReplicaIngresoOrden {
                         + "(id, id_proveedor, id_transportador, id_user, id_tipo, fecha, hora, no_factura, estado, id_bodega, fecha_vencimiento, descripcion) "
                         + "VALUES (" + idCabecera + ", "
                         + (idProveedor > 0 ? idProveedor : "NULL") + ", NULL, "
-                        + idUser + ", " + ID_TIPO_AJUSTE + ", "
+                        + idUser + ", " + ID_TIPO_FACTURA + ", "
                         + "'" + fecha + "', '" + hora + "', '" + q(noFactura) + "', "
                         + ESTADO_PENDIENTE + ", " + idBodega + ", "
                         + "'" + fecha + "', '" + q(descripcion) + "')";

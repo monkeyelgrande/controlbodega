@@ -17,10 +17,14 @@ import modelos.Cuentas_Egresos;
  */
 public class jif_crear_cuenta_egresos extends javax.swing.JDialog {
 
+    /** Caja a la que pertenece la cuenta creada/editada (1=Caja, 2=Caja Dos). */
+    private final int idCaja;
+
     /**
      * Creates new form jif_crear_cuenta
      */
-    public jif_crear_cuenta_egresos() {
+    public jif_crear_cuenta_egresos(int idCaja) {
+        this.idCaja = idCaja;
         initComponents();
         // El id lo asigna la BD (serial); vacio = registro nuevo
         txt_id.setText("");
@@ -168,7 +172,7 @@ public class jif_crear_cuenta_egresos extends javax.swing.JDialog {
             JOptionPane.showMessageDialog(this, "Por favor ingrese un nombre para la cuenta");
         } else {
 
-            if (DB_consultas_R_D.consultar_existencia_campo_String("nombre", txt_nombre.getText(), "cuentas_egresos") > 0 && btn_guardar.getText().equals("Guardar")) {
+            if (DB_consultas_R_D.consultar_existencia_campo_String("nombre", txt_nombre.getText(), "cuentas_egresos", idCaja) > 0 && btn_guardar.getText().equals("Guardar")) {
                 JOptionPane.showMessageDialog(this, "La Cuenta ya se encuentra creada");
                 txt_nombre.setText("");
                 txt_nombre.requestFocus();
@@ -186,6 +190,7 @@ public class jif_crear_cuenta_egresos extends javax.swing.JDialog {
                 if (chk_predeterminado.isSelected()) {
                     cuenta.setPredeterminado(1);
                 }
+                cuenta.setId_caja(idCaja);
                 if (!txt_id.getText().equals("") && DB_consultas_R_D.consultarId(txt_id.getText(), "cuentas_egresos") == 1) {
                     dbcuentas.Actualizar(cuenta);
                 } else {

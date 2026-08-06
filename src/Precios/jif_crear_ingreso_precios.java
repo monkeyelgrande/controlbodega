@@ -505,6 +505,16 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
             }
         });
 
+        // Actualiza SOLO la observacion del ingreso, en cualquier momento y con
+        // cualquier usuario (no depende del rol ni del estado del ingreso).
+        btn_actualizar_obs = new JButton("Actualizar", FontAwesome.icon(FontAwesome.SAVE, 13f, EstiloCompras.PRIMARY));
+        EstiloCompras.secondaryButton(btn_actualizar_obs);
+        btn_actualizar_obs.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_actualizar_obsActionPerformed(evt);
+            }
+        });
+
         chk_cerrar = new javax.swing.JCheckBox("Cerrar al guardar", true);
         chk_cerrar.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         chk_cerrar.setOpaque(false);
@@ -603,7 +613,11 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
         JLabel lblObs = new JLabel("Observacion");
         lblObs.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblObs.setForeground(EstiloCompras.TEXT_SECONDARY);
-        obs.add(lblObs, BorderLayout.NORTH);
+        JPanel obsHead = new JPanel(new BorderLayout());
+        obsHead.setOpaque(false);
+        obsHead.add(lblObs, BorderLayout.WEST);
+        obsHead.add(btn_actualizar_obs, BorderLayout.EAST);
+        obs.add(obsHead, BorderLayout.NORTH);
         obs.add(jScrollPane2, BorderLayout.CENTER);
         jpanel_dinero = obs;
 
@@ -1313,6 +1327,39 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
         }
     }
 
+    /**
+     * Actualiza SOLO la observacion del ingreso abierto, sin importar el rol del
+     * usuario ni el estado del ingreso. Escribe directo en la cabecera por id.
+     */
+    private void btn_actualizar_obsActionPerformed(java.awt.event.ActionEvent evt) {
+        int id;
+        try {
+            id = Integer.parseInt(lbl_id.getText().trim());
+        } catch (Exception e) {
+            id = 0;
+        }
+        if (id <= 0 || es_nuevo) {
+            JOptionPane.showMessageDialog(this,
+                    "Primero debe guardar el ingreso para poder actualizar la observacion.");
+            return;
+        }
+        try (Connection con = DB_consultas_R_D.getConexion();
+                PreparedStatement ps = con.prepareStatement(
+                        "UPDATE ingresos_productos_cabecera SET observacion=? WHERE id=?")) {
+            ps.setString(1, txt_observacion.getText());
+            ps.setInt(2, id);
+            ps.executeUpdate();
+            JOptionPane.showMessageDialog(this, "Observacion actualizada.");
+            try {
+                frm_ingresos_precios.btn_actualizar.doClick();
+            } catch (Exception ignored) {
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "No se pudo actualizar la observacion:\n" + e,
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void btn_buscarActionPerformed(java.awt.event.ActionEvent evt) {
         jd_buscar_producto_precios buscar_producto = new jd_buscar_producto_precios(null, rootPaneCheckingEnabled);
         jd_buscar_producto_precios.formulario = "ingreso";
@@ -1823,6 +1870,7 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
     // Variables declaration
     public static javax.swing.JButton btn_Exportar_Worold;
     public static javax.swing.JButton btn_buscar;
+    public static javax.swing.JButton btn_actualizar_obs;
     public static javax.swing.JButton btn_buscar_proveedor;
     public static javax.swing.JButton btn_buscar_transportador;
     public static javax.swing.JButton btn_calcular_costos;

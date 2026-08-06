@@ -43,12 +43,12 @@ public class DB_transferencias {
         java.sql.Date fecha = java.sql.Date.valueOf(t.getFecha().replace("'", ""));
         String descripcionPar = "TRASLADO - " + t.getDescripcion();
 
-        String sqlEgreso = "INSERT INTO egresos (id_user, id_cuenta, id_cliente, id_fondo, descripcion, total, fecha, hora, factura_remision, transferencia) "
-                + "VALUES (?,?,?,?,?,?,?,?,?,1) RETURNING id";
-        String sqlIngreso = "INSERT INTO ingresos (id_user, id_cuenta, id_cliente, id_fondo, descripcion, total, fecha, hora, factura_remision, transferencia) "
-                + "VALUES (?,?,?,?,?,?,?,?,?,1) RETURNING id";
-        String sqlTransferencia = "INSERT INTO transferencias (id_user, id_fondo_origen, id_fondo_destino, descripcion, total, fecha, hora, id_ingreso, id_egreso) "
-                + "VALUES (?,?,?,?,?,?,?,?,?) RETURNING id";
+        String sqlEgreso = "INSERT INTO egresos (id_user, id_cuenta, id_cliente, id_fondo, descripcion, total, fecha, hora, factura_remision, transferencia, id_caja) "
+                + "VALUES (?,?,?,?,?,?,?,?,?,1,?) RETURNING id";
+        String sqlIngreso = "INSERT INTO ingresos (id_user, id_cuenta, id_cliente, id_fondo, descripcion, total, fecha, hora, factura_remision, transferencia, id_caja) "
+                + "VALUES (?,?,?,?,?,?,?,?,?,1,?) RETURNING id";
+        String sqlTransferencia = "INSERT INTO transferencias (id_user, id_fondo_origen, id_fondo_destino, descripcion, total, fecha, hora, id_ingreso, id_egreso, id_caja) "
+                + "VALUES (?,?,?,?,?,?,?,?,?,?) RETURNING id";
 
         try {
             con = DB_consultas_R_D.getConexion();
@@ -64,6 +64,8 @@ public class DB_transferencias {
             int idIngreso = insertarPar(con, sqlIngreso, t, idCuentaIngreso, idCliente,
                     t.getId_fondo_destino(), descripcionPar, fecha);
 
+            // (id_caja del par y de la transferencia = la caja del traslado)
+
             // 3) la transferencia que enlaza el par
             PreparedStatement ps = con.prepareStatement(sqlTransferencia);
             ps.setInt(1, t.getId_user());
@@ -75,6 +77,7 @@ public class DB_transferencias {
             ps.setString(7, t.getHora());
             ps.setInt(8, idIngreso);
             ps.setInt(9, idEgreso);
+            ps.setInt(10, t.getId_caja());
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 idTransferencia = rs.getInt(1);
@@ -131,6 +134,7 @@ public class DB_transferencias {
         ps.setDate(7, fecha);
         ps.setString(8, t.getHora());
         ps.setInt(9, t.getFactura_remision());
+        ps.setInt(10, t.getId_caja());
         ResultSet rs = ps.executeQuery();
         if (rs.next()) {
             id = rs.getInt(1);
@@ -161,8 +165,8 @@ public class DB_transferencias {
     public int Guardar(Transferencias trans) {
         int resultado = 0;
         Connection con = null;
-        String SSQL = "INSERT INTO transferencias (id_user, id_fondo_origen, id_fondo_destino, descripcion, total, fecha, hora, id_ingreso, id_egreso) "
-                + "VALUES (?,?,?,?,?,?,?,?,?)";
+        String SSQL = "INSERT INTO transferencias (id_user, id_fondo_origen, id_fondo_destino, descripcion, total, fecha, hora, id_ingreso, id_egreso, id_caja) "
+                + "VALUES (?,?,?,?,?,?,?,?,?,?)";
 
         try {
             con = DB_consultas_R_D.getConexion();
@@ -176,6 +180,7 @@ public class DB_transferencias {
             psql.setString(7, trans.getHora());
             psql.setInt(8, trans.getId_ingreso());
             psql.setInt(9, trans.getId_egreso());
+            psql.setInt(10, trans.getId_caja());
             resultado = psql.executeUpdate();
             psql.close();
 

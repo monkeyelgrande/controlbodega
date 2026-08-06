@@ -22,18 +22,21 @@ public class DB_Fondos {
         try {
             con = DB_consultas_R_D.getConexion();
 
-            // Si el nuevo fondo es el predeterminado, se quita la marca de los demas.
+            // Si el nuevo fondo es el predeterminado, se quita la marca de los
+            // demas fondos DE LA MISMA CAJA (cada caja tiene su predeterminado).
             if (obj.getPredeterminado() == 1) {
-                PreparedStatement preset = con.prepareStatement("update fondos set predeterminado=0");
+                PreparedStatement preset = con.prepareStatement("update fondos set predeterminado=0 where id_caja=?");
+                preset.setInt(1, obj.getId_caja());
                 preset.executeUpdate();
                 preset.close();
             }
 
             PreparedStatement psql = con.prepareStatement(
-                    "INSERT INTO fondos (nombre, predeterminado, fisico_digital) VALUES (?, ?, ?)");
+                    "INSERT INTO fondos (nombre, predeterminado, fisico_digital, id_caja) VALUES (?, ?, ?, ?)");
             psql.setString(1, obj.getNombre());
             psql.setInt(2, obj.getPredeterminado());
             psql.setInt(3, obj.getFisico_digital());
+            psql.setInt(4, obj.getId_caja());
 
             resultado = psql.executeUpdate();
             psql.close();
@@ -62,7 +65,8 @@ public class DB_Fondos {
             con = DB_consultas_R_D.getConexion();
 
             if (cuenta.getPredeterminado() == 1) {
-                PreparedStatement preset = con.prepareStatement("update fondos set predeterminado=0");
+                PreparedStatement preset = con.prepareStatement("update fondos set predeterminado=0 where id_caja=?");
+                preset.setInt(1, cuenta.getId_caja());
                 preset.executeUpdate();
                 preset.close();
             }

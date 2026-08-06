@@ -9,6 +9,8 @@ import conexiondb.DB_consultas_R_D;
 import modelos.Bodegas;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.border.AbstractBorder;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
@@ -110,8 +112,14 @@ public class frm_consulta extends javax.swing.JDialog {
         initComponentes();
         cargarBodegas();
         consultarStock();
-        // Filtro en vivo a medida que se escribe (sin necesidad de Enter)
-        try { metodos.BuscarEnTabla(txtBuscar, tabla); } catch (Exception ignore) {}
+        // Filtro en vivo a medida que se escribe (sin necesidad de Enter). Ahora
+        // consulta directamente la BD, no las filas ya cargadas: asi encuentra el
+        // producto sin importar cuantos registros haya ni el LIMIT.
+        txtBuscar.getDocument().addDocumentListener(new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e) { consultarStock(); }
+            @Override public void removeUpdate(DocumentEvent e) { consultarStock(); }
+            @Override public void changedUpdate(DocumentEvent e) { consultarStock(); }
+        });
         setLocationRelativeTo(parent);
         try { metodos.addEscapeListenerWindowDialog(this); } catch (Exception ignore) {}
     }
@@ -425,8 +433,17 @@ public class frm_consulta extends javax.swing.JDialog {
             sql.append("  AND b.id = ").append(idBodega).append(" ");
         }
 
+        // Filtro por texto EN LA CONSULTA (codigo o descripcion): asi la busqueda
+        // encuentra el producto aunque su fila quede mas alla del LIMIT.
+        String filtro = txtBuscar.getText().trim();
+        if (!filtro.isEmpty()) {
+            String seguro = filtro.replace("'", "''");
+            sql.append("  AND (p.codigo_barras ILIKE '%").append(seguro).append("%' ")
+               .append("       OR p.descripcion ILIKE '%").append(seguro).append("%') ");
+        }
+
         sql.append("ORDER BY p.descripcion, b.nombre ");
-        sql.append("LIMIT 5000");
+        sql.append("LIMIT 20000");
 
         double totalCantidad = 0;
         double totalPendientes = 0;

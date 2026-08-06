@@ -20,8 +20,18 @@ public class Cuentas_Egresos {
 
     String nombre;
     int id, predeterminado;
+    /** Caja a la que pertenece la cuenta: 1 = Caja, 2 = Caja Dos. */
+    int id_caja = 1;
 
     public Cuentas_Egresos() {
+    }
+
+    public int getId_caja() {
+        return id_caja;
+    }
+
+    public void setId_caja(int id_caja) {
+        this.id_caja = id_caja;
     }
 
     public Cuentas_Egresos(int id, String nombre) {
@@ -53,10 +63,10 @@ public class Cuentas_Egresos {
         this.id = id;
     }
 
-    public static void mostrarCuentas(JComboBox<Cuentas_Egresos> jbox) {
+    public static void mostrarCuentas(JComboBox<Cuentas_Egresos> jbox, int idCaja) {
         DefaultComboBoxModel modeloCombo = new DefaultComboBoxModel();
         try {
-            ResultSet rs = DB_consultas_R_D.getTabla("select id,nombre from cuentas_egresos order by nombre");
+            ResultSet rs = DB_consultas_R_D.getTabla("select id,nombre from cuentas_egresos where id_caja = " + idCaja + " order by nombre");
             while (rs.next()) {
                 modeloCombo.addElement(new Cuentas_Egresos(rs.getInt("id"), rs.getString("nombre")));
                 jbox.setModel(modeloCombo);
@@ -66,10 +76,10 @@ public class Cuentas_Egresos {
         AutoCompleteDecorator.decorate(jbox);
     }
 
-    public static int Traer_cuentas_modelo_lista(JList jlist) {
+    public static int Traer_cuentas_modelo_lista(JList jlist, int idCaja) {
         DefaultListModel modelo = new DefaultListModel();
         try {
-            ResultSet rs = DB_consultas_R_D.getTabla("select id,nombre from cuentas_egresos order by nombre");
+            ResultSet rs = DB_consultas_R_D.getTabla("select id,nombre from cuentas_egresos where id_caja = " + idCaja + " order by nombre");
             while (rs.next()) {
                 modelo.addElement(new Cuentas_Egresos(rs.getInt("id"), rs.getString("nombre")));
                 jlist.setModel(modelo);
@@ -79,10 +89,10 @@ public class Cuentas_Egresos {
         return modelo.size();
     }
 
-    public static String TraerPredeterminadoNombre() {
+    public static String TraerPredeterminadoNombre(int idCaja) {
         String name = "";
         try {
-            ResultSet rs = DB_consultas_R_D.getTabla("select nombre from cuentas_egresos where predeterminado =1");
+            ResultSet rs = DB_consultas_R_D.getTabla("select nombre from cuentas_egresos where predeterminado =1 and id_caja = " + idCaja);
             while (rs.next()) {
 
                 name = rs.getString("nombre");
@@ -93,10 +103,10 @@ public class Cuentas_Egresos {
         return name;
     }
 
-    public static int TraerPredeterminadoID() {
+    public static int TraerPredeterminadoID(int idCaja) {
         int name = 0;
         try {
-            ResultSet rs = DB_consultas_R_D.getTabla("select id from cuentas_egresos where predeterminado =1");
+            ResultSet rs = DB_consultas_R_D.getTabla("select id from cuentas_egresos where predeterminado =1 and id_caja = " + idCaja);
             while (rs.next()) {
 
                 name = rs.getInt("id");

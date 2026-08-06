@@ -18,7 +18,17 @@ public class Transferencias {
     int id, id_user, id_fondo_origen, id_fondo_destino, id_ingreso, id_egreso;
     // 1=Factura, 0=Remision: se replica en el par ingreso/egreso generado
     int factura_remision;
+    /** Caja a la que pertenece el traslado y su par ingreso/egreso: 1 o 2. */
+    int id_caja = 1;
     double total;
+
+    public int getId_caja() {
+        return id_caja;
+    }
+
+    public void setId_caja(int id_caja) {
+        this.id_caja = id_caja;
+    }
 
     public int getFactura_remision() {
         return factura_remision;
