@@ -158,9 +158,11 @@ public class DBingresosPrecios {
     public int Actualizar(IngresosProductos ingreso) {
         int resultado = 0;
         Connection con = null;
+        // La 'hora' NO se toca al actualizar: conserva la hora real de creacion
+        // del ingreso. El momento de cada edicion/cambio de estado queda
+        // registrado en auditoria_ingresos (sql/migracion_auditoria_ingresos.sql).
         String SQL = "UPDATE ingresos_productos_cabecera set "
                 + "fecha=" + ingreso.getFecha_ingreso() + ", "
-                + "hora=" + ingreso.getHora() + ", "
                 + "no_factura='" + ingreso.getNo_factura() + "', "
                 + "id_proveedor=" + ingreso.getId_proveedor() + ", "
                 + "id_transportador=" + ingreso.getId_transportador() + ", "

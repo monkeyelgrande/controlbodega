@@ -15,6 +15,7 @@ import Metodos.metodos;
 import conexiondb.AuditoriaCaja;
 import conexiondb.DB_consultas_R_D;
 import conexiondb.DBIngresos;
+import conexiondb.DB_transferencias;
 import conexiondb.DB_Fotos_servicios;
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -983,6 +984,11 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
             return;
         }
         String id = "" + jtabla.getValueAt(fila, 0);
+        if (DB_transferencias.esTraslado("ingresos", id)) {
+            JOptionPane.showMessageDialog(this, "Este ingreso proviene de un traslado entre fondos y no se puede editar.\n"
+                    + "Modifique o elimine el traslado desde el modulo de Traslados.", "Operacion no permitida", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         String consulta = "select i.id, i.descripcion, i.total, i.fecha, i.factura_remision, "
                 + "coalesce(i.recibo_caja,0) as recibo_caja, "
                 + "u.nombre as user, cu.nombre as cuenta, cu.id as id_cuenta, "
@@ -1025,6 +1031,12 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
         int fila = jtabla.getSelectedRow();
         if (fila == -1) {
             JOptionPane.showMessageDialog(null, "Seleccione un registro");
+            return;
+        }
+        String idSel = "" + jtabla.getValueAt(fila, 0);
+        if (DB_transferencias.esTraslado("ingresos", idSel)) {
+            JOptionPane.showMessageDialog(this, "Este ingreso proviene de un traslado entre fondos y no se puede eliminar.\n"
+                    + "Elimine el traslado desde el modulo de Traslados.", "Operacion no permitida", JOptionPane.WARNING_MESSAGE);
             return;
         }
         int dialogResult = JOptionPane.showConfirmDialog(null, "Desea eliminar este ingreso?", "Alerta", JOptionPane.YES_NO_OPTION);

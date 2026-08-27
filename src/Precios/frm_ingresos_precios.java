@@ -41,6 +41,16 @@ public class frm_ingresos_precios extends javax.swing.JInternalFrame {
             }
         });
 
+        // Al seleccionar una fila (un clic) se muestra su historial de cambios a
+        // la derecha; el doble clic sigue abriendo el ingreso como antes.
+        jtabla.getSelectionModel().addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+            public void valueChanged(javax.swing.event.ListSelectionEvent e) {
+                if (!e.getValueIsAdjusting()) {
+                    cargarHistorial();
+                }
+            }
+        });
+
         // Unión de capacidades de los roles del usuario: crear lo permiten
         // Almacenista (2) y Precios (4); eliminar, Contable (3) y Precios (4).
         // Con un solo rol equivale al switch anterior.
@@ -287,6 +297,33 @@ public class frm_ingresos_precios extends javax.swing.JInternalFrame {
                 .addContainerGap())
         );
 
+        // ---- Panel de historial (auditoria) ----------------------------------
+        jPanelHistorial = new javax.swing.JPanel();
+        lblHistorialTitulo = new javax.swing.JLabel();
+        jScrollHistorial = new javax.swing.JScrollPane();
+        jTablaHistorial = new javax.swing.JTable();
+
+        jPanelHistorial.setBackground(new java.awt.Color(51, 51, 51));
+        jPanelHistorial.setPreferredSize(new java.awt.Dimension(360, 0));
+        jPanelHistorial.setLayout(new java.awt.BorderLayout(0, 6));
+
+        lblHistorialTitulo.setFont(new java.awt.Font("Tahoma", 1, 16)); // NOI18N
+        lblHistorialTitulo.setForeground(new java.awt.Color(255, 255, 255));
+        lblHistorialTitulo.setText("Historial");
+        lblHistorialTitulo.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 4, 10));
+        jPanelHistorial.add(lblHistorialTitulo, java.awt.BorderLayout.NORTH);
+
+        jTablaHistorial.setFont(new java.awt.Font("Yu Gothic Medium", 0, 13)); // NOI18N
+        jTablaHistorial.setModel(new javax.swing.table.DefaultTableModel(
+            new Object[][]{},
+            new String[]{"Fecha / Hora", "Usuario", "Cambio"}
+        ));
+        jTablaHistorial.setRowHeight(30);
+        jTablaHistorial.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        jTablaHistorial.getTableHeader().setReorderingAllowed(false);
+        jScrollHistorial.setViewportView(jTablaHistorial);
+        jPanelHistorial.add(jScrollHistorial, java.awt.BorderLayout.CENTER);
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -295,7 +332,9 @@ public class frm_ingresos_precios extends javax.swing.JInternalFrame {
             .addGroup(layout.createSequentialGroup()
                 .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jPanelHistorial, javax.swing.GroupLayout.PREFERRED_SIZE, 360, javax.swing.GroupLayout.PREFERRED_SIZE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -306,7 +345,10 @@ public class frm_ingresos_precios extends javax.swing.JInternalFrame {
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addContainerGap())
-                    .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                    .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(jPanelHistorial, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addContainerGap())))
         );
 
         pack();
@@ -628,6 +670,35 @@ public class frm_ingresos_precios extends javax.swing.JInternalFrame {
         }
     }
 
+    /**
+     * Carga en el panel de la derecha la mini-auditoria del ingreso
+     * seleccionado: fecha/hora real, usuario y cada cambio (incluidos los
+     * cambios de estado Recibido -> Ingresado -> Precios). Los datos los
+     * escriben los triggers de sql/migracion_auditoria_ingresos.sql.
+     */
+    private void cargarHistorial() {
+        int fila = jtabla.getSelectedRow();
+        if (fila < 0) {
+            lblHistorialTitulo.setText("Historial");
+            jTablaHistorial.setModel(new javax.swing.table.DefaultTableModel(
+                    new Object[][]{}, new String[]{"Fecha / Hora", "Usuario", "Cambio"}));
+            return;
+        }
+        try {
+            String id = jtabla.getValueAt(fila, 0).toString();
+            lblHistorialTitulo.setText("Historial · Ingreso #" + id);
+            jTablaHistorial.setModel(conexiondb.AuditoriaIngresos.historial(Integer.parseInt(id)));
+            TableColumnModel cm = jTablaHistorial.getColumnModel();
+            if (cm.getColumnCount() >= 3) {
+                cm.getColumn(0).setPreferredWidth(130);
+                cm.getColumn(1).setPreferredWidth(90);
+                cm.getColumn(2).setPreferredWidth(260);
+            }
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+
     private void btn_cerrarActionPerformed(java.awt.event.ActionEvent evt) {
         this.dispose();
     }
@@ -762,5 +833,10 @@ public class frm_ingresos_precios extends javax.swing.JInternalFrame {
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JTable jtabla;
     private javax.swing.JTextField txt_Filtro;
+    // Panel de historial (auditoria) a la derecha del listado
+    private javax.swing.JPanel jPanelHistorial;
+    private javax.swing.JLabel lblHistorialTitulo;
+    private javax.swing.JScrollPane jScrollHistorial;
+    private javax.swing.JTable jTablaHistorial;
     // End of variables declaration
 }

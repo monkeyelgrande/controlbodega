@@ -243,4 +243,28 @@ public class DB_transferencias {
         }
         return resultado;
     }
+
+    /**
+     * Indica si una fila de ingresos/egresos proviene de un traslado
+     * (columna transferencia=1). Se usa para impedir editar o eliminar
+     * esos registros desde los formularios de Ingresos/Egresos, ya que
+     * romperia la sincronia con su traslado (tabla transferencias).
+     *
+     * @param tabla "ingresos" o "egresos".
+     * @param id id de la fila.
+     * @return true si es el ingreso/egreso generado por un traslado.
+     */
+    public static boolean esTraslado(String tabla, String id) {
+        String sql = "select coalesce(transferencia,0) as t from " + tabla + " where id = " + id;
+        ResultSet rs = DB_consultas_R_D.getTabla(sql);
+        try {
+            if (rs.next()) {
+                return rs.getInt("t") == 1;
+            }
+            rs.close();
+        } catch (SQLException e) {
+            System.out.println(e);
+        }
+        return false;
+    }
 }

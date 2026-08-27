@@ -14,6 +14,7 @@ import Metodos.metodos;
 import conexiondb.AuditoriaCaja;
 import conexiondb.DB_consultas_R_D;
 import conexiondb.DBEgresos;
+import conexiondb.DB_transferencias;
 import conexiondb.DB_Fotos_servicios;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -960,6 +961,11 @@ public class frm_egresos extends javax.swing.JInternalFrame {
             return;
         }
         String id = "" + jtabla_gastos.getValueAt(fila, 0);
+        if (DB_transferencias.esTraslado("egresos", id)) {
+            JOptionPane.showMessageDialog(this, "Este egreso proviene de un traslado entre fondos y no se puede editar.\n"
+                    + "Modifique o elimine el traslado desde el modulo de Traslados.", "Operacion no permitida", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         String consulta = "select i.*, u.nombre as user, cu.nombre as cuenta, cu.id as id_cuenta, coalesce(f.nombre,'default') as fondo, coalesce(i.id_fondo,0) as id_fondo_sel, co.nombre as cliente \n"
                 + "from egresos i \n"
                 + "left join fondos f on i.id_fondo=f.id, users u, cuentas_egresos cu, contactos co\n"
@@ -999,6 +1005,12 @@ public class frm_egresos extends javax.swing.JInternalFrame {
         int fila = jtabla_gastos.getSelectedRow();
         if (fila == -1) {
             JOptionPane.showMessageDialog(null, "Seleccione un registro");
+            return;
+        }
+        String idSel = "" + jtabla_gastos.getValueAt(fila, 0);
+        if (DB_transferencias.esTraslado("egresos", idSel)) {
+            JOptionPane.showMessageDialog(this, "Este egreso proviene de un traslado entre fondos y no se puede eliminar.\n"
+                    + "Elimine el traslado desde el modulo de Traslados.", "Operacion no permitida", JOptionPane.WARNING_MESSAGE);
             return;
         }
         int dialogResult = JOptionPane.showConfirmDialog(null, "Desea eliminar este egreso?", "Alerta", JOptionPane.YES_NO_OPTION);

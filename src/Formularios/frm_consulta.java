@@ -101,6 +101,8 @@ public class frm_consulta extends javax.swing.JDialog {
 
     private JTable tabla;
     private DefaultTableModel modelo;
+    /** id de producto por fila del modelo (para abrir el kardex con doble clic). */
+    private final java.util.List<Integer> idsProductosFilas = new java.util.ArrayList<Integer>();
 
     private final DecimalFormat df = new DecimalFormat("###,###.##");
 
@@ -120,8 +122,31 @@ public class frm_consulta extends javax.swing.JDialog {
             @Override public void removeUpdate(DocumentEvent e) { consultarStock(); }
             @Override public void changedUpdate(DocumentEvent e) { consultarStock(); }
         });
+        // Doble clic sobre un producto: abre su kardex (movimientos + rotacion)
+        tabla.addMouseListener(new MouseAdapter() {
+            @Override public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && tabla.getSelectedRow() != -1) {
+                    abrirKardex();
+                }
+            }
+        });
         setLocationRelativeTo(parent);
         try { metodos.addEscapeListenerWindowDialog(this); } catch (Exception ignore) {}
+    }
+
+    /** Abre el kardex del producto de la fila seleccionada. */
+    private void abrirKardex() {
+        int filaVista = tabla.getSelectedRow();
+        if (filaVista < 0) return;
+        int filaModelo = tabla.convertRowIndexToModel(filaVista);
+        if (filaModelo < 0 || filaModelo >= idsProductosFilas.size()) return;
+
+        int idProducto = idsProductosFilas.get(filaModelo);
+        String codigo = String.valueOf(modelo.getValueAt(filaModelo, 0));
+        String descripcion = String.valueOf(modelo.getValueAt(filaModelo, 1));
+
+        jd_kardex_producto kardex = new jd_kardex_producto(this, idProducto, codigo, descripcion);
+        kardex.setVisible(true);
     }
 
     // ================================================================
@@ -173,7 +198,7 @@ public class frm_consulta extends javax.swing.JDialog {
         lblTitulo.setForeground(Color.WHITE);
         lblTitulo.setFont(new Font(FONT_FAMILY, Font.BOLD, 22));
 
-        JLabel lblSubtitulo = new JLabel("Existencias por bodega  \u00b7  tabla stock_productos");
+        JLabel lblSubtitulo = new JLabel("Existencias por bodega  \u00b7  Doble clic sobre un producto: kardex y rotaci\u00f3n");
         lblSubtitulo.setForeground(new Color(255, 255, 255, 200));
         lblSubtitulo.setFont(new Font(FONT_FAMILY, Font.PLAIN, 12));
 
@@ -370,7 +395,12 @@ public class frm_consulta extends javax.swing.JDialog {
                 + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ")'>"
                 + valor + "</b></html>");
         chip.setOpaque(true);
-        chip.setBackground(new Color(color.getRed(), color.getGreen(), color.getBlue(), 25));
+        // Color solido (mezclado con el fondo): un componente opaco con fondo
+        // semitransparente deja "restos" de texto al repintarse.
+        chip.setBackground(new Color(
+                (color.getRed()   * 25 + CARD_BG.getRed()   * 230) / 255,
+                (color.getGreen() * 25 + CARD_BG.getGreen() * 230) / 255,
+                (color.getBlue()  * 25 + CARD_BG.getBlue()  * 230) / 255));
         chip.setBorder(new EmptyBorder(8, 14, 8, 14));
         chip.setFont(new Font(FONT_FAMILY, Font.PLAIN, 12));
         chip.putClientProperty("chipColor", color);
@@ -413,12 +443,13 @@ public class frm_consulta extends javax.swing.JDialog {
     // ================================================================
     private void consultarStock() {
         modelo.setRowCount(0);
+        idsProductosFilas.clear();
 
         Bodegas bodegaSel = (Bodegas) cmbBodega.getSelectedItem();
         int idBodega = (bodegaSel != null) ? bodegaSel.getId() : 0;
 
         StringBuilder sql = new StringBuilder();
-        sql.append("SELECT p.codigo_barras, p.descripcion, ")
+        sql.append("SELECT p.id AS id_producto, p.codigo_barras, p.descripcion, ")
            .append("       b.id AS id_bodega, b.nombre AS bodega, ")
            .append("       sp.cantidad   AS cantidad, ")
            .append("       sp.pendientes AS pendientes ")
@@ -453,6 +484,7 @@ public class frm_consulta extends javax.swing.JDialog {
         try {
             ResultSet rs = DB_consultas_R_D.getTabla(sql.toString());
             while (rs.next()) {
+                int idProducto = rs.getInt("id_producto");
                 String codigo = rs.getString("codigo_barras");
                 String descripcion = rs.getString("descripcion");
                 String nombreBodega = rs.getString("bodega");
@@ -468,6 +500,7 @@ public class frm_consulta extends javax.swing.JDialog {
                         df.format(pendientes),
                         df.format(disponible)
                 });
+                idsProductosFilas.add(idProducto);
 
                 totalCantidad   += cantidad;
                 totalPendientes += pendientes;

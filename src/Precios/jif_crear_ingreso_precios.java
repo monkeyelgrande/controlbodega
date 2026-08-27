@@ -1095,16 +1095,17 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
             ingreso_cabecera.setObservacion(txt_observacion.getText());
 
             ingreso_cabecera.setId_user(frm_main.id_user);
-            int hora, minutos, segundos;
             int dia, mes, ano;
             ano = jdate_fecha_entrada.getCalendar().get(Calendar.YEAR);
             mes = jdate_fecha_entrada.getCalendar().get(Calendar.MONTH) + 1;
             dia = jdate_fecha_entrada.getCalendar().get(Calendar.DAY_OF_MONTH);
-            hora = jdate_fecha_entrada.getCalendar().get(Calendar.HOUR_OF_DAY);
-            minutos = jdate_fecha_entrada.getCalendar().get(Calendar.MINUTE);
-            segundos = jdate_fecha_entrada.getCalendar().get(Calendar.SECOND);
             ingreso_cabecera.setFecha_ingreso("'" + ano + "-" + mes + "-" + dia + "'");
-            ingreso_cabecera.setHora("'" + hora + ":" + minutos + ":" + segundos + "'");
+            // La HORA es la del reloj del sistema al momento de registrar (antes
+            // se tomaba del selector de fecha, que queda en 00:00:00). El flujo
+            // completo con cada cambio de estado queda ademas en auditoria_ingresos.
+            Calendar ahora = Calendar.getInstance();
+            ingreso_cabecera.setHora(String.format("'%02d:%02d:%02d'",
+                    ahora.get(Calendar.HOUR_OF_DAY), ahora.get(Calendar.MINUTE), ahora.get(Calendar.SECOND)));
             ingreso_cabecera.setId(Integer.parseInt(lbl_id.getText()));
             ingreso_cabecera.setNo_factura(txt_no_factura.getText());
 
