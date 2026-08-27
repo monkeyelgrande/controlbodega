@@ -1687,3 +1687,166 @@ SELECT a.id,
           FROM auditoria_caja_campos c
          WHERE c.id_auditoria = a.id) AS cambios
 FROM auditoria_caja a;
+
+-- =============================================================================
+-- MODULO PRECIOS (fusion agro) + MODO DE PRECIOS POR EMPRESA
+-- -----------------------------------------------------------------------------
+-- Esquema de datos del modulo Precios. Consolidado aqui (2026-08-27) porque
+-- una instalacion nueva creada solo con este archivo arrancaba con el modulo
+-- Precios roto: estas columnas/tablas solo existian en
+-- sql/migracion_fusion_agro.sql y sql/migracion_modo_precios.sql.
+-- Bloques idempotentes: seguros sobre una base que ya corrio esas migraciones.
+--
+-- modo_precios ('AGRO' default | 'TECNI') decide COMO calcula la instalacion
+-- sus precios de venta:
+--   AGRO  = 1 margen + descuentos escalonados + S&T + credito
+--   TECNI = 3 margenes independientes -> Precio 1/2/3 (venta, valor_desc_1,
+--           valor_desc_2), sin descuentos escalonados ni credito.
+-- =============================================================================
+
+-- Columnas de precios del modulo sobre productos (no toca precio_venta/2/3)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'productos' AND column_name = 'venta') THEN
+        ALTER TABLE productos ADD COLUMN venta double precision;
+        ALTER TABLE productos ADD COLUMN valor_desc_1 double precision;
+        ALTER TABLE productos ADD COLUMN valor_desc_2 double precision;
+        ALTER TABLE productos ADD COLUMN valor_s_y_t double precision;
+        ALTER TABLE productos ADD COLUMN valor_credito double precision;
+        ALTER TABLE productos ADD COLUMN iva double precision;
+        ALTER TABLE productos ADD COLUMN porcentaje_utilidad double precision;
+    END IF;
+    -- Margenes 2 y 3 del modo TECNI (nullables; AGRO no los usa)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'productos' AND column_name = 'porcentaje_utilidad2') THEN
+        ALTER TABLE productos ADD COLUMN porcentaje_utilidad2 double precision;
+        ALTER TABLE productos ADD COLUMN porcentaje_utilidad3 double precision;
+    END IF;
+END $$;
+
+-- Traza de origen en contactos + ensanchar "contacto" (dato de agro: hasta 95)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'contactos' AND column_name = 'origen') THEN
+        ALTER TABLE contactos ADD COLUMN origen character varying(20);
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_name = 'contactos' AND column_name = 'contacto'
+                 AND character_maximum_length < 200) THEN
+        ALTER TABLE contactos ALTER COLUMN contacto TYPE character varying(200);
+    END IF;
+END $$;
+
+-- Parametros del modulo en configuraciones + modo de precios de la instalacion
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'configuraciones' AND column_name = 'porcentaje_operacion') THEN
+        ALTER TABLE configuraciones ADD COLUMN porcentaje_operacion double precision;
+        ALTER TABLE configuraciones ADD COLUMN porcentaje_s_y_t double precision;
+        ALTER TABLE configuraciones ADD COLUMN porcentaje_credito double precision;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'configuraciones' AND column_name = 'modo_precios') THEN
+        ALTER TABLE configuraciones ADD COLUMN modo_precios character varying(10) DEFAULT 'AGRO';
+    END IF;
+END $$;
+
+UPDATE configuraciones SET modo_precios = 'AGRO' WHERE id = 1 AND modo_precios IS NULL;
+
+-- Descuentos escalonados (solo los usa el modo AGRO)
+CREATE TABLE IF NOT EXISTS descuentos (
+    id serial NOT NULL,
+    tipo integer,
+    utilidad double precision,
+    descuento double precision,
+    CONSTRAINT pk_descuentos_precios PRIMARY KEY (id)
+);
+
+-- Ingresos del modulo Precios (cabecera + detalle + pagos)
+CREATE TABLE IF NOT EXISTS ingresos_productos_cabecera (
+    id serial NOT NULL,
+    no_factura character varying(100),
+    id_proveedor integer,
+    id_transportador integer,
+    id_user integer,
+    total double precision,
+    fecha date,
+    hora character varying(8),
+    estado integer,                          -- 0=Recibido 1=Ingresado 2=Precios
+    observacion character varying,
+    id_bodega integer,
+    fecha_vencimiento date,
+    enviado_control_bodega boolean DEFAULT false,
+    CONSTRAINT pk_ingresos_productos_cabecera PRIMARY KEY (id),
+    CONSTRAINT fk_ipc_proveedor FOREIGN KEY (id_proveedor) REFERENCES contactos (id),
+    CONSTRAINT fk_ipc_transportador FOREIGN KEY (id_transportador) REFERENCES contactos (id),
+    CONSTRAINT fk_ipc_user FOREIGN KEY (id_user) REFERENCES users (id)
+);
+
+-- desc_n_1/desc_n_2: en AGRO guardan la utilidad monetaria descontada
+-- (venta - desc N); en TECNI guardan los porcentajes 2 y 3 de la linea.
+CREATE TABLE IF NOT EXISTS ingresos_productos_detalle (
+    id serial NOT NULL,
+    id_ingreso_cabecera integer,
+    id_producto integer,
+    cantidad double precision,
+    iva double precision,
+    precio_costo double precision,
+    venta double precision,
+    valor_desc_1 double precision,
+    valor_desc_2 double precision,
+    valor_s_y_t double precision,
+    valor_credito double precision,
+    descuento double precision,
+    porcentaje_utilidad double precision,
+    desc_n_1 double precision,
+    desc_n_2 double precision,
+    etiquetas character varying,
+    id_bodega_control integer,               -- bodega elegida por fila (rol 2)
+    CONSTRAINT pk_ingresos_productos_detalle PRIMARY KEY (id),
+    CONSTRAINT fk_ipd_cabecera FOREIGN KEY (id_ingreso_cabecera)
+        REFERENCES ingresos_productos_cabecera (id) ON DELETE CASCADE,
+    CONSTRAINT fk_ipd_producto FOREIGN KEY (id_producto) REFERENCES productos (id)
+);
+
+CREATE TABLE IF NOT EXISTS pagos_ingresos_productos (
+    id serial NOT NULL,
+    id_ingreso_productos_cabecera integer,
+    total double precision,
+    fecha date,
+    hora character varying(8),
+    cod_pago character varying,
+    CONSTRAINT pk_pagos_ingresos_productos PRIMARY KEY (id),
+    CONSTRAINT fk_pip_cabecera FOREIGN KEY (id_ingreso_productos_cabecera)
+        REFERENCES ingresos_productos_cabecera (id) ON DELETE CASCADE
+);
+
+-- Mapeo de migraciones de datos (trazabilidad e idempotencia)
+CREATE TABLE IF NOT EXISTS migracion_mapeo (
+    tabla_origen character varying(60) NOT NULL,
+    id_viejo integer NOT NULL,
+    id_nuevo integer NOT NULL,
+    accion character varying(20) NOT NULL,   -- 'creado' | 'fusionado' | 'mapeado'
+    fecha timestamp NOT NULL DEFAULT now(),
+    CONSTRAINT pk_migracion_mapeo PRIMARY KEY (tabla_origen, id_viejo)
+);
+
+-- Indices (PG 9.4: sin IF NOT EXISTS -> chequeo en pg_class)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_ipd_cabecera') THEN
+        CREATE INDEX idx_ipd_cabecera ON ingresos_productos_detalle (id_ingreso_cabecera);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_ipd_producto') THEN
+        CREATE INDEX idx_ipd_producto ON ingresos_productos_detalle (id_producto);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_ipc_proveedor') THEN
+        CREATE INDEX idx_ipc_proveedor ON ingresos_productos_cabecera (id_proveedor);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_ipc_fecha') THEN
+        CREATE INDEX idx_ipc_fecha ON ingresos_productos_cabecera (fecha);
+    END IF;
+END $$;

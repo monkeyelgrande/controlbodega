@@ -101,30 +101,56 @@ public class frm_precios_productos extends javax.swing.JInternalFrame {
     }
 
     public void mostrar() {
+        boolean tecni = ModoPrecios.esTecni();
         modelo.setRowCount(0);
-        modelo.setColumnIdentifiers(new Object[]{"Código", "Descripción", "Costo", "IVA",
-            "Venta", "Desc. N1", "Desc. N2", "S y T", "Crédito", "% Util.", "Cant. paquete"});
+        if (tecni) {
+            modelo.setColumnIdentifiers(new Object[]{"Código", "Descripción", "Costo", "IVA",
+                "Precio 1", "% P1", "Precio 2", "% P2", "Precio 3", "% P3", "S y T", "Cant. paquete"});
+        } else {
+            modelo.setColumnIdentifiers(new Object[]{"Código", "Descripción", "Costo", "IVA",
+                "Venta", "Desc. N1", "Desc. N2", "S y T", "Crédito", "% Util.", "Cant. paquete"});
+        }
         ResultSet rs = DB_consultas_R_D.getTabla(
                 "select codigo_barras, descripcion, coalesce(precio_costo,0) as precio_costo, coalesce(iva,0) as iva, "
                 + "coalesce(venta,0) as venta, coalesce(valor_desc_1,0) as valor_desc_1, coalesce(valor_desc_2,0) as valor_desc_2, "
                 + "coalesce(valor_s_y_t,0) as valor_s_y_t, coalesce(valor_credito,0) as valor_credito, "
-                + "coalesce(porcentaje_utilidad,0) as porcentaje_utilidad, coalesce(cant_paquete,0) as cant_paquete "
+                + "coalesce(porcentaje_utilidad,0) as porcentaje_utilidad, "
+                + "coalesce(porcentaje_utilidad2,0) as porcentaje_utilidad2, "
+                + "coalesce(porcentaje_utilidad3,0) as porcentaje_utilidad3, "
+                + "coalesce(cant_paquete,0) as cant_paquete "
                 + "from productos where coalesce(estado,true)=true order by descripcion");
         try {
             while (rs.next()) {
-                modelo.addRow(new Object[]{
-                    rs.getString("codigo_barras"),
-                    rs.getString("descripcion"),
-                    metodos.formateador_dinero().format(rs.getDouble("precio_costo")),
-                    rs.getDouble("iva"),
-                    metodos.formateador_dinero().format(rs.getDouble("venta")),
-                    metodos.formateador_dinero().format(rs.getDouble("valor_desc_1")),
-                    metodos.formateador_dinero().format(rs.getDouble("valor_desc_2")),
-                    metodos.formateador_dinero().format(rs.getDouble("valor_s_y_t")),
-                    metodos.formateador_dinero().format(rs.getDouble("valor_credito")),
-                    rs.getDouble("porcentaje_utilidad"),
-                    rs.getInt("cant_paquete")
-                });
+                if (tecni) {
+                    modelo.addRow(new Object[]{
+                        rs.getString("codigo_barras"),
+                        rs.getString("descripcion"),
+                        metodos.formateador_dinero().format(rs.getDouble("precio_costo")),
+                        rs.getDouble("iva"),
+                        metodos.formateador_dinero().format(rs.getDouble("venta")),
+                        rs.getDouble("porcentaje_utilidad"),
+                        metodos.formateador_dinero().format(rs.getDouble("valor_desc_1")),
+                        rs.getDouble("porcentaje_utilidad2"),
+                        metodos.formateador_dinero().format(rs.getDouble("valor_desc_2")),
+                        rs.getDouble("porcentaje_utilidad3"),
+                        metodos.formateador_dinero().format(rs.getDouble("valor_s_y_t")),
+                        rs.getInt("cant_paquete")
+                    });
+                } else {
+                    modelo.addRow(new Object[]{
+                        rs.getString("codigo_barras"),
+                        rs.getString("descripcion"),
+                        metodos.formateador_dinero().format(rs.getDouble("precio_costo")),
+                        rs.getDouble("iva"),
+                        metodos.formateador_dinero().format(rs.getDouble("venta")),
+                        metodos.formateador_dinero().format(rs.getDouble("valor_desc_1")),
+                        metodos.formateador_dinero().format(rs.getDouble("valor_desc_2")),
+                        metodos.formateador_dinero().format(rs.getDouble("valor_s_y_t")),
+                        metodos.formateador_dinero().format(rs.getDouble("valor_credito")),
+                        rs.getDouble("porcentaje_utilidad"),
+                        rs.getInt("cant_paquete")
+                    });
+                }
             }
             rs.close();
             ajustarColumnas();

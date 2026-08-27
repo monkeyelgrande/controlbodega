@@ -492,6 +492,10 @@ public class frm_main extends javax.swing.JFrame {
             // el interruptor de modulo se aplica aqui de forma explicita.
             menuPrecios.setVisible(Metodos.Modulos.activo("Precios")
                     && (rol_precios > 0 || perfil == 1));
+            // Los descuentos escalonados solo existen en el modo AGRO.
+            if (itemDescuentosPrecios != null) {
+                itemDescuentosPrecios.setVisible(!Precios.ModoPrecios.esTecni());
+            }
             jMenuBar1.revalidate();
             jMenuBar1.repaint();
             if (barra != null) {

@@ -55,6 +55,11 @@ import modelos.IngresosProductos;
  * El boton "Enviar a bodega" (rol 2) crea ingresos de mercancia PENDIENTES en
  * el modulo clasico de controlbodega via ReplicaIngresoOrden (puente local).
  *
+ * La disposicion de columnas del rol 4 y la formula de precios dependen del
+ * modo de la instalacion (ModoPrecios: AGRO o TECNI); las formulas viven en
+ * CalculadoraPrecios y el guardado sincroniza precio_venta/2/3 (puente con la
+ * facturacion de bodega).
+ *
  * @author Monkeyelgrande
  */
 public class jif_crear_ingreso_precios extends javax.swing.JDialog {
@@ -141,70 +146,164 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
                     } else {
                         // Calcular solo la fila seleccionada (rol Precios)
                         if (frm_main.rol_precios == 4) {
-
-                            ResultSet rs = DB_consultas_R_D.getTabla("select * from configuraciones where id = 1");
-                            try {
-                                while (rs.next()) {
-                                    porcentaje_s_y_t = rs.getDouble("porcentaje_s_y_t");
-                                    porcentaje_credito = rs.getDouble("porcentaje_credito");
-                                }
-                                rs.close();
-                            } catch (SQLException ex) {
-                                System.out.println(ex);
-                            }
-
-                            try {
-                                double costo_iva_descuento,
-                                        costo_iva_descuento_gasto,
-                                        porcentaje_utilidad = 0,
-                                        venta,
-                                        valor_desc_1,
-                                        valor_desc_2,
-                                        valor_s_y_t,
-                                        valor_credito;
-
-                                try {
-                                    porcentaje_utilidad = Double.parseDouble(
-                                            modelo_productos.getValueAt(fila, 9).toString());
-                                } catch (Exception e) {
-                                    porcentaje_utilidad = 0;
-                                }
-
-                                costo_iva_descuento = Double.parseDouble(
-                                        metodos.EliminaCaracteres(modelo_productos.getValueAt(fila, 7).toString(), "."));
-                                costo_iva_descuento_gasto = Double.parseDouble(
-                                        metodos.EliminaCaracteres(modelo_productos.getValueAt(fila, 8).toString(), "."));
-
-                                venta = (costo_iva_descuento_gasto / ((100 - porcentaje_utilidad) / 100));
-
-                                valor_desc_1 = calcularDescuento(venta, costo_iva_descuento_gasto, 1);
-                                valor_desc_2 = calcularDescuento(venta, costo_iva_descuento_gasto, 2);
-
-                                valor_s_y_t = costo_iva_descuento / (porcentaje_s_y_t);
-                                valor_credito = venta + (venta * (porcentaje_credito / 100));
-
-                                int redondear = Integer.parseInt(txt_redondear.getText());
-
-                                modelo_productos.setValueAt(metodos.formateador_dinero().format(
-                                        metodos.redondearNumero(venta, redondear)), fila, 10);
-                                modelo_productos.setValueAt(metodos.formateador_dinero().format(
-                                        metodos.redondearNumero(valor_desc_1, redondear)), fila, 11);
-                                modelo_productos.setValueAt(metodos.formateador_dinero().format(
-                                        metodos.redondearNumero(valor_desc_2, redondear)), fila, 12);
-                                modelo_productos.setValueAt(metodos.formateador_dinero().format(
-                                        metodos.redondearNumero(valor_s_y_t, redondear)), fila, 13);
-                                modelo_productos.setValueAt(metodos.formateador_dinero().format(
-                                        metodos.redondearNumero(valor_credito, redondear)), fila, 14);
-
-                            } catch (Exception e) {
-                                System.out.println(e);
-                                modelo_productos.setValueAt("0", fila, 6);
-                            }
+                            calcularPreciosVenta(fila);
                         }
                     }
                 }
             }
         });
+    }
+
+    // ====================================================================
+    // Tabla del rol 4 (Precios): la disposicion de columnas depende del modo
+    // de precios de la instalacion (ModoPrecios).
+    //   AGRO : 9=%UTIL 10=VENTA 11=DESC.N1 12=DESC.N2 13=S&T 14=CRED 15=E
+    //   TECNI: 9=%P1 10=PRECIO1 11=%P2 12=PRECIO2 13=%P3 14=PRECIO3 15=S&T 16=E
+    // Todo acceso a esas columnas debe pasar por estos helpers.
+    // ====================================================================
+    public static int colU1() {
+        return 9;
+    }
+
+    public static int colVenta() {
+        return 10;
+    }
+
+    /** Columna del margen 2 (solo TECNI; -1 en AGRO). */
+    public static int colU2() {
+        return ModoPrecios.esTecni() ? 11 : -1;
+    }
+
+    /** Columna de valor_desc_1 (AGRO: Desc. N1; TECNI: Precio 2). */
+    public static int colD1() {
+        return ModoPrecios.esTecni() ? 12 : 11;
+    }
+
+    /** Columna del margen 3 (solo TECNI; -1 en AGRO). */
+    public static int colU3() {
+        return ModoPrecios.esTecni() ? 13 : -1;
+    }
+
+    /** Columna de valor_desc_2 (AGRO: Desc. N2; TECNI: Precio 3). */
+    public static int colD2() {
+        return ModoPrecios.esTecni() ? 14 : 12;
+    }
+
+    public static int colSyT() {
+        return ModoPrecios.esTecni() ? 15 : 13;
+    }
+
+    /** Columna del precio de credito (solo AGRO; -1 en TECNI). */
+    public static int colCred() {
+        return ModoPrecios.esTecni() ? -1 : 14;
+    }
+
+    public static int colEtq() {
+        return ModoPrecios.esTecni() ? 16 : 15;
+    }
+
+    /** Encabezados de la tabla del rol 4 segun el modo de precios. */
+    public static Object[] encabezadosRol4() {
+        if (ModoPrecios.esTecni()) {
+            return new Object[]{"ID", "CODIGO", "DESCRIPCIÓN", "CANTIDAD", "COSTO", "IVA", "DESCUENTO",
+                "COSTO+IVA-DESC", "COSTO+IVA+GASTO", "% P1", "PRECIO 1", "% P2", "PRECIO 2", "% P3", "PRECIO 3",
+                "VALOR S Y T", "E"};
+        }
+        return new Object[]{"ID", "CODIGO", "DESCRIPCIÓN", "CANTIDAD", "COSTO", "IVA", "DESCUENTO",
+            "COSTO+IVA-DESC", "COSTO+IVA+GASTO", "% UTIL.", "VENTA", "VALOR DES. N1", "VALOR DES. N2",
+            "VALOR S Y T", "VALOR CRED.", "E"};
+    }
+
+    /**
+     * Arma una fila del rol 4 en el orden del modo vigente. u2/u3 son los
+     * margenes 2 y 3 (solo se muestran en TECNI); credito solo en AGRO.
+     */
+    public static Object[] filaRol4(String id, String codigo, String descripcion, Object cantidad,
+            String costoFmt, Object iva, Object descuento, String costoIvaDescFmt, String costoIvaDescGastoFmt,
+            double u1, double venta, double u2, double d1, double u3, double d2,
+            double syt, double credito, Object etiquetas) {
+        if (ModoPrecios.esTecni()) {
+            return new Object[]{id, codigo, descripcion, cantidad, costoFmt, iva, descuento,
+                costoIvaDescFmt, costoIvaDescGastoFmt,
+                u1, metodos.formateador_dinero().format(venta),
+                u2, metodos.formateador_dinero().format(d1),
+                u3, metodos.formateador_dinero().format(d2),
+                metodos.formateador_dinero().format(syt), etiquetas};
+        }
+        return new Object[]{id, codigo, descripcion, cantidad, costoFmt, iva, descuento,
+            costoIvaDescFmt, costoIvaDescGastoFmt,
+            u1, metodos.formateador_dinero().format(venta),
+            metodos.formateador_dinero().format(d1),
+            metodos.formateador_dinero().format(d2),
+            metodos.formateador_dinero().format(syt),
+            metodos.formateador_dinero().format(credito), etiquetas};
+    }
+
+    /** Porcentaje de una celda; 0 si la columna no existe en este modo o no es numero. */
+    private static double pct(int fila, int col) {
+        if (col < 0) {
+            return 0;
+        }
+        try {
+            return Double.parseDouble(modelo_productos.getValueAt(fila, col).toString());
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Recalcula los precios de venta con la formula del modo vigente
+     * (CalculadoraPrecios). filaUnica = -1 recalcula todas las filas. Lo usan
+     * el doble clic sobre una fila y el boton "Calcular P. Venta".
+     */
+    private void calcularPreciosVenta(int filaUnica) {
+        ResultSet rs = DB_consultas_R_D.getTabla("select * from configuraciones where id = 1");
+        try {
+            while (rs.next()) {
+                porcentaje_s_y_t = rs.getDouble("porcentaje_s_y_t");
+                porcentaje_credito = rs.getDouble("porcentaje_credito");
+            }
+            rs.close();
+        } catch (SQLException ex) {
+            System.out.println(ex);
+        }
+
+        int desde = (filaUnica >= 0) ? filaUnica : 0;
+        int hasta = (filaUnica >= 0) ? filaUnica : jtabla.getRowCount() - 1;
+        for (int i = desde; i <= hasta; i++) {
+            try {
+                double costo_iva_descuento = Double.parseDouble(
+                        metodos.EliminaCaracteres(modelo_productos.getValueAt(i, 7).toString(), "."));
+                double costo_iva_descuento_gasto = Double.parseDouble(
+                        metodos.EliminaCaracteres(modelo_productos.getValueAt(i, 8).toString(), "."));
+
+                CalculadoraPrecios.Resultado r;
+                if (ModoPrecios.esTecni()) {
+                    r = CalculadoraPrecios.calcularTecni(costo_iva_descuento, costo_iva_descuento_gasto,
+                            pct(i, colU1()), pct(i, colU2()), pct(i, colU3()), porcentaje_s_y_t);
+                } else {
+                    r = CalculadoraPrecios.calcularAgro(costo_iva_descuento, costo_iva_descuento_gasto,
+                            pct(i, colU1()), porcentaje_s_y_t, porcentaje_credito);
+                }
+
+                int redondear = Integer.parseInt(txt_redondear.getText());
+                modelo_productos.setValueAt(metodos.formateador_dinero().format(
+                        metodos.redondearNumero(r.venta, redondear)), i, colVenta());
+                modelo_productos.setValueAt(metodos.formateador_dinero().format(
+                        metodos.redondearNumero(r.valorDesc1, redondear)), i, colD1());
+                modelo_productos.setValueAt(metodos.formateador_dinero().format(
+                        metodos.redondearNumero(r.valorDesc2, redondear)), i, colD2());
+                modelo_productos.setValueAt(metodos.formateador_dinero().format(
+                        metodos.redondearNumero(r.valorSyT, redondear)), i, colSyT());
+                if (colCred() >= 0) {
+                    modelo_productos.setValueAt(metodos.formateador_dinero().format(
+                            metodos.redondearNumero(r.valorCredito, redondear)), i, colCred());
+                }
+            } catch (Exception e) {
+                System.out.println(e);
+                modelo_productos.setValueAt("0", i, 6);
+            }
+        }
     }
 
     public static void inicializar_modelo() {
@@ -253,7 +352,9 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
                 modelo_productos = new DefaultTableModel() {
                     @Override
                     public boolean isCellEditable(int fila, int columna) {
-                        return columna >= 9 && columna <= 14;
+                        // AGRO: % util + 5 precios (9..14). TECNI: 3 pares
+                        // %/precio + S&T (9..15).
+                        return columna >= 9 && columna <= (ModoPrecios.esTecni() ? 15 : 14);
                     }
 
                     @Override
@@ -1257,6 +1358,7 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
                         }
                         updates_precios_productos = "";
 
+                        boolean tecni = ModoPrecios.esTecni();
                         for (int i = 0; i < modelo_productos.getRowCount(); i++) {
                             String can = "";
                             try {
@@ -1266,32 +1368,54 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
                                 can = "1";
                             }
 
+                            String venta = metodos.EliminaCaracteres(modelo_productos.getValueAt(i, colVenta()).toString(), ".");
+                            String d1 = metodos.EliminaCaracteres(modelo_productos.getValueAt(i, colD1()).toString(), ".");
+                            String d2 = metodos.EliminaCaracteres(modelo_productos.getValueAt(i, colD2()).toString(), ".");
+                            String syt = metodos.EliminaCaracteres(modelo_productos.getValueAt(i, colSyT()).toString(), ".");
+                            String u1 = modelo_productos.getValueAt(i, colU1()).toString();
+                            String credito = tecni ? "0"
+                                    : metodos.EliminaCaracteres(modelo_productos.getValueAt(i, colCred()).toString(), ".");
+                            // desc_n_1/desc_n_2: en AGRO guardan la utilidad
+                            // monetaria descontada (venta - desc N); en TECNI
+                            // guardan los porcentajes 2 y 3 de la linea.
+                            String descN1 = tecni ? modelo_productos.getValueAt(i, colU2()).toString()
+                                    : String.valueOf(Double.parseDouble(venta) - Double.parseDouble(d1));
+                            String descN2 = tecni ? modelo_productos.getValueAt(i, colU3()).toString()
+                                    : String.valueOf(Double.parseDouble(venta) - Double.parseDouble(d2));
+
                             sql_ingreso_detalle += "INSERT INTO ingresos_productos_detalle (id,  id_ingreso_cabecera, id_producto, cantidad, precio_costo, iva, descuento, porcentaje_utilidad, venta, valor_desc_1, valor_desc_2, valor_s_y_t,"
                                     + "valor_credito, desc_n_1, desc_n_2, etiquetas) "
                                     + "VALUES ((select COALESCE(max(id),0)+1 from ingresos_productos_detalle), " + lbl_id.getText() + "," + modelo_productos.getValueAt(i, 0).toString() + "," + can + ", "
                                     + metodos.EliminaCaracteres(modelo_productos.getValueAt(i, 4).toString(), ".") + ","
                                     + modelo_productos.getValueAt(i, 5).toString() + ","
                                     + modelo_productos.getValueAt(i, 6).toString() + ","
-                                    + modelo_productos.getValueAt(i, 9).toString() + ","
-                                    + metodos.EliminaCaracteres(modelo_productos.getValueAt(i, 10).toString(), ".") + ", "
-                                    + metodos.EliminaCaracteres(modelo_productos.getValueAt(i, 11).toString(), ".") + ", "
-                                    + metodos.EliminaCaracteres(modelo_productos.getValueAt(i, 12).toString(), ".") + ", "
-                                    + metodos.EliminaCaracteres(modelo_productos.getValueAt(i, 13).toString(), ".") + ", "
-                                    + metodos.EliminaCaracteres(modelo_productos.getValueAt(i, 14).toString(), ".") + ", "
-                                    + (Double.parseDouble(metodos.EliminaCaracteres(modelo_productos.getValueAt(i, 10).toString(), ".")) - Double.parseDouble(metodos.EliminaCaracteres(modelo_productos.getValueAt(i, 11).toString(), "."))) + ","
-                                    + (Double.parseDouble(metodos.EliminaCaracteres(modelo_productos.getValueAt(i, 10).toString(), ".")) - Double.parseDouble(metodos.EliminaCaracteres(modelo_productos.getValueAt(i, 12).toString(), "."))) + ","
-                                    + "'" + modelo_productos.getValueAt(i, 15).toString() + "'"
+                                    + u1 + ","
+                                    + venta + ", "
+                                    + d1 + ", "
+                                    + d2 + ", "
+                                    + syt + ", "
+                                    + credito + ", "
+                                    + descN1 + ","
+                                    + descN2 + ","
+                                    + "'" + modelo_productos.getValueAt(i, colEtq()).toString() + "'"
                                     + ");\n";
 
-                            // SOLO columnas del modulo Precios: nunca toca
-                            // precio_venta/2/3 de bodega.
+                            // Columnas del modulo Precios + puente a los
+                            // precios de bodega: la facturacion usa
+                            // precio_venta/2/3, asi que quedan sincronizados
+                            // con lo que fija este modulo.
                             updates_precios_productos += "update productos set "
-                                    + "venta=" + metodos.EliminaCaracteres("" + modelo_productos.getValueAt(i, 10).toString(), ".") + ", "
-                                    + "valor_desc_1=" + metodos.EliminaCaracteres("" + modelo_productos.getValueAt(i, 11).toString(), ".") + ", "
-                                    + "valor_desc_2=" + metodos.EliminaCaracteres("" + modelo_productos.getValueAt(i, 12).toString(), ".") + ", "
-                                    + "valor_s_y_t=" + metodos.EliminaCaracteres("" + modelo_productos.getValueAt(i, 13).toString(), ".") + ", "
-                                    + "valor_credito=" + metodos.EliminaCaracteres("" + modelo_productos.getValueAt(i, 14).toString(), ".") + ", "
-                                    + "porcentaje_utilidad=" + modelo_productos.getValueAt(i, 9).toString() + ", "
+                                    + "venta=" + venta + ", "
+                                    + "valor_desc_1=" + d1 + ", "
+                                    + "valor_desc_2=" + d2 + ", "
+                                    + "valor_s_y_t=" + syt + ", "
+                                    + "valor_credito=" + credito + ", "
+                                    + "porcentaje_utilidad=" + u1 + ", "
+                                    + (tecni ? "porcentaje_utilidad2=" + modelo_productos.getValueAt(i, colU2()).toString() + ", "
+                                            + "porcentaje_utilidad3=" + modelo_productos.getValueAt(i, colU3()).toString() + ", " : "")
+                                    + "precio_venta=" + venta + ", "
+                                    + "precio_venta2=" + d1 + ", "
+                                    + "precio_venta3=" + d2 + ", "
                                     + "iva=" + modelo_productos.getValueAt(i, 5).toString() + " "
                                     + "where codigo_barras='" + modelo_productos.getValueAt(i, 1).toString() + "';\n";
                         }
@@ -1478,9 +1602,11 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
                 txt_codigo_barras.setText("");
             } else {
                 if (frm_main.rol_precios == 4) {
-                    // Rol Precios: agregar con 16 columnas
+                    // Rol Precios: agregar con las columnas del modo vigente
                     String consulta = "select p.id, p.codigo_barras, p.descripcion, p.precio_costo, p.iva, p.venta, "
                             + "p.valor_desc_1, p.valor_desc_2, p.valor_s_y_t, p.valor_credito, p.porcentaje_utilidad, "
+                            + "coalesce(p.porcentaje_utilidad2,0) as porcentaje_utilidad2, "
+                            + "coalesce(p.porcentaje_utilidad3,0) as porcentaje_utilidad3, "
                             + "c.porcentaje_operacion "
                             + "from productos p, configuraciones c "
                             + "where c.id=1 and p.codigo_barras ='" + codigo_barras + "'";
@@ -1495,22 +1621,23 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
                             double costo_iva_descuento = (costo + (costo * (iva / 100))) - ((costo + (costo * (iva / 100))) * (descuento / 100));
                             double costo_iva_descuento_gasto = costo_iva_descuento + (costo_iva_descuento * (porcentaje_operacion / 100));
 
-                            modelo_productos.setColumnIdentifiers(new Object[]{"ID", "CODIGO", "DESCRIPCIÓN", "CANTIDAD", "COSTO", "IVA", "DESCUENTO", "COSTO+IVA-DESC", "COSTO+IVA+GASTO",
-                                "% UTIL.", "VENTA", "VALOR DES. N1", "VALOR DES. N2", "VALOR S Y T", "VALOR CRED.", "E"});
+                            modelo_productos.setColumnIdentifiers(encabezadosRol4());
 
-                            modelo_productos.addRow(new Object[]{
-                                rs.getString("id"), rs.getString("codigo_barras"), rs.getString("descripcion"),
-                                cantidad, metodos.formateador_dinero().format(costo), iva, descuento,
-                                metodos.formateador_dinero().format(costo_iva_descuento),
-                                metodos.formateador_dinero().format(costo_iva_descuento_gasto),
-                                rs.getDouble("porcentaje_utilidad"),
-                                metodos.formateador_dinero().format(rs.getDouble("venta")),
-                                metodos.formateador_dinero().format(rs.getDouble("valor_desc_1")),
-                                metodos.formateador_dinero().format(rs.getDouble("valor_desc_2")),
-                                metodos.formateador_dinero().format(rs.getDouble("valor_s_y_t")),
-                                metodos.formateador_dinero().format(rs.getDouble("valor_credito")),
-                                "0"
-                            });
+                            modelo_productos.addRow(filaRol4(
+                                    rs.getString("id"), rs.getString("codigo_barras"), rs.getString("descripcion"),
+                                    cantidad, metodos.formateador_dinero().format(costo), iva, descuento,
+                                    metodos.formateador_dinero().format(costo_iva_descuento),
+                                    metodos.formateador_dinero().format(costo_iva_descuento_gasto),
+                                    rs.getDouble("porcentaje_utilidad"),
+                                    rs.getDouble("venta"),
+                                    rs.getDouble("porcentaje_utilidad2"),
+                                    rs.getDouble("valor_desc_1"),
+                                    rs.getDouble("porcentaje_utilidad3"),
+                                    rs.getDouble("valor_desc_2"),
+                                    rs.getDouble("valor_s_y_t"),
+                                    rs.getDouble("valor_credito"),
+                                    "0"
+                            ));
                         }
                         rs.close();
                         jtabla.setModel(modelo_productos);
@@ -1569,6 +1696,11 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
     public static void TamanosTablaPrecios() {
         jtabla.getTableHeader().setReorderingAllowed(false);
         TableColumnModel columnModel = jtabla.getColumnModel();
+        // 16 columnas en AGRO, 17 en TECNI; la ultima siempre es etiquetas.
+        int n = columnModel.getColumnCount();
+        if (n < 9) {
+            return;
+        }
         columnModel.getColumn(0).setPreferredWidth(10);
         columnModel.getColumn(1).setPreferredWidth(50);
         columnModel.getColumn(2).setPreferredWidth(350);
@@ -1576,15 +1708,10 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
         columnModel.getColumn(4).setPreferredWidth(70);
         columnModel.getColumn(5).setPreferredWidth(30);
         columnModel.getColumn(6).setPreferredWidth(5);
-        columnModel.getColumn(7).setPreferredWidth(100);
-        columnModel.getColumn(8).setPreferredWidth(100);
-        columnModel.getColumn(9).setPreferredWidth(100);
-        columnModel.getColumn(10).setPreferredWidth(100);
-        columnModel.getColumn(11).setPreferredWidth(100);
-        columnModel.getColumn(12).setPreferredWidth(100);
-        columnModel.getColumn(13).setPreferredWidth(100);
-        columnModel.getColumn(14).setPreferredWidth(100);
-        columnModel.getColumn(15).setPreferredWidth(1);
+        for (int i = 7; i < n - 1; i++) {
+            columnModel.getColumn(i).setPreferredWidth(100);
+        }
+        columnModel.getColumn(n - 1).setPreferredWidth(1);
     }
 
     private void jbox_proveedorKeyPressed(java.awt.event.KeyEvent evt) {
@@ -1704,12 +1831,18 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
                     ResultSet rs = DB_consultas_R_D.getTabla(consulta);
                     try {
                         while (rs.next()) {
-                            modelo_productos.setValueAt(rs.getDouble("porcentaje_utilidad"), i, 9);
-                            modelo_productos.setValueAt(metodos.formateador_dinero().format(rs.getDouble("venta")), i, 10);
-                            modelo_productos.setValueAt(metodos.formateador_dinero().format(rs.getDouble("valor_desc_1")), i, 11);
-                            modelo_productos.setValueAt(metodos.formateador_dinero().format(rs.getDouble("valor_desc_2")), i, 12);
-                            modelo_productos.setValueAt(metodos.formateador_dinero().format(rs.getDouble("valor_s_y_t")), i, 13);
-                            modelo_productos.setValueAt(metodos.formateador_dinero().format(rs.getDouble("valor_credito")), i, 14);
+                            modelo_productos.setValueAt(rs.getDouble("porcentaje_utilidad"), i, colU1());
+                            modelo_productos.setValueAt(metodos.formateador_dinero().format(rs.getDouble("venta")), i, colVenta());
+                            modelo_productos.setValueAt(metodos.formateador_dinero().format(rs.getDouble("valor_desc_1")), i, colD1());
+                            modelo_productos.setValueAt(metodos.formateador_dinero().format(rs.getDouble("valor_desc_2")), i, colD2());
+                            modelo_productos.setValueAt(metodos.formateador_dinero().format(rs.getDouble("valor_s_y_t")), i, colSyT());
+                            if (ModoPrecios.esTecni()) {
+                                // En TECNI desc_n_1/desc_n_2 guardan los margenes 2 y 3
+                                modelo_productos.setValueAt(rs.getDouble("desc_n_1"), i, colU2());
+                                modelo_productos.setValueAt(rs.getDouble("desc_n_2"), i, colU3());
+                            } else {
+                                modelo_productos.setValueAt(metodos.formateador_dinero().format(rs.getDouble("valor_credito")), i, colCred());
+                            }
                         }
                         rs.close();
 
@@ -1728,53 +1861,8 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
 
     private void btn_calcular_precios_ventaActionPerformed(java.awt.event.ActionEvent evt) {
         switch (frm_main.rol_precios) {
-
             case 4:
-
-                ResultSet rs = DB_consultas_R_D.getTabla("select * from configuraciones where id = 1");
-                try {
-                    while (rs.next()) {
-                        porcentaje_s_y_t = rs.getDouble("porcentaje_s_y_t");
-                        porcentaje_credito = rs.getDouble("porcentaje_credito");
-                    }
-                    rs.close();
-                } catch (SQLException ex) {
-                    System.out.println(ex);
-                }
-
-                for (int i = 0; i < jtabla.getRowCount(); i++) {
-                    try {
-                        double costo_iva_descuento, costo_iva_descuento_gasto, porcentaje_utilidad = 0, venta, valor_desc_1, valor_desc_2, valor_s_y_t, valor_credito;
-                        try {
-                            porcentaje_utilidad = Double.parseDouble(modelo_productos.getValueAt(i, 9).toString());
-                        } catch (Exception e) {
-                            porcentaje_utilidad = 0;
-                        }
-                        costo_iva_descuento = Double.parseDouble(metodos.EliminaCaracteres(modelo_productos.getValueAt(i, 7).toString(), "."));
-                        costo_iva_descuento_gasto = Double.parseDouble(metodos.EliminaCaracteres(modelo_productos.getValueAt(i, 8).toString(), "."));
-
-                        venta = (costo_iva_descuento_gasto / ((100 - porcentaje_utilidad) / 100));
-
-                        valor_desc_1 = calcularDescuento(venta, costo_iva_descuento_gasto, 1);
-                        valor_desc_2 = calcularDescuento(venta, costo_iva_descuento_gasto, 2);
-
-                        valor_s_y_t = costo_iva_descuento / (porcentaje_s_y_t);
-                        valor_credito = venta + (venta * (porcentaje_credito / 100));
-
-                        int redondear = Integer.parseInt(txt_redondear.getText());
-
-                        modelo_productos.setValueAt(metodos.formateador_dinero().format(metodos.redondearNumero(venta, redondear)), i, 10);
-                        modelo_productos.setValueAt(metodos.formateador_dinero().format(metodos.redondearNumero(valor_desc_1, redondear)), i, 11);
-                        modelo_productos.setValueAt(metodos.formateador_dinero().format(metodos.redondearNumero(valor_desc_2, redondear)), i, 12);
-                        modelo_productos.setValueAt(metodos.formateador_dinero().format(metodos.redondearNumero(valor_s_y_t, redondear)), i, 13);
-                        modelo_productos.setValueAt(metodos.formateador_dinero().format(metodos.redondearNumero(valor_credito, redondear)), i, 14);
-
-                    } catch (Exception e) {
-                        System.out.println(e);
-                        modelo_productos.setValueAt("0", i, 6);
-                    }
-                }
-
+                calcularPreciosVenta(-1);
                 break;
         }
     }
@@ -1788,18 +1876,30 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
             symbols.setDecimalSeparator('.');
             DecimalFormat df = new DecimalFormat("0.00", symbols);
 
-            try {
-                double costo = Double.parseDouble(metodos.EliminaCaracteres(modelo_productos.getValueAt(fila, 8).toString(), "."));
-                double venta = Double.parseDouble(metodos.EliminaCaracteres(modelo_productos.getValueAt(fila, 10).toString(), "."));
+            // Pares {columnaPrecio, columnaMargen}: AGRO solo venta -> %util;
+            // TECNI deduce los tres margenes desde los tres precios.
+            int[][] pares = ModoPrecios.esTecni()
+                    ? new int[][]{{colVenta(), colU1()}, {colD1(), colU2()}, {colD2(), colU3()}}
+                    : new int[][]{{colVenta(), colU1()}};
 
-                if (costo > 0) {
-                    double porcentaje_utilidad = ((venta - costo) / costo) * 100;
-                    modelo_productos.setValueAt(df.format(porcentaje_utilidad), fila, 9);
-                } else {
-                    modelo_productos.setValueAt("0.00", fila, 9);
-                }
+            double costo;
+            try {
+                costo = Double.parseDouble(metodos.EliminaCaracteres(modelo_productos.getValueAt(fila, 8).toString(), "."));
             } catch (Exception ex) {
-                modelo_productos.setValueAt("0.00", fila, 9);
+                costo = 0;
+            }
+
+            for (int[] par : pares) {
+                try {
+                    double venta = Double.parseDouble(metodos.EliminaCaracteres(modelo_productos.getValueAt(fila, par[0]).toString(), "."));
+                    if (costo > 0) {
+                        modelo_productos.setValueAt(df.format(CalculadoraPrecios.utilidadInversa(costo, venta)), fila, par[1]);
+                    } else {
+                        modelo_productos.setValueAt("0.00", fila, par[1]);
+                    }
+                } catch (Exception ex) {
+                    modelo_productos.setValueAt("0.00", fila, par[1]);
+                }
             }
         }
     }
@@ -1835,37 +1935,6 @@ public class jif_crear_ingreso_precios extends javax.swing.JDialog {
 
         jd_exportar_world_office.jtable_productos.setModel(jd_exportar_world_office.modelo);
         j.show();
-    }
-
-    public double calcularDescuento(double venta, double costo, int tipo) {
-        double valor_descuento = 0.0;
-
-        double porcentaje_utilidad = 0.0;
-        if (costo > 0) {
-            porcentaje_utilidad = ((venta - costo) / costo) * 100;
-        } else {
-            System.out.println("El costo es 0, no se puede calcular el porcentaje de utilidad.");
-            return venta;
-        }
-
-        String consulta = "SELECT utilidad, descuento FROM descuentos WHERE tipo = " + tipo + " ORDER BY utilidad ASC";
-        try (Connection con = DB_consultas_R_D.getConexion(); PreparedStatement ps = con.prepareStatement(consulta); ResultSet rs = ps.executeQuery()) {
-
-            while (rs.next()) {
-                double utilidad = rs.getDouble("utilidad");
-                double descuento = rs.getDouble("descuento");
-
-                if (porcentaje_utilidad <= utilidad) {
-                    double utilidad_monetaria = venta - costo;
-                    valor_descuento = utilidad_monetaria * (descuento / 100);
-                    break;
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return venta - valor_descuento;
     }
 
     // Variables declaration

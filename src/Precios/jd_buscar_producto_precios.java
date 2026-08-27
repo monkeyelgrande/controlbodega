@@ -196,9 +196,11 @@ public class jd_buscar_producto_precios extends javax.swing.JDialog {
                 }
 
                 if (Formularios.frm_main.rol_precios == 4) {
-                    // Rol Precios: agregar con 16 columnas
+                    // Rol Precios: agregar con las columnas del modo vigente
                     String consultaPrecios = "select p.id, p.codigo_barras, p.descripcion, p.precio_costo, p.iva, p.venta, "
                             + "p.valor_desc_1, p.valor_desc_2, p.valor_s_y_t, p.valor_credito, p.porcentaje_utilidad, "
+                            + "coalesce(p.porcentaje_utilidad2,0) as porcentaje_utilidad2, "
+                            + "coalesce(p.porcentaje_utilidad3,0) as porcentaje_utilidad3, "
                             + "c.porcentaje_operacion "
                             + "from productos p, configuraciones c "
                             + "where c.id=1 and p.codigo_barras ='" + codigo + "'";
@@ -213,22 +215,23 @@ public class jd_buscar_producto_precios extends javax.swing.JDialog {
                             double costo_iva_descuento = (costo + (costo * (iva / 100))) - ((costo + (costo * (iva / 100))) * (descuento / 100));
                             double costo_iva_descuento_gasto = costo_iva_descuento + (costo_iva_descuento * (porcentaje_operacion / 100));
 
-                            jif_crear_ingreso_precios.modelo_productos.setColumnIdentifiers(new Object[]{"ID", "CODIGO", "DESCRIPCIÓN", "CANTIDAD", "COSTO", "IVA", "DESCUENTO", "COSTO+IVA-DESC", "COSTO+IVA+GASTO",
-                                "% UTIL.", "VENTA", "VALOR DES. N1", "VALOR DES. N2", "VALOR S Y T", "VALOR CRED.", "E"});
+                            jif_crear_ingreso_precios.modelo_productos.setColumnIdentifiers(jif_crear_ingreso_precios.encabezadosRol4());
 
-                            jif_crear_ingreso_precios.modelo_productos.addRow(new Object[]{
-                                rsP.getString("id"), rsP.getString("codigo_barras"), rsP.getString("descripcion"),
-                                cantidad, metodos.formateador_dinero().format(costo), iva, descuento,
-                                metodos.formateador_dinero().format(costo_iva_descuento),
-                                metodos.formateador_dinero().format(costo_iva_descuento_gasto),
-                                rsP.getDouble("porcentaje_utilidad"),
-                                metodos.formateador_dinero().format(rsP.getDouble("venta")),
-                                metodos.formateador_dinero().format(rsP.getDouble("valor_desc_1")),
-                                metodos.formateador_dinero().format(rsP.getDouble("valor_desc_2")),
-                                metodos.formateador_dinero().format(rsP.getDouble("valor_s_y_t")),
-                                metodos.formateador_dinero().format(rsP.getDouble("valor_credito")),
-                                "0"
-                            });
+                            jif_crear_ingreso_precios.modelo_productos.addRow(jif_crear_ingreso_precios.filaRol4(
+                                    rsP.getString("id"), rsP.getString("codigo_barras"), rsP.getString("descripcion"),
+                                    cantidad, metodos.formateador_dinero().format(costo), iva, descuento,
+                                    metodos.formateador_dinero().format(costo_iva_descuento),
+                                    metodos.formateador_dinero().format(costo_iva_descuento_gasto),
+                                    rsP.getDouble("porcentaje_utilidad"),
+                                    rsP.getDouble("venta"),
+                                    rsP.getDouble("porcentaje_utilidad2"),
+                                    rsP.getDouble("valor_desc_1"),
+                                    rsP.getDouble("porcentaje_utilidad3"),
+                                    rsP.getDouble("valor_desc_2"),
+                                    rsP.getDouble("valor_s_y_t"),
+                                    rsP.getDouble("valor_credito"),
+                                    "0"
+                            ));
                         }
                         rsP.close();
                         jif_crear_ingreso_precios.jtabla.setModel(jif_crear_ingreso_precios.modelo_productos);

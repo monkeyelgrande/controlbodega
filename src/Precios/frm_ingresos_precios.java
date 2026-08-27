@@ -580,8 +580,7 @@ public class frm_ingresos_precios extends javax.swing.JInternalFrame {
                             break;
 
                         default: // 4 PRECIOS
-                            jif_crear_ingreso_precios.modelo_productos.setColumnIdentifiers(new Object[]{"ID", "CODIGO", "DESCRIPCIÓN", "CANTIDAD", "COSTO", "IVA", "DESCUENTO", "COSTO+IVA-DESC", "COSTO+IVA+GASTO",
-                                "% UTIL.", "VENTA", "VALOR DES. N1", "VALOR DES. N2", "VALOR S Y T", "VALOR CRED.", "E"});
+                            jif_crear_ingreso_precios.modelo_productos.setColumnIdentifiers(jif_crear_ingreso_precios.encabezadosRol4());
 
                             double costo = rs.getDouble("precio_costo"),
                              descuento = rs.getDouble("descuento"),
@@ -592,17 +591,25 @@ public class frm_ingresos_precios extends javax.swing.JInternalFrame {
 
                             double costo_iva_descuento_gasto = costo_iva_descuento + (costo_iva_descuento * (porcentaje_operacion / 100));
 
-                            jif_crear_ingreso_precios.modelo_productos.addRow(new Object[]{
-                                rs.getString("id"), rs.getString("codigo_barras"), rs.getString("descripcion"),
-                                formateador.format(rs.getDouble("cantidad")), metodos.formateador_dinero().format(rs.getDouble("precio_costo")), rs.getDouble("iva"), rs.getDouble("descuento"),
-                                metodos.formateador_dinero().format(costo_iva_descuento), metodos.formateador_dinero().format(costo_iva_descuento_gasto),
-                                rs.getDouble("porcentaje_utilidad"), metodos.formateador_dinero().format(rs.getDouble("venta")),
-                                metodos.formateador_dinero().format(rs.getDouble("valor_desc_1")),
-                                metodos.formateador_dinero().format(rs.getDouble("valor_desc_2")),
-                                metodos.formateador_dinero().format(rs.getDouble("valor_s_y_t")),
-                                metodos.formateador_dinero().format(rs.getDouble("valor_credito")),
-                                rs.getString("etiquetas")
-                            });
+                            // En TECNI desc_n_1/desc_n_2 del detalle guardan los
+                            // margenes 2 y 3 de la linea (filaRol4 los ignora en AGRO).
+                            jif_crear_ingreso_precios.modelo_productos.addRow(jif_crear_ingreso_precios.filaRol4(
+                                    rs.getString("id"), rs.getString("codigo_barras"), rs.getString("descripcion"),
+                                    formateador.format(rs.getDouble("cantidad")),
+                                    metodos.formateador_dinero().format(rs.getDouble("precio_costo")),
+                                    rs.getDouble("iva"), rs.getDouble("descuento"),
+                                    metodos.formateador_dinero().format(costo_iva_descuento),
+                                    metodos.formateador_dinero().format(costo_iva_descuento_gasto),
+                                    rs.getDouble("porcentaje_utilidad"),
+                                    rs.getDouble("venta"),
+                                    rs.getDouble("desc_n_1"),
+                                    rs.getDouble("valor_desc_1"),
+                                    rs.getDouble("desc_n_2"),
+                                    rs.getDouble("valor_desc_2"),
+                                    rs.getDouble("valor_s_y_t"),
+                                    rs.getDouble("valor_credito"),
+                                    rs.getString("etiquetas")
+                            ));
                             jif_crear_ingreso_precios.jtabla.setRowHeight(20);
                             jif_crear_ingreso_precios.btn_calcular_utildiad_porcentaje.setVisible(true);
                             break;
