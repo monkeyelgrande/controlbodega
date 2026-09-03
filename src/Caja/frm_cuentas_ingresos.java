@@ -381,6 +381,7 @@ public class frm_cuentas_ingresos extends javax.swing.JInternalFrame {
                     if (rs.getInt("predeterminado") == 1) {
                         jif_crear_cuenta_ingresos.chk_predeterminado.setSelected(true);
                     }
+                    jif_crear_cuenta_ingresos.chk_abono_a_credito.setSelected(rs.getInt("abono_a_credito") == 1);
                 }
                 rs.close();
 

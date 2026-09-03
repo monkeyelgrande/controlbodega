@@ -43,7 +43,7 @@ public class frm_productos extends javax.swing.JInternalFrame {
         TamanosTablaAbonos();
         jtabla.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mousePressed(MouseEvent me) {
-                if (me.getClickCount() == 2) {
+                if (me.getClickCount() == 2 && btn_ver.isVisible()) {
                     btn_verActionPerformed(null);
                 }
             }
@@ -51,7 +51,25 @@ public class frm_productos extends javax.swing.JInternalFrame {
 
         metodos.BuscarEnTabla(txt_Filtro, jtabla);
         metodos.EstiloTablaMaterialGlobal(jtabla);
+        permisos();
 
+    }
+
+    /**
+     * Cada acción del catálogo es una opción gobernable propia
+     * ('productos_ver/crear/editar/eliminar/deshabilitar'). Con la BD sin la
+     * migración de permisos se conserva lo anterior: todos los botones
+     * visibles para quien alcance a abrir la pantalla.
+     */
+    private void permisos() {
+        if (!Metodos.Permisos.estaCargado()) {
+            return;
+        }
+        btn_ver.setVisible(Metodos.Permisos.puede("productos_ver"));
+        btn_crear.setVisible(Metodos.Permisos.puede("productos_crear"));
+        btn_editar.setVisible(Metodos.Permisos.puede("productos_editar"));
+        btn_eliminar.setVisible(Metodos.Permisos.puede("productos_eliminar"));
+        btn_deshabilitar.setVisible(Metodos.Permisos.puede("productos_deshabilitar"));
     }
 
     private void deshabilitarProducto() {
@@ -575,7 +593,10 @@ public class frm_productos extends javax.swing.JInternalFrame {
                 frm.btn_guardar.setEnabled(false);
                 frm.btn_limpiar.setEnabled(false);
                 frm.chk_cerrar.setEnabled(false);
-                frm.btn_editar.setVisible(true);
+                // El botón "Editar" del detalle desbloquea los campos: solo
+                // aparece para quien tenga la opción 'productos_editar'.
+                frm.btn_editar.setVisible(!Metodos.Permisos.estaCargado()
+                        || Metodos.Permisos.puede("productos_editar"));
 
                 // Cargar kardex de movimientos del producto
                 frm.cargarKardex(id);

@@ -89,6 +89,7 @@ public class jif_crear_credito extends javax.swing.JDialog {
 
         Contactos contratante = new Contactos();
         contratante.MostrarNombreContactos(cbx_contacto);
+        Contactos.MostrarVendedores(cbx_vendedor);
         txt_descripcion.setWrapStyleWord(true);
         metodos.EvitarTabEnJTextArea(txt_descripcion);
 
@@ -193,6 +194,9 @@ public class jif_crear_credito extends javax.swing.JDialog {
         jLabel5 = new javax.swing.JLabel();
         jdate_fecha_creacion = new com.toedter.calendar.JDateChooser();
         cbx_contacto = new javax.swing.JComboBox<>();
+        cbx_vendedor = new javax.swing.JComboBox<>();
+        lbl_vendedor = new javax.swing.JLabel();
+        chk_comisionable = new javax.swing.JCheckBox();
         jLabel6 = new javax.swing.JLabel();
         jScrollPane7 = new javax.swing.JScrollPane();
         txt_descripcion = new javax.swing.JTextArea();
@@ -307,7 +311,23 @@ public class jif_crear_credito extends javax.swing.JDialog {
                 btn_guardarActionPerformed(evt);
             }
         });
-        jPanel2.add(btn_guardar, new org.netbeans.lib.awtextra.AbsoluteConstraints(7, 388, 150, 56));
+        jPanel2.add(btn_guardar, new org.netbeans.lib.awtextra.AbsoluteConstraints(7, 462, 150, 56));
+
+        lbl_vendedor.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        lbl_vendedor.setForeground(new java.awt.Color(255, 255, 255));
+        lbl_vendedor.setText("Vendedor");
+        jPanel2.add(lbl_vendedor, new org.netbeans.lib.awtextra.AbsoluteConstraints(7, 391, -1, -1));
+
+        cbx_vendedor.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        cbx_vendedor.setToolTipText("Vendedor al que se le liquida la comision de este credito");
+        jPanel2.add(cbx_vendedor, new org.netbeans.lib.awtextra.AbsoluteConstraints(177, 388, 300, -1));
+
+        chk_comisionable.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        chk_comisionable.setForeground(new java.awt.Color(255, 255, 255));
+        chk_comisionable.setSelected(true);
+        chk_comisionable.setText("Genera comision");
+        chk_comisionable.setToolTipText("Si se desmarca, los abonos a este credito no comisionan");
+        jPanel2.add(chk_comisionable, new org.netbeans.lib.awtextra.AbsoluteConstraints(7, 425, -1, -1));
 
         btn_limpiar.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
         btn_limpiar.setIcon(new javax.swing.ImageIcon(getClass().getResource("/imagenes/limpiar.png"))); // NOI18N
@@ -319,13 +339,13 @@ public class jif_crear_credito extends javax.swing.JDialog {
                 btn_limpiarActionPerformed(evt);
             }
         });
-        jPanel2.add(btn_limpiar, new org.netbeans.lib.awtextra.AbsoluteConstraints(163, 388, 146, 56));
+        jPanel2.add(btn_limpiar, new org.netbeans.lib.awtextra.AbsoluteConstraints(163, 462, 146, 56));
 
         chk_cerrar.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         chk_cerrar.setForeground(new java.awt.Color(255, 255, 255));
         chk_cerrar.setSelected(true);
         chk_cerrar.setText("Cerrar formulario al guardar");
-        jPanel2.add(chk_cerrar, new org.netbeans.lib.awtextra.AbsoluteConstraints(7, 456, -1, -1));
+        jPanel2.add(chk_cerrar, new org.netbeans.lib.awtextra.AbsoluteConstraints(7, 530, -1, -1));
 
         jLabel4.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
         jLabel4.setForeground(new java.awt.Color(255, 255, 255));
@@ -388,7 +408,7 @@ public class jif_crear_credito extends javax.swing.JDialog {
                 btn_editarActionPerformed(evt);
             }
         });
-        jPanel2.add(btn_editar, new org.netbeans.lib.awtextra.AbsoluteConstraints(7, 492, -1, -1));
+        jPanel2.add(btn_editar, new org.netbeans.lib.awtextra.AbsoluteConstraints(7, 566, -1, -1));
 
         jLabel10.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
         jLabel10.setForeground(new java.awt.Color(255, 255, 255));
@@ -644,7 +664,7 @@ public class jif_crear_credito extends javax.swing.JDialog {
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addContainerGap())
-                    .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, 571, Short.MAX_VALUE)))
+                    .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, 645, Short.MAX_VALUE)))
         );
 
         pack();
@@ -750,6 +770,14 @@ public class jif_crear_credito extends javax.swing.JDialog {
         factura.setFecha_vencimiento(ano + "-" + mes + "-" + dia);
 
         factura.setHora(DB_consultas_R_D.obtener_hora());
+
+        // vendedor y marca de comision
+        try {
+            factura.setId_empleado(cbx_vendedor.getItemAt(cbx_vendedor.getSelectedIndex()).getId());
+        } catch (Exception e) {
+            factura.setId_empleado(0);
+        }
+        factura.setComisionable(chk_comisionable.isSelected());
         factura.setEstado(1);
         factura.setId_user(frm_main.id_user);
 
@@ -1134,6 +1162,9 @@ public class jif_crear_credito extends javax.swing.JDialog {
     public static javax.swing.JButton btn_limpiar;
     private javax.swing.JButton btn_sumar30Dias;
     public static javax.swing.JComboBox<Contactos> cbx_contacto;
+    public static javax.swing.JComboBox<Contactos> cbx_vendedor;
+    public static javax.swing.JCheckBox chk_comisionable;
+    public static javax.swing.JLabel lbl_vendedor;
     public static javax.swing.JCheckBox chk_cerrar;
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel3;

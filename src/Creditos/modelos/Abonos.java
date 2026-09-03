@@ -15,6 +15,8 @@ package Creditos.modelos;
 public class Abonos {
 
     int id, id_cabecera, id_credito;
+    /** 1 = la comision de este abono ya se le liquido al vendedor. */
+    int comision_pagada;
     double abono;
     String fecha, hora;
 
@@ -26,6 +28,14 @@ public class Abonos {
         this.abono = abono;
         this.fecha = fecha;
         this.hora = hora;
+    }
+
+    public int getComision_pagada() {
+        return comision_pagada;
+    }
+
+    public void setComision_pagada(int comision_pagada) {
+        this.comision_pagada = comision_pagada;
     }
 
     public int getId() {

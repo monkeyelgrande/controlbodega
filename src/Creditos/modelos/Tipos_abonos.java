@@ -21,6 +21,26 @@ public class Tipos_abonos {
 
     String nombre, color;
     int id, anticipo;
+    /** 1 = un pago de este tipo entra a Caja como ingreso. */
+    int agregar_a_ingreso = 1;
+    /** 1 = un pago de este tipo genera comision para el vendedor. */
+    int comisionable;
+
+    public int getAgregar_a_ingreso() {
+        return agregar_a_ingreso;
+    }
+
+    public void setAgregar_a_ingreso(int agregar_a_ingreso) {
+        this.agregar_a_ingreso = agregar_a_ingreso;
+    }
+
+    public int getComisionable() {
+        return comisionable;
+    }
+
+    public void setComisionable(int comisionable) {
+        this.comisionable = comisionable;
+    }
 
     public int getAnticipo() {
         return anticipo;
@@ -68,10 +88,11 @@ public class Tipos_abonos {
             ResultSet rs = DB_consultas_R_D.getTabla("select id,nombre from tipos_abonos order by nombre");
             while (rs.next()) {
                 modeloCombo.addElement(new Tipos_abonos(rs.getInt("id"), rs.getString("nombre")));
-                jbox.setModel(modeloCombo);
             }
+            rs.close();
         } catch (Exception e) {
         }
+        jbox.setModel(modeloCombo);
         AutoCompleteDecorator.decorate(jbox);
     }
 

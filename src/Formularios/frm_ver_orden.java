@@ -1182,7 +1182,18 @@ public class frm_ver_orden extends javax.swing.JDialog {
     private void jtabla_entregados_cabeceraKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jtabla_entregados_cabeceraKeyPressed
         int key = evt.getKeyCode();
         if ((key == KeyEvent.VK_DELETE)) {
-            if (DB_consultas_R_D.validar_admin()) {
+            // Con la opcion 'ordenes_eliminar_entrega' concedida el usuario elimina
+            // la entrega directamente; con la BD sin migrar se mantiene la clave de
+            // administrador como antes.
+            boolean autorizado = Metodos.Permisos.estaCargado()
+                    ? Metodos.Permisos.puede("ordenes_eliminar_entrega")
+                    : DB_consultas_R_D.validar_admin();
+            if (!autorizado) {
+                JOptionPane.showMessageDialog(this,
+                        "No tiene permiso para eliminar entregas de mercancia.");
+                return;
+            }
+            {
                 int fila = jtabla_entregados_cabecera.getSelectedRow();
                 if (fila == -1) {
                     JOptionPane.showMessageDialog(null, "Seleccione un registro");

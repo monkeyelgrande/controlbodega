@@ -21,8 +21,8 @@ public class DB_Tipos_Abonos {
         Connection con = null;
 
         
-        String SSQL = "INSERT INTO tipos_abonos (id,nombre, color, anticipo) "
-                + "VALUES (?, ?, ?, ?)";
+        String SSQL = "INSERT INTO tipos_abonos (id,nombre, color, anticipo, agregar_a_ingreso, comisionable) "
+                + "VALUES (?, ?, ?, ?, ?, ?)";
         try {
             con = DB_consultas_R_D.getConexion();
             PreparedStatement psql = con.prepareStatement(SSQL);
@@ -30,6 +30,8 @@ public class DB_Tipos_Abonos {
             psql.setString(2, obj.getNombre());
             psql.setString(3, obj.getColor());
             psql.setInt(4, obj.getAnticipo());
+            psql.setInt(5, obj.getAgregar_a_ingreso());
+            psql.setInt(6, obj.getComisionable());
 
             resultado = psql.executeUpdate();
             psql.close();
@@ -58,7 +60,9 @@ public class DB_Tipos_Abonos {
         String SQL = "UPDATE tipos_abonos set "
                 + "nombre='" + obj.getNombre() + "', "
                 + "color='" + obj.getColor()+ "', "
-                + "anticipo=" + obj.getAnticipo()+ " "
+                + "anticipo=" + obj.getAnticipo() + ", "
+                + "agregar_a_ingreso=" + obj.getAgregar_a_ingreso() + ", "
+                + "comisionable=" + obj.getComisionable() + " "
                 + "where id=" + obj.getId();
         try {
             con = DB_consultas_R_D.getConexion();

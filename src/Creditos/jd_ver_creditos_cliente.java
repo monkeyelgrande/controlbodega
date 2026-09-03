@@ -556,6 +556,7 @@ public class jd_ver_creditos_cliente extends javax.swing.JDialog {
         jPanel3 = new javax.swing.JPanel();
         jPanel2 = new javax.swing.JPanel();
         btn_abonar = new javax.swing.JButton();
+        btn_cruzar = new javax.swing.JButton();
         btn_actualizar = new javax.swing.JButton();
         lbl_cliente1 = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
@@ -726,6 +727,18 @@ public class jd_ver_creditos_cliente extends javax.swing.JDialog {
             }
         });
 
+        btn_cruzar.setBackground(new java.awt.Color(255, 229, 204));
+        btn_cruzar.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
+        btn_cruzar.setMnemonic('z');
+        btn_cruzar.setText("Cruzar saldo a favor");
+        btn_cruzar.setToolTipText("Aplica el saldo a favor de un pago a los creditos pendientes del cliente");
+        btn_cruzar.setBorder(null);
+        btn_cruzar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_cruzarActionPerformed(evt);
+            }
+        });
+
         btn_actualizar.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
         btn_actualizar.setIcon(new javax.swing.ImageIcon(getClass().getResource("/imagenes/actualizar.png"))); // NOI18N
         btn_actualizar.setMnemonic('c');
@@ -744,7 +757,9 @@ public class jd_ver_creditos_cliente extends javax.swing.JDialog {
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(btn_abonar, javax.swing.GroupLayout.PREFERRED_SIZE, 152, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(1011, 1011, 1011)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(btn_cruzar, javax.swing.GroupLayout.PREFERRED_SIZE, 230, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(769, 769, 769)
                 .addComponent(btn_actualizar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addContainerGap())
         );
@@ -754,6 +769,7 @@ public class jd_ver_creditos_cliente extends javax.swing.JDialog {
                 .addContainerGap()
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(btn_abonar, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btn_cruzar, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btn_actualizar, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
@@ -1005,6 +1021,16 @@ public class jd_ver_creditos_cliente extends javax.swing.JDialog {
                             jif_crear_credito.id_cuenta = (rs.getInt("id_cuenta"));
                             jif_crear_credito.id_cliente = rs.getInt("id_contacto");
                             jif_crear_credito.cbx_contacto.setSelectedItem(rs.getString("contacto"));
+                            jif_crear_credito.chk_comisionable.setSelected(rs.getBoolean("comisionable"));
+                            // El combo de vendedor se posiciona por id: los nombres
+                            // pueden repetirse entre contactos.
+                            int idVendedor = rs.getInt("id_empleado");
+                            for (int k = 0; k < jif_crear_credito.cbx_vendedor.getItemCount(); k++) {
+                                if (jif_crear_credito.cbx_vendedor.getItemAt(k).getId() == idVendedor) {
+                                    jif_crear_credito.cbx_vendedor.setSelectedIndex(k);
+                                    break;
+                                }
+                            }
 
                         }
                         rs.close();
@@ -1038,6 +1064,64 @@ public class jd_ver_creditos_cliente extends javax.swing.JDialog {
     private void btn_abonarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_abonarActionPerformed
         AbonarATotal();
     }//GEN-LAST:event_btn_abonarActionPerformed
+
+    private void btn_cruzarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_cruzarActionPerformed
+        CruzarAbono();
+    }//GEN-LAST:event_btn_cruzarActionPerformed
+
+    /**
+     * Aplica el saldo a favor de un pago a los créditos pendientes del cliente.
+     *
+     * Se trabaja sobre la fila seleccionada en la tabla de movimientos, que
+     * debe ser un ABONO (no un CREDITO). El saldo se relee de la base y no de
+     * la pantalla: otro usuario pudo haber aplicado parte del abono mientras
+     * esta ventana estaba abierta.
+     */
+    public void CruzarAbono() {
+        int fila = jtabla_creditos.getSelectedRow();
+        if (fila == -1) {
+            JOptionPane.showMessageDialog(this,
+                    "Seleccione primero la fila del abono que desea cruzar.",
+                    "Sin selección", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String tipo = jtabla_creditos.getValueAt(fila, 2).toString();
+        if (tipo.equals("CREDITO")) {
+            JOptionPane.showMessageDialog(this,
+                    "La fila seleccionada es un crédito, no un abono.\n\n"
+                    + "Seleccione la fila de un pago (ABONO) que tenga saldo disponible\n"
+                    + "y vuelva a pulsar Cruzar saldo a favor.",
+                    "Seleccione un abono", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int idCabecera;
+        try {
+            idCabecera = Integer.parseInt(jtabla_creditos.getValueAt(fila, 0).toString());
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "No se pudo leer el id del abono seleccionado.",
+                    "Error en la operación", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        double saldoDisponible = Creditos.db.DBabonos.SaldoAFavorCabecera(idCabecera);
+        if (saldoDisponible <= 0.009) {
+            JOptionPane.showMessageDialog(this,
+                    "El abono #" + idCabecera + " no tiene saldo disponible para cruzar.\n\n"
+                    + "Su valor ya se aplicó por completo a créditos del cliente.",
+                    "Sin saldo por cruzar", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        jd_cruzar_abono dlg = new jd_cruzar_abono(this, idCabecera,
+                Integer.parseInt(id_cliente), saldoDisponible, lbl_cliente_nombre.getText());
+        dlg.setVisible(true);
+
+        if (dlg.isCruceAplicado()) {
+            btn_actualizar.doClick();
+        }
+    }
 
     private void btn_actualizarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_actualizarActionPerformed
         actualizar(false);
@@ -1300,6 +1384,7 @@ public class jd_ver_creditos_cliente extends javax.swing.JDialog {
     private javax.swing.JButton btn_VerFactura1;
     private javax.swing.JButton btn_VerFactura_editar;
     private javax.swing.JButton btn_abonar;
+    private javax.swing.JButton btn_cruzar;
     public static javax.swing.JButton btn_actualizar;
     private javax.swing.JButton btn_eliminar;
     private javax.swing.JButton btn_imprimir_oi;

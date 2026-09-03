@@ -720,9 +720,18 @@ WITH (
 
 CREATE INDEX idx_ajuste_det_cabecera ON ajustes_inventario_detalle (id_ajuste_cabecera);
 
+-- Los 9 perfiles del sistema. El catalogo de permisos por perfil de mas abajo
+-- (perfil_opciones) reparte opciones a los 9, asi que los 9 deben existir.
 insert into perfiles (id,perfil) values (1,'admin');
-insert into perfiles (id,perfil) values (2,'cajero');
+insert into perfiles (id,perfil) values (2,'bodeguero');
 insert into perfiles (id,perfil) values (3,'vendedor');
+insert into perfiles (id,perfil) values (4,'facturacion');
+insert into perfiles (id,perfil) values (5,'supervisor');
+insert into perfiles (id,perfil) values (6,'Almacenista');
+insert into perfiles (id,perfil) values (7,'Precios');
+insert into perfiles (id,perfil) values (8,'CAJA');
+insert into perfiles (id,perfil) values (9,'CARTERA');
+select setval('perfiles_id_seq', (select max(id) from perfiles));
 insert into users (id,nombre,password,user_name,id_perfil) values (1,'admin','6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b','admin',1);
 insert into users (id,nombre,password,user_name,id_perfil) values (2,'caja','000c285457fc971f862a79b786476c78812c8897063c6fa9c045f579a3b2d63f','caja',2);
 insert into contactos (id,nombre,cedula,direccion) values (1,'Ventas Diarias','0000','Home');
@@ -1028,6 +1037,7 @@ INSERT INTO opciones (clave, nombre, modulo, componente, orden) VALUES
     ('ordenes_entrega_masiva', 'Entrega masiva por bodega', 'Ordenes', 'btn_entregar_todo', 11),
     ('ordenes_reimprimir', 'Reimprimir orden sin limite', 'Ordenes', 'btn_verFactura', 12),
     ('ordenes_anular', 'Anular ordenes', 'Ordenes', 'btn_eliminar', 13),
+    ('ordenes_eliminar_entrega', 'Eliminar entregas de mercancia', 'Ordenes', 'jtabla_entregados_cabecera', 14),
     ('jmenu_facturacion', 'Generar orden (menu)', 'Ordenes', 'jmenu_facturacion', 20),
     ('btn_generar_orden', 'Generar orden (boton)', 'Ordenes', 'btn_generar_orden', 30),
     ('btn_ver_ordenes', 'Ver ordenes', 'Ordenes', 'btn_ver_ordenes', 40),
@@ -1044,9 +1054,33 @@ INSERT INTO opciones (clave, nombre, modulo, componente, orden) VALUES
     ('menu_precios_reportes', 'Reportes', 'Precios', 'menuReportesPrecios', 50),
     ('menu_precios_config', 'Configuracion de precios', 'Precios', 'itemConfigPrecios', 60),
     -- Productos
+    -- El menu y los dos botones del escritorio abren las pantallas; las
+    -- opciones 100+ gobiernan, dentro de cada pantalla, que puede hacer el
+    -- usuario (ver / crear / editar / eliminar). Las cinco acciones que
+    -- reversan stock -- eliminar producto, eliminar ingreso, pasarlo a
+    -- recibido, eliminar traslado y anular ajuste -- se dejan cerradas: solo
+    -- el Admin las tiene por codigo, el resto se reparte a mano.
     ('jMenu_productos_principal', 'Productos (menu)', 'Productos', 'jMenu_productos_principal', 10),
     ('btn_productos', 'Productos (boton)', 'Productos', 'btn_productos', 20),
     ('btn_ingreso_productos', 'Ingreso de productos', 'Productos', 'btn_ingreso_productos', 30),
+    ('productos_ver', 'Productos: abrir y ver', 'Productos', 'jmenu_productos', 100),
+    ('productos_crear', 'Productos: crear', 'Productos', 'btn_crear', 110),
+    ('productos_editar', 'Productos: editar', 'Productos', 'btn_editar', 120),
+    ('productos_eliminar', 'Productos: eliminar', 'Productos', 'btn_eliminar', 130),
+    ('productos_deshabilitar', 'Productos: habilitar / deshabilitar', 'Productos', 'btn_deshabilitar', 140),
+    ('productos_consulta', 'Consulta de productos y existencias', 'Productos', 'jMenuItem3', 150),
+    ('ingresos_mercancia_ver', 'Ingreso de mercancia: abrir y ver', 'Productos', 'jMenuItem2', 200),
+    ('ingresos_mercancia_crear', 'Ingreso de mercancia: crear', 'Productos', 'btn_crear', 210),
+    ('ingresos_mercancia_editar', 'Ingreso de mercancia: editar', 'Productos', 'btn_editar', 220),
+    ('ingresos_mercancia_eliminar', 'Ingreso de mercancia: eliminar', 'Productos', 'btn_eliminar', 230),
+    ('ingresos_mercancia_recibir', 'Ingreso de mercancia: pasar a recibido', 'Productos', 'jtabla', 240),
+    ('traslados_ver', 'Traslados entre bodegas: abrir y ver', 'Productos', 'jmenu_mover_productos', 300),
+    ('traslados_crear', 'Traslados entre bodegas: crear', 'Productos', 'btn_crear', 310),
+    ('traslados_editar', 'Traslados entre bodegas: editar', 'Productos', 'btn_editar', 320),
+    ('traslados_eliminar', 'Traslados entre bodegas: eliminar', 'Productos', 'btn_eliminar', 330),
+    ('ajustes_inventario_ver', 'Ajustes de inventario: abrir y ver', 'Productos', 'jMenu_verificar_inventario', 400),
+    ('ajustes_inventario_crear', 'Ajustes de inventario: crear', 'Productos', 'btn_crear', 410),
+    ('ajustes_inventario_anular', 'Ajustes de inventario: anular', 'Productos', 'btn_eliminar', 420),
     -- Creditos (modulo licenciable importado de control_creditos)
     ('menu_creditos', 'Menu Creditos (completo)', 'Creditos', 'menuCreditos', 10),
     ('creditos_ver', 'Creditos (cartera)', 'Creditos', 'itemCreditosVer', 20),
@@ -1054,6 +1088,10 @@ INSERT INTO opciones (clave, nombre, modulo, componente, orden) VALUES
     ('creditos_cuentas', 'Cuentas', 'Creditos', 'itemCreditosCuentas', 40),
     ('creditos_tipos_abonos', 'Tipos de abonos', 'Creditos', 'itemCreditosTipos', 50),
     ('creditos_reportes', 'Reportes de creditos', 'Creditos', 'itemCreditosReportes', 60),
+    ('creditos_porcentajes_comision', 'Porcentajes de comision', 'Creditos', 'itemCreditosPorcentajes', 70),
+    ('creditos_comisiones', 'Reporte de comisiones', 'Creditos', 'itemCreditosComisiones', 80),
+    ('creditos_cruzar_saldo', 'Cruzar saldos a favor', 'Creditos', 'btnCruzarSaldo', 90),
+    ('creditos_auditoria', 'Auditoria de cartera', 'Creditos', 'itemCreditosAuditoria', 100),
     -- Caja (modulo licenciable importado de cajadiaria)
     ('menu_caja', 'Menu Caja (completo)', 'Caja', 'menuCaja', 10),
     ('caja_ingresos', 'Ingresos de dinero', 'Caja', 'itemCajaIngresos', 20),
@@ -1132,8 +1170,21 @@ CREATE TABLE tipos_abonos
   nombre character varying,
   color character varying,
   anticipo integer,
+  -- fase 2: 1 = el abono entra a caja como ingreso
+  agregar_a_ingreso integer NOT NULL DEFAULT 1,
+  -- fase 2: 1 = el tipo de pago genera comision de vendedor
+  comisionable integer NOT NULL DEFAULT 0,
   CONSTRAINT tipos_abonos_pkey PRIMARY KEY (id)
 );
+
+-- Catalogo minimo: sin al menos una fila el combo de "tipo de abono" de las
+-- pantallas de pago queda vacio y no se puede registrar ningun abono.
+INSERT INTO tipos_abonos (id, nombre, color, anticipo) VALUES
+    (1, 'EFECTIVO',      'VERDE',    0),
+    (2, 'TRANSFERENCIA', 'AZUL',     0),
+    (3, 'CHEQUE',        'AMARILLO', 0),
+    (4, 'ANTICIPO',      'NARANJA',  1);
+SELECT setval('tipos_abonos_id_seq', (SELECT MAX(id) FROM tipos_abonos));
 
 CREATE TABLE creditos
 (
@@ -1152,7 +1203,14 @@ CREATE TABLE creditos
   id_cuenta integer,
   foto character varying,
   pdf character varying,
+  -- fase 2: vendedor dueno del credito (contactos.empleado = 1) y marca de
+  -- si el credito genera comision
+  id_empleado integer,
+  comisionable boolean NOT NULL DEFAULT true,
   CONSTRAINT pk_creditos PRIMARY KEY (id),
+  CONSTRAINT fk_creditos_empleado FOREIGN KEY (id_empleado)
+      REFERENCES contactos (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION,
   CONSTRAINT fk_creditos_user FOREIGN KEY (id_user)
       REFERENCES users (id) MATCH SIMPLE
       ON UPDATE NO ACTION ON DELETE NO ACTION,
@@ -1175,7 +1233,10 @@ CREATE TABLE abonos_cabeceras
   hora character varying DEFAULT '',
   observacion character varying DEFAULT '',
   foto character varying DEFAULT '',
-  pdf character varying DEFAULT ''
+  pdf character varying DEFAULT '',
+  -- fase 2: comision ya liquidada (aqui para el anticipo puro, que no tiene
+  -- detalle donde marcarla)
+  comision_pagada integer NOT NULL DEFAULT 0
 );
 
 CREATE TABLE abonos
@@ -1185,7 +1246,8 @@ CREATE TABLE abonos
   id_credito integer NOT NULL REFERENCES creditos (id),
   abono double precision NOT NULL,
   fecha date NOT NULL,
-  hora character varying DEFAULT ''
+  hora character varying DEFAULT '',
+  comision_pagada integer NOT NULL DEFAULT 0   -- fase 2
 );
 
 CREATE INDEX idx_abonos_id_cabecera        ON abonos(id_cabecera);
@@ -1193,6 +1255,21 @@ CREATE INDEX idx_abonos_id_credito         ON abonos(id_credito);
 CREATE INDEX idx_abonos_cabeceras_contacto ON abonos_cabeceras(id_contacto);
 CREATE INDEX idx_abonos_cabeceras_fecha    ON abonos_cabeceras(fecha);
 CREATE INDEX idx_creditos_contacto         ON creditos(id_contacto);
+CREATE INDEX idx_creditos_empleado         ON creditos(id_empleado);
+CREATE INDEX idx_creditos_fecha_creacion   ON creditos(fecha_creacion);
+CREATE INDEX idx_abonos_fecha              ON abonos(fecha);
+
+-- Escala dias-de-cobro -> porcentaje de comision (fase 2). Se lee ordenada por
+-- dias y se toma el primer rango cuyo "dias" es >= a los dias que tardo el
+-- cobro. No se siembra ninguna fila: la escala es una decision comercial del
+-- cliente; con la tabla vacia el reporte muestra comision 0 y lo avisa.
+CREATE TABLE porcentajes_comision
+(
+  id serial NOT NULL,
+  dias integer NOT NULL,
+  porcentaje double precision NOT NULL,
+  CONSTRAINT pk_porcentajes_comision PRIMARY KEY (id)
+);
 
 
 
@@ -1237,8 +1314,15 @@ CREATE TABLE cuentas_ingresos (
     nombre character varying(50),
     predeterminado integer,
     id_caja integer NOT NULL DEFAULT 1,
+    -- Creditos fase 2: 1 = cuenta destino de los abonos a credito. Solo puede
+    -- haber UNA marcada (indice unico parcial abajo): el INSERT de ingresos
+    -- la resuelve con un subselect que no admite mas de una fila.
+    abono_a_credito integer NOT NULL DEFAULT 0,
     CONSTRAINT pk_cuentas_ingresos PRIMARY KEY (id)
 );
+
+CREATE UNIQUE INDEX idx_cuentas_ingresos_abono_credito
+    ON cuentas_ingresos (abono_a_credito) WHERE abono_a_credito = 1;
 
 CREATE TABLE cuentas_egresos (
     id serial NOT NULL,
@@ -1264,6 +1348,10 @@ CREATE TABLE ingresos (
     transferencia integer,
     recibo_caja integer DEFAULT 0,   -- 1 = el ingreso es un recibo de caja, 0 = no (informativo)
     id_caja integer NOT NULL DEFAULT 1,  -- 1 = Caja, 2 = Caja Dos
+    -- Creditos fase 2: de que cabecera de abono viene el ingreso y a que
+    -- vendedor se le acredita
+    id_abono_credito integer,
+    id_vendedor integer,
     -- pk_ingresos ya lo usa ingresos_mercancias_cabecera; nombre distinto
     CONSTRAINT pk_caja_ingresos PRIMARY KEY (id),
     CONSTRAINT fk_ingreso_cuenta FOREIGN KEY (id_cuenta) REFERENCES cuentas_ingresos (id),
@@ -1687,6 +1775,168 @@ SELECT a.id,
           FROM auditoria_caja_campos c
          WHERE c.id_auditoria = a.id) AS cambios
 FROM auditoria_caja a;
+
+-- =============================================================================
+-- MODULO CREDITOS  -  FASE 2: auditoria de cartera
+-- -----------------------------------------------------------------------------
+-- Reutiliza el marco de auditoria del modulo Caja de aqui arriba (auditoria_caja
+-- + auditoria_caja_campos + fn_auditoria_caja). Es generico: la funcion trabaja
+-- con TG_TABLE_NAME y row_to_json, sirve para cualquier tabla. Aqui solo se le
+-- ensenan los nombres/etiquetas de las tablas de cartera y se enganchan sus
+-- triggers, para que quede UN solo libro de auditoria para todo el dinero (caja
+-- y cartera), inmutable y con detalle campo por campo.
+--
+-- OJO: caja_audit_nombre_tabla() y caja_audit_etiqueta() se REDEFINEN aqui
+-- agregandoles los casos de cartera. Este bloque debe ir siempre DESPUES del
+-- bloque de auditoria de caja.
+-- =============================================================================
+
+
+-- 5.1 Nombres legibles: se agregan las tablas de cartera a las de caja.
+CREATE OR REPLACE FUNCTION caja_audit_nombre_tabla(p_tabla text)
+RETURNS text AS $$
+BEGIN
+    RETURN CASE p_tabla
+        WHEN 'ingresos'             THEN 'ingreso'
+        WHEN 'egresos'              THEN 'egreso'
+        WHEN 'transferencias'       THEN 'traslado'
+        WHEN 'fondos'               THEN 'fondo'
+        WHEN 'cuentas_ingresos'     THEN 'cuenta de ingresos'
+        WHEN 'cuentas_egresos'      THEN 'cuenta de egresos'
+        WHEN 'fotos_registros'      THEN 'soporte fotografico'
+        -- Cartera
+        WHEN 'creditos'             THEN 'credito'
+        WHEN 'abonos_cabeceras'     THEN 'pago'
+        WHEN 'abonos'               THEN 'aplicacion de pago'
+        WHEN 'tipos_abonos'         THEN 'tipo de abono'
+        WHEN 'cuentas'              THEN 'cuenta de credito'
+        WHEN 'porcentajes_comision' THEN 'porcentaje de comision'
+        ELSE p_tabla
+    END;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- 5.2 Traduccion de llaves foraneas. Se agregan las de cartera cuidando que
+--     id_cuenta signifique cosas distintas segun la tabla (cuentas_ingresos en
+--     caja, cuentas en un credito).
+CREATE OR REPLACE FUNCTION caja_audit_etiqueta(p_tabla text, p_campo text, p_valor text)
+RETURNS text AS $$
+DECLARE
+    v_id integer;
+    v_nombre text;
+BEGIN
+    IF p_valor IS NULL OR p_valor !~ '^[0-9]+$' THEN
+        RETURN NULL;
+    END IF;
+    v_id := p_valor::integer;
+
+    IF p_campo IN ('id_fondo', 'id_fondo_origen', 'id_fondo_destino') THEN
+        SELECT f.nombre INTO v_nombre FROM fondos f WHERE f.id = v_id;
+
+    ELSIF p_campo = 'id_cuenta' THEN
+        IF p_tabla = 'ingresos' THEN
+            SELECT c.nombre INTO v_nombre FROM cuentas_ingresos c WHERE c.id = v_id;
+        ELSIF p_tabla = 'egresos' THEN
+            SELECT c.nombre INTO v_nombre FROM cuentas_egresos c WHERE c.id = v_id;
+        ELSIF p_tabla = 'creditos' THEN
+            SELECT c.nombre INTO v_nombre FROM cuentas c WHERE c.id = v_id;
+        END IF;
+
+    ELSIF p_campo IN ('id_cliente', 'id_contacto', 'id_empleado', 'id_vendedor') THEN
+        SELECT c.nombre INTO v_nombre FROM contactos c WHERE c.id = v_id;
+
+    ELSIF p_campo = 'id_user' THEN
+        SELECT u.user_name INTO v_nombre FROM users u WHERE u.id = v_id;
+
+    ELSIF p_campo = 'id_tipo_abono' THEN
+        SELECT t.nombre INTO v_nombre FROM tipos_abonos t WHERE t.id = v_id;
+
+    ELSIF p_campo = 'id_credito' THEN
+        SELECT COALESCE(cr.codigo, '#' || cr.id::text) INTO v_nombre
+        FROM creditos cr WHERE cr.id = v_id;
+
+    ELSIF p_campo IN ('id_ingreso', 'id_egreso', 'id_cabecera', 'id_abono_credito') THEN
+        v_nombre := NULL;   -- son enlaces internos, no tienen nombre que mostrar
+    END IF;
+
+    RETURN v_nombre;
+EXCEPTION WHEN OTHERS THEN
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- 5.3 Enganche de los triggers. DROP + CREATE para que re-ejecutar no duplique.
+--     Se auditan el dinero (creditos, abonos_cabeceras, abonos) y los catalogos
+--     que cambian el significado del historico (tipos_abonos, cuentas,
+--     porcentajes_comision: tocar un porcentaje reescribe lo que se le debe a
+--     un vendedor).
+
+DROP TRIGGER IF EXISTS trg_auditoria_creditos ON creditos;
+CREATE TRIGGER trg_auditoria_creditos
+    AFTER INSERT OR UPDATE OR DELETE ON creditos
+    FOR EACH ROW EXECUTE PROCEDURE fn_auditoria_caja();
+
+DROP TRIGGER IF EXISTS trg_auditoria_abonos_cabeceras ON abonos_cabeceras;
+CREATE TRIGGER trg_auditoria_abonos_cabeceras
+    AFTER INSERT OR UPDATE OR DELETE ON abonos_cabeceras
+    FOR EACH ROW EXECUTE PROCEDURE fn_auditoria_caja();
+
+DROP TRIGGER IF EXISTS trg_auditoria_abonos ON abonos;
+CREATE TRIGGER trg_auditoria_abonos
+    AFTER INSERT OR UPDATE OR DELETE ON abonos
+    FOR EACH ROW EXECUTE PROCEDURE fn_auditoria_caja();
+
+DROP TRIGGER IF EXISTS trg_auditoria_tipos_abonos ON tipos_abonos;
+CREATE TRIGGER trg_auditoria_tipos_abonos
+    AFTER INSERT OR UPDATE OR DELETE ON tipos_abonos
+    FOR EACH ROW EXECUTE PROCEDURE fn_auditoria_caja();
+
+DROP TRIGGER IF EXISTS trg_auditoria_cuentas ON cuentas;
+CREATE TRIGGER trg_auditoria_cuentas
+    AFTER INSERT OR UPDATE OR DELETE ON cuentas
+    FOR EACH ROW EXECUTE PROCEDURE fn_auditoria_caja();
+
+DROP TRIGGER IF EXISTS trg_auditoria_porcentajes_comision ON porcentajes_comision;
+CREATE TRIGGER trg_auditoria_porcentajes_comision
+    AFTER INSERT OR UPDATE OR DELETE ON porcentajes_comision
+    FOR EACH ROW EXECUTE PROCEDURE fn_auditoria_caja();
+
+-- 5.4 Vista de lectura de la auditoria de cartera (misma forma que
+--     v_auditoria_caja, filtrada a las tablas del modulo Creditos).
+CREATE OR REPLACE VIEW v_auditoria_creditos AS
+SELECT a.id,
+       a.fecha,
+       a.hora,
+       a.fecha_hora,
+       a.tabla,
+       a.operacion,
+       a.id_registro,
+       COALESCE(a.nombre_usuario, a.usuario, a.usuario_bd) AS usuario_visible,
+       a.usuario,
+       a.origen,
+       a.equipo,
+       a.total_anterior,
+       a.total_nuevo,
+       a.diferencia,
+       a.descripcion,
+       (SELECT string_agg(c.campo || ': ' ||
+                          COALESCE(c.etiqueta_anterior, c.valor_anterior, '(vacio)') || ' -> ' ||
+                          COALESCE(c.etiqueta_nueva,   c.valor_nuevo,    '(vacio)'), ' | ')
+          FROM auditoria_caja_campos c
+         WHERE c.id_auditoria = a.id) AS cambios
+FROM auditoria_caja a
+WHERE a.tabla IN ('creditos', 'abonos_cabeceras', 'abonos',
+                  'tipos_abonos', 'cuentas', 'porcentajes_comision');
+
+-- Cuenta de ingresos destino de los abonos a credito. DBIngresos
+-- .Guardar_desde_abono_credito la resuelve con
+-- (select id from cuentas_ingresos where abono_a_credito = 1): si no existe
+-- ninguna marcada, el INSERT falla. Si el cliente prefiere usar otra cuenta,
+-- mueve la marca desde Caja > Cuentas de ingresos y borra esta.
+INSERT INTO cuentas_ingresos (nombre, predeterminado, abono_a_credito, id_caja)
+VALUES ('ABONO A CREDITO', 0, 1, 1);
+
+
 
 -- =============================================================================
 -- MODULO PRECIOS (fusion agro) + MODO DE PRECIOS POR EMPRESA

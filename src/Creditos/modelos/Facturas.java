@@ -14,8 +14,28 @@ import javax.swing.JTable;
 public class Facturas {
 
     int id, id_contacto, id_user, estado, id_cuenta;
+    /** Vendedor dueño del credito (contactos con empleado=1). 0 = sin vendedor. */
+    int id_empleado;
+    /** false = el credito no genera comision aunque se le abone. */
+    boolean comisionable = true;
     double total, monto_descuento, interes;
     String fecha_creacion, fecha_vencimiento, hora, codigo, descripcion, foto, PDF;
+
+    public int getId_empleado() {
+        return id_empleado;
+    }
+
+    public void setId_empleado(int id_empleado) {
+        this.id_empleado = id_empleado;
+    }
+
+    public boolean isComisionable() {
+        return comisionable;
+    }
+
+    public void setComisionable(boolean comisionable) {
+        this.comisionable = comisionable;
+    }
 
     public String getPDF() {
         return PDF;

@@ -41,7 +41,7 @@ public class frm_traslado_productos_entre_bodegas extends javax.swing.JInternalF
         actualizar();
         jtabla.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mousePressed(MouseEvent me) {
-                if (me.getClickCount() == 2) {
+                if (me.getClickCount() == 2 && btn_ver.isVisible()) {
                     btn_verActionPerformed(null);
                 }
             }
@@ -49,6 +49,23 @@ public class frm_traslado_productos_entre_bodegas extends javax.swing.JInternalF
         Contactos.mostrarContactosNombre(txt_Filtro, false);
         metodos.BuscarEnTabla(txt_Filtro, jtabla);
         metodos.EstiloTablaMaterialGlobal(jtabla);
+        permisos();
+    }
+
+    /**
+     * Cada acción del traslado es una opción gobernable propia
+     * ('traslados_ver/crear/editar/eliminar'). Con la BD sin la migración
+     * de permisos se conserva lo anterior: todos los botones visibles para
+     * quien alcance a abrir la pantalla.
+     */
+    private void permisos() {
+        if (!Metodos.Permisos.estaCargado()) {
+            return;
+        }
+        btn_ver.setVisible(Metodos.Permisos.puede("traslados_ver"));
+        btn_crear.setVisible(Metodos.Permisos.puede("traslados_crear"));
+        btn_editar.setVisible(Metodos.Permisos.puede("traslados_editar"));
+        btn_eliminar.setVisible(Metodos.Permisos.puede("traslados_eliminar"));
     }
 
     DefaultTableModel modelo = new DefaultTableModel() {

@@ -20,6 +20,19 @@ public class Cuentas_Ingresos {
 
     String nombre;
     int id, predeterminado;
+    /**
+     * 1 = es la cuenta donde caen los abonos a credito que entran a Caja.
+     * Solo una cuenta puede tenerlo (indice unico parcial en la base).
+     */
+    int abono_a_credito;
+
+    public int getAbono_a_credito() {
+        return abono_a_credito;
+    }
+
+    public void setAbono_a_credito(int abono_a_credito) {
+        this.abono_a_credito = abono_a_credito;
+    }
     /** Caja a la que pertenece la cuenta: 1 = Caja, 2 = Caja Dos. */
     int id_caja = 1;
 

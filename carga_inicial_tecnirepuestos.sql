@@ -3,7 +3,7 @@
 -- Genera: unidades_medidas, productos, stock_productos, movimientos_inventario
 --
 -- REQUISITOS PREVIOS:
---   * Esquema base ya creado (base bodega.sql)
+--   * Esquema base ya creado (sql/controlbodega.sql)
 --   * Existe al menos 1 bodega y 1 user (id_bodega y id_user abajo)
 --
 -- AJUSTAR si fuera necesario:

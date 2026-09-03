@@ -83,6 +83,8 @@
                                   <EmptySpace max="-2" attributes="0"/>
                                   <Component id="rbtn_NO_anticipo" min="-2" max="-2" attributes="0"/>
                               </Group>
+                              <Component id="chk_agregar_a_ingreso" alignment="0" min="-2" max="-2" attributes="0"/>
+                              <Component id="chk_comisionable" alignment="0" min="-2" max="-2" attributes="0"/>
                               <Component id="jLabel4" alignment="0" min="-2" max="-2" attributes="0"/>
                           </Group>
                       </Group>
@@ -116,6 +118,10 @@
                       <Component id="rbtn_SI_anticipo" alignment="3" min="-2" max="-2" attributes="0"/>
                       <Component id="rbtn_NO_anticipo" alignment="3" min="-2" max="-2" attributes="0"/>
                   </Group>
+                  <EmptySpace max="-2" attributes="0"/>
+                  <Component id="chk_agregar_a_ingreso" min="-2" max="-2" attributes="0"/>
+                  <EmptySpace max="-2" attributes="0"/>
+                  <Component id="chk_comisionable" min="-2" max="-2" attributes="0"/>
                   <EmptySpace max="32767" attributes="0"/>
                   <Group type="103" groupAlignment="3" attributes="0">
                       <Component id="btn_guardar" alignment="3" min="-2" pref="35" max="-2" attributes="0"/>
@@ -259,6 +265,19 @@
             <AuxValue name="JavaCodeGenerator_TypeParameters" type="java.lang.String" value="&lt;String&gt;"/>
             <AuxValue name="JavaCodeGenerator_VariableModifier" type="java.lang.Integer" value="9"/>
           </AuxValues>
+        </Component>
+        <Component class="javax.swing.JCheckBox" name="chk_agregar_a_ingreso">
+          <Properties>
+            <Property name="selected" type="boolean" value="true"/>
+            <Property name="text" type="java.lang.String" value="Entra a Caja como ingreso"/>
+            <Property name="toolTipText" type="java.lang.String" value="Un pago de este tipo se registra automaticamente en Caja"/>
+          </Properties>
+        </Component>
+        <Component class="javax.swing.JCheckBox" name="chk_comisionable">
+          <Properties>
+            <Property name="text" type="java.lang.String" value="Genera comision al vendedor"/>
+            <Property name="toolTipText" type="java.lang.String" value="Los abonos de este tipo entran al reporte de comisiones"/>
+          </Properties>
         </Component>
         <Component class="javax.swing.JRadioButton" name="rbtn_SI_anticipo">
           <Properties>

@@ -38,6 +38,22 @@ public class frm_ajuste_inventario extends javax.swing.JInternalFrame {
         actualizar();
         metodos.BuscarEnTabla(txt_Filtro, jtabla);
         metodos.EstiloTablaMaterialGlobal(jtabla);
+        permisos();
+    }
+
+    /**
+     * Cada accion del ajuste es una opcion gobernable propia
+     * ('ajustes_inventario_ver/crear/anular'). Con la BD sin la migracion
+     * de permisos se conserva lo anterior: todos los botones visibles para
+     * quien alcance a abrir la pantalla.
+     */
+    private void permisos() {
+        if (!Metodos.Permisos.estaCargado()) {
+            return;
+        }
+        btn_ver.setVisible(Metodos.Permisos.puede("ajustes_inventario_ver"));
+        btn_crear.setVisible(Metodos.Permisos.puede("ajustes_inventario_crear"));
+        btn_eliminar.setVisible(Metodos.Permisos.puede("ajustes_inventario_anular"));
     }
 
     private void initUI() {
@@ -113,7 +129,7 @@ public class frm_ajuste_inventario extends javax.swing.JInternalFrame {
         });
         jtabla.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mousePressed(MouseEvent me) {
-                if (me.getClickCount() == 2) verAjuste();
+                if (me.getClickCount() == 2 && btn_ver.isVisible()) verAjuste();
             }
         });
 

@@ -152,6 +152,28 @@ public class Contactos {
         AutoCompleteDecorator.decorate(jbox);
     }
 
+    /**
+     * Vendedores para asignar a un credito: los contactos marcados como
+     * empleado, precedidos de una opcion vacia. El credito puede no tener
+     * vendedor (id 0) y entonces no genera comision para nadie.
+     */
+    public static void MostrarVendedores(JComboBox<Contactos> jbox) {
+        DefaultComboBoxModel modeloCombo = new DefaultComboBoxModel();
+        modeloCombo.addElement(new Contactos(0, "(sin vendedor)"));
+        try {
+            ResultSet rs = DB_consultas_R_D.getTabla(
+                    "select id,nombre from contactos where empleado=1 order by nombre");
+            while (rs.next()) {
+                modeloCombo.addElement(new Contactos(rs.getInt("id"), rs.getString("nombre")));
+            }
+            rs.close();
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+        jbox.setModel(modeloCombo);
+        AutoCompleteDecorator.decorate(jbox);
+    }
+
     public void MostrarNombreEmpleados(JComboBox<Contactos> jbox) {
         DefaultComboBoxModel modeloCombo = new DefaultComboBoxModel();
         try {

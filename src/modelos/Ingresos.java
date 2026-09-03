@@ -24,7 +24,20 @@ public class Ingresos {
     int id_caja = 1;
     /** 1 = el ingreso es un recibo de caja, 0 = no lo es (informativo). */
     int recibo_caja;
+    /**
+     * Vendedor al que se le acredita el dinero. Solo lo usan los ingresos que
+     * vienen de un abono a credito; 0 = sin vendedor.
+     */
+    int id_vendedor;
     double total;
+
+    public int getId_vendedor() {
+        return id_vendedor;
+    }
+
+    public void setId_vendedor(int id_vendedor) {
+        this.id_vendedor = id_vendedor;
+    }
 
     public int getId_caja() {
         return id_caja;

@@ -10,8 +10,22 @@ package Creditos.modelos;
 public class AbonosCabecera {
 
     int id, id_contacto, id_user, id_tipo_abono;
+    /**
+     * 1 = la comision de este pago ya se liquido. Vive en la cabecera para el
+     * anticipo puro, que no tiene detalle donde marcarla; los pagos aplicados a
+     * creditos la marcan en cada fila del detalle.
+     */
+    int comision_pagada;
     double total;
     String fecha, hora, observacion, foto, PDF;
+
+    public int getComision_pagada() {
+        return comision_pagada;
+    }
+
+    public void setComision_pagada(int comision_pagada) {
+        this.comision_pagada = comision_pagada;
+    }
 
     public int getId() {
         return id;

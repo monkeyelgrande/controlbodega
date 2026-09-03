@@ -389,8 +389,10 @@ public class frm_Tipos_abonos extends javax.swing.JInternalFrame {
                         jif_crear_tipos_abonos.rbtn_NO_anticipo.setSelected(true);
                     } else {
                         jif_crear_tipos_abonos.rbtn_SI_anticipo.setSelected(true);
-                        
+
                     }
+                    jif_crear_tipos_abonos.chk_agregar_a_ingreso.setSelected(rs.getInt("agregar_a_ingreso") == 1);
+                    jif_crear_tipos_abonos.chk_comisionable.setSelected(rs.getInt("comisionable") == 1);
                 }
                 rs.close();
                 
@@ -437,11 +439,14 @@ public class frm_Tipos_abonos extends javax.swing.JInternalFrame {
         } catch (Exception e) {
         }
         ResultSet rs = DB_consultas_R_D.getTabla("select * from tipos_abonos order by id");
-        modelo.setColumnIdentifiers(new Object[]{"id", "Nombre", "Color"});
+        modelo.setColumnIdentifiers(new Object[]{"id", "Nombre", "Color", "Anticipo", "Entra a Caja", "Comisiona"});
         try {
             while (rs.next()) {
                 // añade los resultado a al modelo de tabla
-                modelo.addRow(new Object[]{rs.getString("id"), rs.getString("nombre"), rs.getString("color")});
+                modelo.addRow(new Object[]{rs.getString("id"), rs.getString("nombre"), rs.getString("color"),
+                    rs.getInt("anticipo") == 1 ? "SI" : "NO",
+                    rs.getInt("agregar_a_ingreso") == 1 ? "SI" : "NO",
+                    rs.getInt("comisionable") == 1 ? "SI" : "NO"});
             }
             rs.close();
             // asigna el modelo a la tabla

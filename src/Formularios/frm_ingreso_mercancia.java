@@ -54,19 +54,36 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
                             && jtabla.convertColumnIndexToModel(columna) == 5
                             && "Pendiente".equals("" + jtabla.getValueAt(fila, columna))) {
                         pasar_a_recibido(fila);
-                    } else {
+                    } else if (btn_ver.isVisible()) {
                         btn_verActionPerformed(null);
                     }
                 }
             }
         });
 
-        if (frm_main.perfil == 2) {
-            btn_eliminar.setEnabled(false);
-            btn_editar.setEnabled(false);
-        }
+        permisos();
         metodos.BuscarEnTabla(txt_Filtro, jtabla);
 //        metodos.EstiloTablaMaterialGlobal(jtabla);
+    }
+
+    /**
+     * Cada acción del ingreso de mercancía es una opción gobernable propia
+     * ('ingresos_mercancia_ver/crear/editar/eliminar/recibir'). Con la BD sin
+     * la migración de permisos se conserva lo anterior: el bodeguero
+     * (perfil 2) no elimina ni edita, el resto sí.
+     */
+    private void permisos() {
+        if (!Metodos.Permisos.estaCargado()) {
+            if (frm_main.perfil == 2) {
+                btn_eliminar.setEnabled(false);
+                btn_editar.setEnabled(false);
+            }
+            return;
+        }
+        btn_ver.setVisible(Metodos.Permisos.puede("ingresos_mercancia_ver"));
+        btn_crear.setVisible(Metodos.Permisos.puede("ingresos_mercancia_crear"));
+        btn_editar.setVisible(Metodos.Permisos.puede("ingresos_mercancia_editar"));
+        btn_eliminar.setVisible(Metodos.Permisos.puede("ingresos_mercancia_eliminar"));
     }
 
     DefaultTableModel modelo = new DefaultTableModel() {
@@ -341,8 +358,13 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
         return 0;
     }
     private void btn_eliminarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_eliminarActionPerformed
-
-        if (DB_consultas_R_D.validar_admin()) {
+        // Con la opción 'ingresos_mercancia_eliminar' concedida el usuario
+        // elimina directamente; con la BD sin migrar se mantiene la clave de
+        // administrador como antes. Al eliminar se resta el stock ingresado.
+        boolean autorizado = Metodos.Permisos.estaCargado()
+                ? Metodos.Permisos.puede("ingresos_mercancia_eliminar")
+                : DB_consultas_R_D.validar_admin();
+        if (autorizado) {
             int fila = jtabla.getSelectedRow();
             if (fila == -1) {
                 JOptionPane.showMessageDialog(null, "Seleccione un registro");
@@ -515,6 +537,12 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
             } else {
                 jif_crear_ingreso_mercancia.chk_cerrar.setEnabled(false);
                 jif_crear_ingreso_mercancia.btn_guardar.setText("Actualizar");
+                // Marcar "Recibido" desde la edición suma el stock igual que
+                // el doble clic en la tabla, así que pide el mismo permiso.
+                boolean puedeRecibir = !Metodos.Permisos.estaCargado()
+                        || Metodos.Permisos.puede("ingresos_mercancia_recibir");
+                jif_crear_ingreso_mercancia.rbtn_recibido.setEnabled(puedeRecibir);
+                jif_crear_ingreso_mercancia.rbtn_pendiente.setEnabled(puedeRecibir);
             }
             frm.calcular_total();
             frm.show();
@@ -553,6 +581,16 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
      * el movimiento de inventario (suma stock) por cada producto del detalle.
      */
     private void pasar_a_recibido(int fila) {
+        // Pasar a RECIBIDO suma el stock del detalle, así que va detrás de
+        // su propia opción ('ingresos_mercancia_recibir').
+        if (Metodos.Permisos.estaCargado()
+                && !Metodos.Permisos.puede("ingresos_mercancia_recibir")) {
+            JOptionPane.showMessageDialog(this,
+                    "No tiene permiso para pasar ingresos a RECIBIDO.",
+                    "Permiso denegado", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         String id = "" + jtabla.getValueAt(fila, 0);
 
         int dialogResult = JOptionPane.showConfirmDialog(this,
@@ -563,7 +601,8 @@ public class frm_ingreso_mercancia extends javax.swing.JInternalFrame {
             return;
         }
 
-        if (!DB_consultas_R_D.validar_admin()) {
+        // Con la BD sin migrar se mantiene la clave de administrador.
+        if (!Metodos.Permisos.estaCargado() && !DB_consultas_R_D.validar_admin()) {
             return;
         }
 

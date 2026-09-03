@@ -32,7 +32,9 @@ public class DBfacturas {
                 + "id_cuenta=" + factura.getId_cuenta() + ","
                 + "total=" + factura.getTotal() + ","
                 + "interes=" + factura.getInteres() + ","
-                + "id_user=" + factura.getId_user() + ""
+                + "id_empleado=" + (factura.getId_empleado() > 0 ? String.valueOf(factura.getId_empleado()) : "null") + ","
+                + "comisionable=" + factura.isComisionable() + ","
+                + "id_user=" + factura.getId_user() + " "
                 + "where id=" + factura.getId();
         try {
             con = DB_consultas_R_D.getConexion();
@@ -60,8 +62,8 @@ public class DBfacturas {
     public int Guardar(Facturas factura) {
         int resultado = 0;
         Connection con = null;
-        String SSQL = "INSERT INTO creditos (id,id_contacto,id_user,total,fecha_creacion,fecha_vencimiento, estado, codigo,descripcion,interes,id_cuenta,foto,pdf, hora) "
-                + "VALUES (?,?,?,?,'" + factura.getFecha_creacion() + "','" + factura.getFecha_vencimiento() + "',?,?,?,?,?,?,?, '" + factura.getHora() + "')";
+        String SSQL = "INSERT INTO creditos (id,id_contacto,id_user,total,fecha_creacion,fecha_vencimiento, estado, codigo,descripcion,interes,id_cuenta,foto,pdf, hora, id_empleado, comisionable) "
+                + "VALUES (?,?,?,?,'" + factura.getFecha_creacion() + "','" + factura.getFecha_vencimiento() + "',?,?,?,?,?,?,?, '" + factura.getHora() + "', ?, ?)";
         try {
             con = DB_consultas_R_D.getConexion();
             PreparedStatement psql = con.prepareStatement(SSQL);
@@ -77,6 +79,13 @@ public class DBfacturas {
             psql.setInt(9, factura.getId_cuenta());
             psql.setString(10, factura.getFoto());
             psql.setString(11, factura.getPDF());
+            // Sin vendedor se guarda NULL: id_empleado es llave foranea a contactos.
+            if (factura.getId_empleado() > 0) {
+                psql.setInt(12, factura.getId_empleado());
+            } else {
+                psql.setNull(12, java.sql.Types.INTEGER);
+            }
+            psql.setBoolean(13, factura.isComisionable());
 
             resultado = psql.executeUpdate();
             psql.close();

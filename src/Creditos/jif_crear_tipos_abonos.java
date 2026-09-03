@@ -49,6 +49,8 @@ public class jif_crear_tipos_abonos extends javax.swing.JDialog {
         chk_cerrar = new javax.swing.JCheckBox();
         btn_editar = new javax.swing.JButton();
         jbox_color = new javax.swing.JComboBox<>();
+        chk_agregar_a_ingreso = new javax.swing.JCheckBox();
+        chk_comisionable = new javax.swing.JCheckBox();
         rbtn_SI_anticipo = new javax.swing.JRadioButton();
         rbtn_NO_anticipo = new javax.swing.JRadioButton();
         jLabel4 = new javax.swing.JLabel();
@@ -111,6 +113,13 @@ public class jif_crear_tipos_abonos extends javax.swing.JDialog {
         jbox_color.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         jbox_color.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "AMARILLO", "AZUL", "ROJO", "BLANCO", "NARANJA", "VERDE", "GRIS", "ROSA" }));
 
+        chk_agregar_a_ingreso.setSelected(true);
+        chk_agregar_a_ingreso.setText("Entra a Caja como ingreso");
+        chk_agregar_a_ingreso.setToolTipText("Un pago de este tipo se registra automaticamente en Caja");
+
+        chk_comisionable.setText("Genera comision al vendedor");
+        chk_comisionable.setToolTipText("Los abonos de este tipo entran al reporte de comisiones");
+
         buttonGroup2.add(rbtn_SI_anticipo);
         rbtn_SI_anticipo.setText("Si");
 
@@ -149,6 +158,8 @@ public class jif_crear_tipos_abonos extends javax.swing.JDialog {
                                 .addComponent(rbtn_SI_anticipo)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(rbtn_NO_anticipo))
+                            .addComponent(chk_agregar_a_ingreso)
+                            .addComponent(chk_comisionable)
                             .addComponent(jLabel4))))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
@@ -173,6 +184,10 @@ public class jif_crear_tipos_abonos extends javax.swing.JDialog {
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(rbtn_SI_anticipo)
                     .addComponent(rbtn_NO_anticipo))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(chk_agregar_a_ingreso)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(chk_comisionable)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btn_guardar, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -216,6 +231,9 @@ public class jif_crear_tipos_abonos extends javax.swing.JDialog {
             }
             obj.setNombre(txt_nombre.getText());
             obj.setColor(jbox_color.getSelectedItem().toString());
+
+            obj.setAgregar_a_ingreso(chk_agregar_a_ingreso.isSelected() ? 1 : 0);
+            obj.setComisionable(chk_comisionable.isSelected() ? 1 : 0);
 
             if (rbtn_SI_anticipo.isSelected()) {
                 obj.setAnticipo(1);
@@ -271,6 +289,8 @@ public class jif_crear_tipos_abonos extends javax.swing.JDialog {
     private javax.swing.JLabel jLabel4;
     private javax.swing.JPanel jPanel2;
     public static javax.swing.JComboBox<String> jbox_color;
+    public static javax.swing.JCheckBox chk_agregar_a_ingreso;
+    public static javax.swing.JCheckBox chk_comisionable;
     public static javax.swing.JRadioButton rbtn_NO_anticipo;
     public static javax.swing.JRadioButton rbtn_SI_anticipo;
     public static javax.swing.JTextField txt_id;

@@ -124,6 +124,8 @@ public class frm_main extends javax.swing.JFrame {
     private javax.swing.JMenuItem itemCreditosCuentas = null;
     private javax.swing.JMenuItem itemCreditosTipos = null;
     private javax.swing.JMenuItem itemCreditosReportes = null;
+    private javax.swing.JMenuItem itemCreditosPorcentajes = null;
+    private javax.swing.JMenuItem itemCreditosComisiones = null;
     Creditos.frm_Creditos frm_creditos_mod = null;
     Creditos.frm_contactos frm_clientes_credito = null;
     Creditos.frm_cuentas frm_cuentas_credito = null;
@@ -558,6 +560,24 @@ public class frm_main extends javax.swing.JFrame {
             }
         });
         menuCreditos.add(itemCreditosReportes);
+
+        itemCreditosPorcentajes = new javax.swing.JMenuItem("Porcentajes de comisión");
+        itemCreditosPorcentajes.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                new Creditos.frm_Porcentajes_comision(frm_main.this).setVisible(true);
+            }
+        });
+        menuCreditos.add(itemCreditosPorcentajes);
+
+        itemCreditosComisiones = new javax.swing.JMenuItem("Comisiones de vendedores");
+        itemCreditosComisiones.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                new Creditos.jd_Comisiones(frm_main.this, true).setVisible(true);
+            }
+        });
+        menuCreditos.add(itemCreditosComisiones);
 
         menuCreditos.setVisible(false);
         jMenuBar1.add(menuCreditos);
@@ -1184,6 +1204,8 @@ public class frm_main extends javax.swing.JFrame {
         cred.agregarItem("Cuentas", itemCreditosCuentas);
         cred.agregarItem("Tipos de abonos", itemCreditosTipos);
         cred.agregarItem("Reportes", itemCreditosReportes);
+        cred.agregarItem("Porcentajes de comisión", itemCreditosPorcentajes);
+        cred.agregarItem("Comisiones de vendedores", itemCreditosComisiones);
 
         BarraLateral.Grupo caja = barra.agregarGrupo("Caja", FontAwesome.DINERO)
                 .gobernadoPor(menuCaja);
@@ -1361,6 +1383,9 @@ public class frm_main extends javax.swing.JFrame {
         if (itemPermisos != null) {
             itemPermisos.setVisible(Metodos.Permisos.puede("jmenu_permisos"));
         }
+        // El botón "Consultar" del escritorio abre la misma pantalla que el
+        // ítem de menú Consulta, así que comparte su opción.
+        btn_ingreso_productos1.setVisible(Metodos.Permisos.puede("productos_consulta"));
         // La barra lateral refleja la visibilidad de los menús/botones gobernados
         if (barra != null) {
             barra.sincronizar();
@@ -1382,9 +1407,19 @@ public class frm_main extends javax.swing.JFrame {
         m.put("jmenu_con", jmenu_con);
         m.put("jmenu_contactos", jmenu_contactos);
         m.put("btn_contactos", btn_contactos);
+        // Menú Productos: la opción del menú completo sigue siendo el
+        // interruptor de arriba; dentro de él cada entrada tiene la suya, y
+        // cada pantalla gobierna sus propias acciones (ver frm_productos,
+        // frm_ingreso_mercancia, frm_traslado_productos_entre_bodegas y
+        // frm_ajuste_inventario).
         m.put("jMenu_productos_principal", jMenu_productos_principal);
         m.put("btn_productos", btn_productos);
         m.put("btn_ingreso_productos", btn_ingreso_productos);
+        m.put("productos_ver", jmenu_productos);
+        m.put("ingresos_mercancia_ver", jMenuItem2);
+        m.put("productos_consulta", jMenuItem3);
+        m.put("traslados_ver", jmenu_mover_productos);
+        m.put("ajustes_inventario_ver", jMenu_verificar_inventario);
         m.put("jMenu_ordenes", jMenu_ordenes);
         m.put("jmenu_facturacion", jmenu_facturacion);
         m.put("btn_generar_orden", btn_generar_orden);
@@ -1412,6 +1447,8 @@ public class frm_main extends javax.swing.JFrame {
         m.put("creditos_cuentas", itemCreditosCuentas);
         m.put("creditos_tipos_abonos", itemCreditosTipos);
         m.put("creditos_reportes", itemCreditosReportes);
+        m.put("creditos_porcentajes_comision", itemCreditosPorcentajes);
+        m.put("creditos_comisiones", itemCreditosComisiones);
         // Módulo Caja: mismo esquema que Créditos (módulo apagado en la tabla
         // modulos → desaparece completo).
         m.put("menu_caja", menuCaja);

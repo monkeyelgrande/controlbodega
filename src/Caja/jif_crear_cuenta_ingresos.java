@@ -52,6 +52,7 @@ public class jif_crear_cuenta_ingresos extends javax.swing.JDialog {
         chk_cerrar = new javax.swing.JCheckBox();
         btn_editar = new javax.swing.JButton();
         chk_predeterminado = new javax.swing.JCheckBox();
+        chk_abono_a_credito = new javax.swing.JCheckBox();
 
         setModal(true);
 
@@ -147,13 +148,19 @@ public class jif_crear_cuenta_ingresos extends javax.swing.JDialog {
         chk_predeterminado.setFont(new java.awt.Font("Tahoma", 0, 18)); // NOI18N
         chk_predeterminado.setText("Predeterminado");
 
+        chk_abono_a_credito.setFont(new java.awt.Font("Tahoma", 0, 18)); // NOI18N
+        chk_abono_a_credito.setText("Recibe los abonos a crédito");
+        chk_abono_a_credito.setToolTipText("Los pagos de cartera que entran a Caja se registran en esta cuenta. Solo una cuenta puede tenerlo.");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addGap(92, 92, 92)
-                .addComponent(chk_predeterminado)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(chk_predeterminado)
+                    .addComponent(chk_abono_a_credito))
                 .addContainerGap(224, Short.MAX_VALUE))
             .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
@@ -163,7 +170,9 @@ public class jif_crear_cuenta_ingresos extends javax.swing.JDialog {
             .addGroup(layout.createSequentialGroup()
                 .addGap(96, 96, 96)
                 .addComponent(chk_predeterminado)
-                .addContainerGap(165, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(chk_abono_a_credito)
+                .addContainerGap(135, Short.MAX_VALUE))
             .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addComponent(jPanel2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
@@ -195,6 +204,7 @@ public class jif_crear_cuenta_ingresos extends javax.swing.JDialog {
                     obj.setPredeterminado(1);
                 }
                 obj.setId_caja(idCaja);
+                obj.setAbono_a_credito(chk_abono_a_credito.isSelected() ? 1 : 0);
 
                 if (!txt_id.getText().equals("") && DB_consultas_R_D.consultarId(txt_id.getText(), "cuentas_ingresos") == 1) {
                     dbcuentas.Actualizar(obj);
@@ -232,6 +242,7 @@ public class jif_crear_cuenta_ingresos extends javax.swing.JDialog {
     public static javax.swing.JButton btn_limpiar;
     private javax.swing.ButtonGroup buttonGroup1;
     public static javax.swing.JCheckBox chk_cerrar;
+    public static javax.swing.JCheckBox chk_abono_a_credito;
     public static javax.swing.JCheckBox chk_predeterminado;
     private javax.swing.JLabel jLabel12;
     private javax.swing.JLabel jLabel3;

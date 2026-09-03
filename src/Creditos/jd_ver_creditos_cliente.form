@@ -389,7 +389,9 @@
                   <Group type="102" alignment="0" attributes="0">
                       <EmptySpace max="-2" attributes="0"/>
                       <Component id="btn_abonar" min="-2" pref="152" max="-2" attributes="0"/>
-                      <EmptySpace min="-2" pref="1011" max="-2" attributes="0"/>
+                      <EmptySpace type="unrelated" max="-2" attributes="0"/>
+                      <Component id="btn_cruzar" min="-2" pref="230" max="-2" attributes="0"/>
+                      <EmptySpace min="-2" pref="769" max="-2" attributes="0"/>
                       <Component id="btn_actualizar" max="32767" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
                   </Group>
@@ -401,6 +403,7 @@
                       <EmptySpace max="-2" attributes="0"/>
                       <Group type="103" groupAlignment="0" attributes="0">
                           <Component id="btn_abonar" alignment="1" min="-2" pref="58" max="-2" attributes="0"/>
+                          <Component id="btn_cruzar" alignment="1" min="-2" pref="58" max="-2" attributes="0"/>
                           <Component id="btn_actualizar" alignment="1" max="32767" attributes="0"/>
                       </Group>
                       <EmptySpace max="-2" attributes="0"/>
@@ -428,6 +431,25 @@
               </Properties>
               <Events>
                 <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_abonarActionPerformed"/>
+              </Events>
+            </Component>
+            <Component class="javax.swing.JButton" name="btn_cruzar">
+              <Properties>
+                <Property name="background" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
+                  <Color blue="cc" green="e5" red="ff" type="rgb"/>
+                </Property>
+                <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+                  <Font name="Tahoma" size="18" style="1"/>
+                </Property>
+                <Property name="mnemonic" type="int" value="122"/>
+                <Property name="text" type="java.lang.String" value="Cruzar saldo a favor"/>
+                <Property name="toolTipText" type="java.lang.String" value="Aplica el saldo a favor de un pago a los creditos pendientes del cliente"/>
+                <Property name="border" type="javax.swing.border.Border" editor="org.netbeans.modules.form.editors2.BorderEditor">
+                  <Border info="null"/>
+                </Property>
+              </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_cruzarActionPerformed"/>
               </Events>
             </Component>
             <Component class="javax.swing.JButton" name="btn_actualizar">

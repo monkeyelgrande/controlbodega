@@ -175,4 +175,20 @@ BEGIN
     END IF;
 END $$;
 
+-- 6. Catalogo minimo de tipos de abono. Sin al menos una fila el combo de
+--    "tipo de abono" de las pantallas de pago queda vacio y no se puede
+--    registrar ningun abono. Solo se siembra si la tabla esta vacia: nunca
+--    pisa el catalogo que el cliente ya haya definido.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM tipos_abonos) THEN
+        INSERT INTO tipos_abonos (id, nombre, color, anticipo) VALUES
+            (1, 'EFECTIVO',      'VERDE',   0),
+            (2, 'TRANSFERENCIA', 'AZUL',    0),
+            (3, 'CHEQUE',        'AMARILLO', 0),
+            (4, 'ANTICIPO',      'NARANJA', 1);
+        PERFORM setval('tipos_abonos_id_seq', (SELECT MAX(id) FROM tipos_abonos));
+    END IF;
+END $$;
+
 COMMIT;

@@ -43,6 +43,10 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
 import Creditos.modelos.Abonos;
 import Creditos.modelos.AbonosCabecera;
+import conexiondb.AuditoriaCaja;
+import conexiondb.DBIngresos;
+import modelos.Fondos;
+import modelos.Ingresos;
 import Creditos.modelos.Tipos_abonos;
 
 /**
@@ -109,6 +113,7 @@ public class jd_abonar_a_total extends javax.swing.JDialog {
 
         Tipos_abonos ta = new Tipos_abonos();
         ta.mostrarAbonos(jbox_tipo_abono);
+        Fondos.mostrarFondos(jbox_Fondos, CAJA_CREDITOS);
 
         txt_abono.requestFocus();
 
@@ -233,6 +238,7 @@ public class jd_abonar_a_total extends javax.swing.JDialog {
         lbl_foto = new javax.swing.JLabel();
         btnAgregarImagen1 = new javax.swing.JButton();
         jbox_tipo_abono = new javax.swing.JComboBox<>();
+        jbox_Fondos = new javax.swing.JComboBox<>();
         chk_abono_espesifico = new javax.swing.JCheckBox();
         chk_anticipo = new javax.swing.JCheckBox();
         jSeparator1 = new javax.swing.JSeparator();
@@ -397,6 +403,9 @@ public class jd_abonar_a_total extends javax.swing.JDialog {
             }
         });
 
+        jbox_Fondos.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        jbox_Fondos.setToolTipText("Fondo de caja al que entra el dinero de este abono");
+
         jbox_tipo_abono.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         jbox_tipo_abono.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -447,7 +456,9 @@ public class jd_abonar_a_total extends javax.swing.JDialog {
                                     .addComponent(chk_anticipo))
                                 .addGroup(jPanel2Layout.createSequentialGroup()
                                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                    .addComponent(jbox_tipo_abono, javax.swing.GroupLayout.PREFERRED_SIZE, 226, javax.swing.GroupLayout.PREFERRED_SIZE)))))
+                                    .addComponent(jbox_tipo_abono, javax.swing.GroupLayout.PREFERRED_SIZE, 226, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                    .addComponent(jbox_Fondos, javax.swing.GroupLayout.PREFERRED_SIZE, 210, javax.swing.GroupLayout.PREFERRED_SIZE)))))
                     .addComponent(chk_abono_espesifico))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -474,6 +485,7 @@ public class jd_abonar_a_total extends javax.swing.JDialog {
                         .addGap(9, 9, 9)
                         .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                             .addComponent(jbox_tipo_abono)
+                            .addComponent(jbox_Fondos)
                             .addComponent(txt_abono, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
@@ -808,11 +820,17 @@ public class jd_abonar_a_total extends javax.swing.JDialog {
         cabecera.setId_contacto(Integer.parseInt(lbl_id_cliente.getText()));
         cabecera.setTotal(abono_dinero);
 
+        if (jbox_tipo_abono.getItemCount() == 0) {
+            JOptionPane.showMessageDialog(this, "No hay tipos de abono creados. Cree al menos uno en Creditos > Tipos de abonos antes de registrar pagos.");
+            return;
+        }
+        if (jbox_tipo_abono.getSelectedIndex() < 0) {
+            jbox_tipo_abono.setSelectedIndex(0);
+        }
         try {
             cabecera.setId_tipo_abono(jbox_tipo_abono.getItemAt(jbox_tipo_abono.getSelectedIndex()).getId());
         } catch (Exception e) {
             cabecera.setId_tipo_abono(id_tipo_abono);
-            jbox_tipo_abono.setSelectedIndex(0);
         }
 
         // fecha en la que se recibio el pago
@@ -846,6 +864,7 @@ public class jd_abonar_a_total extends javax.swing.JDialog {
                         + cabecera.getId() + "). No se guardó nada.");
                 return;
             }
+            sincronizar_ingreso(cabecera);
             actualizarVentanas();
             this.dispose();
             return;
@@ -905,6 +924,9 @@ public class jd_abonar_a_total extends javax.swing.JDialog {
         }
         lbl_id_abono.setText(String.valueOf(idCabecera));
 
+        // El dinero recibido entra a Caja si el tipo de abono asi lo indica.
+        guardar_ingreso(cabecera);
+
         int dialogButton = JOptionPane.YES_NO_OPTION;
         int dialogResult = JOptionPane.showConfirmDialog(null, "Desea imprimir?", "Alerta", dialogButton);
         if (dialogResult == JOptionPane.YES_OPTION) {
@@ -914,6 +936,103 @@ public class jd_abonar_a_total extends javax.swing.JDialog {
 
         actualizarVentanas();
         this.dispose();
+    }
+
+    /**
+     * Caja a la que entran los abonos de cartera. La app maneja dos cajas; los
+     * pagos de credito van siempre a la principal, igual que la cuenta de
+     * ingresos "abono a credito" que crea la migracion.
+     */
+    public static final int CAJA_CREDITOS = 1;
+
+    /** Texto para lbl_notificacion: si el pago entra a Caja y dónde. */
+    private static String textoDestinoCaja() {
+        if (!DBabonos.agregar_a_ingreso(id_tipo_abono)) {
+            return "Este tipo de abono NO entra a Caja (solo queda en cartera).";
+        }
+        if (DBIngresos.cuentaAbonoACredito() <= 0) {
+            return "ATENCION: entrara a Caja pero no hay cuenta de ingresos marcada como abono a credito.";
+        }
+        return "El pago entrará a Caja como ingreso; elija el fondo que lo recibe.";
+    }
+
+    /**
+     * Registra en Caja el ingreso que genera este abono, si el tipo de abono
+     * asi lo pide. El abono ya quedó guardado antes de llegar aqui: si el
+     * ingreso falla se avisa, pero no se deshace la cartera.
+     */
+    private void guardar_ingreso(AbonosCabecera cabecera) {
+        if (!DBabonos.agregar_a_ingreso(cabecera.getId_tipo_abono())) {
+            return;
+        }
+        AuditoriaCaja.setOrigen("Creditos - abono a total (ingreso a caja)");
+        try {
+            new DBIngresos().Guardar_desde_abono_credito(ingresoDe(cabecera), cabecera.getId());
+        } finally {
+            AuditoriaCaja.limpiar();
+        }
+    }
+
+    /**
+     * Deja el ingreso de Caja en linea con un abono que se acaba de editar:
+     * corrige el valor, lo crea si el tipo de abono paso a entrar a Caja, o lo
+     * borra si dejo de hacerlo.
+     */
+    private void sincronizar_ingreso(AbonosCabecera cabecera) {
+        AuditoriaCaja.setOrigen("Creditos - editar abono (ingreso a caja)");
+        try {
+            new DBIngresos().Sincronizar_ingreso_de_abono(ingresoDe(cabecera), cabecera.getId(),
+                    DBabonos.agregar_a_ingreso(cabecera.getId_tipo_abono()));
+        } finally {
+            AuditoriaCaja.limpiar();
+        }
+    }
+
+    /** Traduce la cabecera del pago al ingreso de Caja que le corresponde. */
+    private Ingresos ingresoDe(AbonosCabecera cabecera) {
+        Ingresos obj = new Ingresos();
+        obj.setDescripcion("Abono a credito #" + cabecera.getId()
+                + (cabecera.getObservacion() == null || cabecera.getObservacion().isEmpty()
+                        ? "" : " - " + cabecera.getObservacion()));
+        obj.setFecha(cabecera.getFecha());
+        obj.setHora(DB_consultas_R_D.obtener_hora());
+        obj.setId_user(frm_main.id_user);
+        obj.setTotal(cabecera.getTotal());
+        obj.setId_cliente(cabecera.getId_contacto());
+        obj.setId_caja(CAJA_CREDITOS);
+        obj.setFactura_remision(0);
+
+        // fondo elegido en la ventana; si no hay eleccion, el predeterminado
+        try {
+            obj.setId_fondo(jbox_Fondos.getItemAt(jbox_Fondos.getSelectedIndex()).getId());
+        } catch (Exception e) {
+            obj.setId_fondo(Fondos.TraerPredeterminado(CAJA_CREDITOS));
+        }
+
+        // vendedor: el del credito al que se abonó. Con un pago repartido entre
+        // varios creditos se toma el del primero; con anticipo puro no hay.
+        obj.setId_vendedor(vendedorDelPago(cabecera.getId()));
+
+        return obj;
+    }
+
+    /**
+     * Vendedor al que se le acredita el pago: el del primer credito abonado.
+     * Devuelve 0 si el pago no toca ningun credito (anticipo puro) o si el
+     * credito no tiene vendedor asignado.
+     */
+    private static int vendedorDelPago(int idCabecera) {
+        try (ResultSet rs = DB_consultas_R_D.getTabla(
+                "select c.id_empleado from abonos a join creditos c on c.id = a.id_credito "
+                + "where a.id_cabecera = " + idCabecera + " and c.id_empleado is not null "
+                + "order by a.id limit 1")) {
+            if (rs.next()) {
+                return rs.getInt("id_empleado");
+            }
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+        return 0;
     }
 
     /**
@@ -1065,23 +1184,38 @@ public class jd_abonar_a_total extends javax.swing.JDialog {
 
     }//GEN-LAST:event_jbox_tipo_abonoActionPerformed
     public static void clic_en_jbox() {
+        if (jbox_tipo_abono.getItemCount() == 0) {
+            // no hay tipos de abono creados todavia
+            id_tipo_abono = 0;
+            lbl_notificacion.setText("No hay tipos de abono creados. Cree uno en Creditos > Tipos de abonos");
+            chk_anticipo.setSelected(false);
+            chk_anticipo.setVisible(false);
+            jbox_Fondos.setEnabled(false);
+            return;
+        }
         try {
+            if (jbox_tipo_abono.getSelectedIndex() < 0) {
+                jbox_tipo_abono.setSelectedIndex(0);
+            }
             id_tipo_abono = jbox_tipo_abono.getItemAt(jbox_tipo_abono.getSelectedIndex()).getId();
         } catch (Exception e) {
-            jbox_tipo_abono.setSelectedIndex(0);
             System.out.println("Por favor seleccione un tipo de abono");
         }
+
+        // El fondo solo importa si este tipo de abono entra a Caja.
+        jbox_Fondos.setEnabled(DBabonos.agregar_a_ingreso(id_tipo_abono));
 
         ResultSet rs = DB_consultas_R_D.getTabla("select anticipo from tipos_abonos where id=" + id_tipo_abono);
 
         try {
             while (rs.next()) {
                 if (rs.getInt("anticipo") == 1) {
-                    lbl_notificacion.setText("Ha seleccionado Anticipo: el pago NO se aplicará a facturas, quedará como saldo a favor");
+                    lbl_notificacion.setText("Ha seleccionado Anticipo: el pago NO se aplicará a facturas, quedará como saldo a favor. "
+                            + textoDestinoCaja());
                     chk_anticipo.setVisible(true);
                     chk_anticipo.setSelected(true);
                 } else {
-                    lbl_notificacion.setText("-");
+                    lbl_notificacion.setText(textoDestinoCaja());
                     chk_anticipo.setSelected(false);
                     chk_anticipo.setVisible(false);
                 }
@@ -1293,6 +1427,7 @@ public class jd_abonar_a_total extends javax.swing.JDialog {
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JSeparator jSeparator1;
+    public static javax.swing.JComboBox<Fondos> jbox_Fondos;
     public static javax.swing.JComboBox<Tipos_abonos> jbox_tipo_abono;
     public static com.toedter.calendar.JDateChooser jdate_fecha_creacion;
     public static javax.swing.JLabel jlabelabonar;
