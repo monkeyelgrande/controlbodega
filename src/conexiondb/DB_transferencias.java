@@ -254,6 +254,27 @@ public class DB_transferencias {
      * @param id id de la fila.
      * @return true si es el ingreso/egreso generado por un traslado.
      */
+    /**
+     * ¿Este ingreso lo genero automaticamente un abono a credito
+     * (ingresos.id_abono_credito no nulo)? Si es asi, no se edita ni se elimina
+     * desde Caja: se hace desde la ventana de creditos del cliente, que es la
+     * que mantiene en linea el abono y su ingreso.
+     */
+    public static boolean esIngresoDeAbonoCredito(String id) {
+        String sql = "select id_abono_credito from ingresos where id = " + id;
+        ResultSet rs = DB_consultas_R_D.getTabla(sql);
+        try {
+            if (rs.next()) {
+                int idAbono = rs.getInt("id_abono_credito");
+                return !rs.wasNull() && idAbono > 0;
+            }
+            rs.close();
+        } catch (SQLException e) {
+            System.out.println(e);
+        }
+        return false;
+    }
+
     public static boolean esTraslado(String tabla, String id) {
         String sql = "select coalesce(transferencia,0) as t from " + tabla + " where id = " + id;
         ResultSet rs = DB_consultas_R_D.getTabla(sql);

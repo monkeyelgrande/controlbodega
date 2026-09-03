@@ -989,6 +989,12 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
                     + "Modifique o elimine el traslado desde el modulo de Traslados.", "Operacion no permitida", JOptionPane.WARNING_MESSAGE);
             return;
         }
+        if (DB_transferencias.esIngresoDeAbonoCredito(id)) {
+            JOptionPane.showMessageDialog(this, "Este ingreso se creo automaticamente desde un abono a credito y no se puede editar desde Caja.\n"
+                    + "Si desea modificarlo, hagalo desde la ventana de creditos del cliente: al editar el abono\n"
+                    + "se actualiza tambien este ingreso.", "Operacion no permitida", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         String consulta = "select i.id, i.descripcion, i.total, i.fecha, i.factura_remision, "
                 + "coalesce(i.recibo_caja,0) as recibo_caja, "
                 + "u.nombre as user, cu.nombre as cuenta, cu.id as id_cuenta, "
@@ -1037,6 +1043,12 @@ public class frm_ingresos extends javax.swing.JInternalFrame {
         if (DB_transferencias.esTraslado("ingresos", idSel)) {
             JOptionPane.showMessageDialog(this, "Este ingreso proviene de un traslado entre fondos y no se puede eliminar.\n"
                     + "Elimine el traslado desde el modulo de Traslados.", "Operacion no permitida", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (DB_transferencias.esIngresoDeAbonoCredito(idSel)) {
+            JOptionPane.showMessageDialog(this, "Este ingreso se creo automaticamente desde un abono a credito y no se puede eliminar desde Caja.\n"
+                    + "Si desea eliminarlo, hagalo desde la ventana de creditos del cliente: al eliminar el abono\n"
+                    + "se elimina tambien este ingreso.", "Operacion no permitida", JOptionPane.WARNING_MESSAGE);
             return;
         }
         int dialogResult = JOptionPane.showConfirmDialog(null, "Desea eliminar este ingreso?", "Alerta", JOptionPane.YES_NO_OPTION);
